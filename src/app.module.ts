@@ -14,6 +14,7 @@ import { config } from './config/config';
 import { CronsModule } from './crons/crons.module';
 import { QueueProcessorsModule } from './queues/queue-processors.module';
 import { RepositoriesModule } from './repositories/repositories.module';
+import { SeedsModule } from './seeds/seeds.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RepositoriesModule } from './repositories/repositories.module';
     RepositoriesModule,
     QueueProcessorsModule,
     CronsModule,
+    SeedsModule,
     // Feature modules
     UsersModule,
     AuthModule,

@@ -1,8 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
 import { seedEmailTemplates } from './email-templates.seed';
-
-const prisma = new PrismaClient();
+import prisma from '../common/prisma';
 
 async function main() {
   console.log('🚀 Starting database seeding...');
@@ -15,8 +12,6 @@ async function main() {
   } catch (error) {
     console.error('❌ Error during seeding:', error);
     throw error;
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

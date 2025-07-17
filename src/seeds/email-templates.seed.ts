@@ -1,7 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 
-import { createEmailTemplate } from '../repositories/entities/email-template.entity';
-
 export const defaultEmailTemplates = [
   {
     name: 'otp-verification',
