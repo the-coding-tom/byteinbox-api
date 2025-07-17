@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Base models following the style guide patterns
+model User {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  password   String?  // Nullable for OAuth-only users
+  firstName  String?  @map("first_name")
+  lastName   String?  @map("last_name")
+  phoneNumber String? @map("phone_number")
+  isActive   Boolean  @default(true) @map("is_active")
+  isEmailVerified Boolean @default(false) @map("is_email_verified")
+  lastLoginAt DateTime? @map("last_login_at")
+  
+  // OAuth fields
+  oauthProvider String? @map("oauth_provider") // google, facebook, etc.
+  oauthId      String? @map("oauth_id")
+  
+  // MFA fields
+  mfaEnabled   Boolean @default(false) @map("mfa_enabled")
+  mfaMethod    MfaMethod? @map("mfa_method")
+  totpSecret   String? @map("totp_secret") // For authenticator apps
+  
+  // OTP fields
+  emailOtp     String? @map("email_otp")
+  emailOtpExpiresAt DateTime? @map("email_otp_expires_at")
+  smsOtp       String? @map("sms_otp")
+  smsOtpExpiresAt DateTime? @map("sms_otp_expires_at")
+  
+  // Verification tokens
+  emailVerificationToken String? @map("email_verification_token")
+  emailVerificationExpiresAt DateTime? @map("email_verification_expires_at")
+  passwordResetToken String? @map("password_reset_token")
+  passwordResetExpiresAt DateTime? @map("password_reset_expires_at")
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  createdBy  Int?     @map("created_by")
+  updatedBy  Int?     @map("updated_by")
+
+  // Relations
+  createdByUser User? @relation("UserCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User? @relation("UserUpdatedBy", fields: [updatedBy], references: [id])
+  
+  // Self-referencing relations
+  usersCreated User[] @relation("UserCreatedBy")
+  usersUpdated User[] @relation("UserUpdatedBy")
+  
+  // Session tracking
+  refreshTokens RefreshToken[]
+
+  // Email template relations
+  emailTemplatesCreated EmailTemplate[] @relation("EmailTemplateCreatedBy")
+  emailTemplatesUpdated EmailTemplate[] @relation("EmailTemplateUpdatedBy")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int      @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+enum UserStatus {
+  active
+  inactive
+  pending
+  suspended
+  
+  @@map("user_status")
+}
+
+enum MfaMethod {
+  email
+  sms
+  totp // Time-based One-Time Password (Authenticator apps)
+  
+  @@map("mfa_method")
+}
+
+model EmailTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // e.g., "otp-verification", "email-verification", "password-reset"
+  subject     String   // Email subject line
+  htmlContent String   @map("html_content") // Handlebars template content
+  description String?  // Optional description of the template
+  isActive    Boolean  @default(true) @map("is_active")
+  isDefault   Boolean  @default(false) @map("is_default") // Indicates if this is a system default template
+  version     Int      @default(1) // Template version for tracking changes
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   Int?     @map("created_by")
+  updatedBy   Int?     @map("updated_by")
+
+  // Relations
+  createdByUser User? @relation("EmailTemplateCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User? @relation("EmailTemplateUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@map("email_templates")
+} 

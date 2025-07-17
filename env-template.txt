@@ -1,0 +1,72 @@
+# Copy this to .env file and update the values
+
+# Database Configuration (REQUIRED)
+DATABASE_URL="postgresql://username:password@localhost:5432/nestjs_auth_db"
+
+# JWT Configuration (REQUIRED)
+JWT_SECRET="your-super-secure-jwt-secret-key-change-this-in-production"
+
+# Application Configuration
+NODE_ENV=development
+PORT=3000
+APP_NAME="Your App"
+
+# Logging Configuration (Production Ready)
+LOG_LEVEL=INFO
+ENABLE_REQUEST_LOGGING=true
+ENABLE_DATABASE_LOGGING=true
+ENABLE_SECURITY_LOGGING=true
+LOG_TO_FILE=false
+LOG_FILE_PATH=./logs/app.log
+
+# Redis Configuration (for queues and caching)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_URL="redis://localhost:6379"
+
+# OAuth Configuration (Optional - set up when needed)
+# Google OAuth
+# GOOGLE_CLIENT_ID=your-google-client-id
+# GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Facebook OAuth
+# FACEBOOK_CLIENT_ID=your-facebook-client-id
+# FACEBOOK_CLIENT_SECRET=your-facebook-client-secret
+
+# Twitter OAuth
+# TWITTER_CLIENT_ID=your-twitter-client-id
+# TWITTER_CLIENT_SECRET=your-twitter-client-secret
+
+# GitHub OAuth
+# GITHUB_CLIENT_ID=your-github-client-id
+# GITHUB_CLIENT_SECRET=your-github-client-secret
+
+# OAuth Redirect URI
+# OAUTH_REDIRECT_URI=http://localhost:3000/auth/callback
+
+# Email Configuration (Optional - for email verification & OTP)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_SECURE=false
+# SMTP_USER=your-email@gmail.com
+# SMTP_PASS=your-email-password-or-app-password
+# SMTP_FROM_EMAIL=noreply@yourapp.com
+# SMTP_FROM_NAME="Your App"
+
+# SMS Configuration (Optional - for SMS OTP)
+# TWILIO_ACCOUNT_SID=your-twilio-account-sid
+# TWILIO_AUTH_TOKEN=your-twilio-auth-token
+# TWILIO_PHONE_NUMBER=+1234567890
+
+# MFA Configuration
+# OTP_EXPIRY_MINUTES=5
+# OTP_LENGTH=6
+# TOTP_WINDOW=2
+# MAX_OTP_ATTEMPTS=3
+
+# External Services (from existing config)
+PAYMENT_SERVICE_URL=http://localhost:3001
+MFA_SERVICE_URL=http://localhost:3002
+NOTIFICATION_SERVICE_URL=http://localhost:3003
+FIAT_WALLET_CRYPTO_TOKEN_ID=your-fiat-wallet-token-id
+CASHCO_WALLET_CRYPTO_TOKEN_ID=your-cashco-wallet-token-id 
