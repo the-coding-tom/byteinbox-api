@@ -3,9 +3,9 @@ import { Response } from 'express';
 import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/profile.dto';
 
-@Controller('api/v1/auth/profile')
+@Controller('api/v1/profile')
 export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
+  constructor(private readonly profileService: ProfileService) { }
 
   @Get()
   async getProfile(@Req() request: any, @Res() response: Response): Promise<void> {

@@ -1,9 +1,9 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { UserRepository } from '../../../repositories/user.repository';
-import { throwError } from '../../../utils/util';
-import { validateJoiSchema } from '../../../utils/joi.validator';
-import { UpdateUserProfileDto } from '../core/dto/core-auth.dto';
-import { UserEntity } from '../../../repositories/entities/user.entity';
+import { UserRepository } from '../../repositories/user.repository';
+import { throwError } from '../../utils/util';
+import { validateJoiSchema } from '../../utils/joi.validator';
+import { UpdateProfileDto } from './dto/profile.dto';
+import { UserEntity } from '../../repositories/entities/user.entity';
 import * as Joi from 'joi';
 
 @Injectable()
@@ -21,8 +21,8 @@ export class ProfileValidator {
 
   async validateUpdateProfile(
     userId: number,
-    data: UpdateUserProfileDto,
-  ): Promise<{ validatedData: UpdateUserProfileDto; user: UserEntity }> {
+    data: UpdateProfileDto,
+  ): Promise<{ validatedData: UpdateProfileDto; user: UserEntity }> {
     // Validate input data
     const schema = Joi.object({
       firstName: Joi.string().min(2).max(50).optional().messages({

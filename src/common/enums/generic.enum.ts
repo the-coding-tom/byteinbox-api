@@ -25,6 +25,11 @@ export enum UserStatus {
   suspended = 'suspended',
 }
 
+export enum OAuthProvider {
+  google = 'google',
+  github = 'github',
+}
+
 export const Constants = {
   successMessage: 'Success',
   errorMessage: 'An error occurred',

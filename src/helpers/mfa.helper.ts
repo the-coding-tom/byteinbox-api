@@ -17,6 +17,11 @@ export async function setupTotp(userEmail: string): Promise<TotpSetupResult> {
   return totpResult;
 }
 
+// Utility functions for MFA operations
+export function maskBackupCode(code: string): string {
+  return code.substring(0, 4) + '****';
+}
+
 // Re-export utility functions for backward compatibility
 export const verifyTotpCode = verifyTotpCodeUtil;
 export const generateBackupCodes = generateBackupCodesUtil;

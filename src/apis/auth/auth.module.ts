@@ -1,24 +1,17 @@
 import { Module } from '@nestjs/common';
-import { CoreAuthModule } from './core/core-auth.module';
-import { PasswordModule } from './password/password.module';
-import { ProfileModule } from './profile/profile.module';
-import { SessionsModule } from './sessions/sessions.module';
-import { TwoFactorModule } from './two-factor/two-factor.module';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { AuthValidator } from './auth.validator';
+import { RepositoriesModule } from '../../repositories/repositories.module';
 
 @Module({
   imports: [
-    CoreAuthModule,
-    PasswordModule,
-    ProfileModule,
-    SessionsModule,
-    TwoFactorModule,
+    RepositoriesModule,
+    JwtModule,
   ],
-  exports: [
-    CoreAuthModule,
-    PasswordModule,
-    ProfileModule,
-    SessionsModule,
-    TwoFactorModule,
-  ],
+  controllers: [AuthController],
+  providers: [AuthService, AuthValidator],
+  exports: [AuthService, AuthValidator],
 })
 export class AuthModule {}

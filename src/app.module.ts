@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bull';
 import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from './apis/auth/auth.module';
+import { ProfileModule } from './apis/profile/profile.module';
 import { ApiKeysModule } from './apis/api-keys/api-keys.module';
 import { TeamsModule } from './apis/teams/teams.module';
 import { AccountModule } from './apis/account/account.module';
@@ -35,7 +36,8 @@ import { AdminModule } from './apis/admin/admin.module';
     QueueProcessorsModule,
     CronsModule,
     SeedsModule,
-    AuthModule,
+        AuthModule,
+    ProfileModule,
     ApiKeysModule,
     TeamsModule,
     AdminModule,

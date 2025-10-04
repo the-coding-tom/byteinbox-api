@@ -69,6 +69,8 @@ export const config = {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      authUrl: process.env.GITHUB_AUTH_URL || 'https://github.com/login/oauth/authorize',
+      tokenUrl: process.env.GITHUB_TOKEN_URL || 'https://github.com/login/oauth/access_token',
     },
     redirectUri: process.env.OAUTH_REDIRECT_URI || 'http://localhost:3000/api/v1/auth/callback',
   },

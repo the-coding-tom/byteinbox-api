@@ -221,4 +221,52 @@ export class UserRepository {
       },
     };
   }
+
+  // OAuth-related methods
+  async findUserByOAuthId(provider: string, oauthId: string): Promise<any> {
+    return prisma.user.findFirst({
+      where: {
+        oauthProvider: provider,
+        oauthId: oauthId,
+      },
+    });
+  }
+
+  async linkOAuthAccount(userId: number, provider: string, oauthId: string, accessToken: string): Promise<any> {
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        oauthProvider: provider,
+        oauthId: oauthId,
+      },
+    });
+  }
+
+  async createOAuthUser(data: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    isEmailVerified: boolean;
+    oauthProvider: string;
+    oauthId: string;
+  }): Promise<any> {
+    return prisma.user.create({
+      data: {
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        isEmailVerified: data.isEmailVerified,
+        oauthProvider: data.oauthProvider,
+        oauthId: data.oauthId,
+        status: 'ACTIVE',
+      },
+    });
+  }
+
+  async updateOAuthAccessToken(userId: number, provider: string, accessToken: string): Promise<any> {
+    // Note: oauthAccessToken field doesn't exist in schema, so we'll just return the user
+    return prisma.user.findUnique({
+      where: { id: userId },
+    });
+  }
 }

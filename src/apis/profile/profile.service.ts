@@ -1,8 +1,8 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { UserRepository } from '../../../repositories/user.repository';
+import { UserRepository } from '../../repositories/user.repository';
 import { ProfileValidator } from './profile.validator';
-import { generateSuccessResponse } from '../../../utils/util';
-import { handleServiceError } from '../../../utils/error.util';
+import { generateSuccessResponse } from '../../utils/util';
+import { handleServiceError } from '../../utils/error.util';
 import { UpdateProfileDto } from './dto/profile.dto';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class ProfileService {
   constructor(
     private userRepository: UserRepository,
     private profileValidator: ProfileValidator,
-  ) {}
+  ) { }
 
   async getProfile(userId: number): Promise<any> {
     try {

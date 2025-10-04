@@ -4,13 +4,11 @@ import { AdminSecurityModule } from './security/security.module';
 import { AdminRolesModule } from './roles/roles.module';
 import { RepositoriesModule } from '../../repositories/repositories.module';
 import { QueueProducersModule } from '../../queues/queue-producers.module';
-import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    RepositoriesModule, 
+    RepositoriesModule,
     QueueProducersModule,
-    AuthModule,
     AdminUsersModule,
     AdminSecurityModule,
     AdminRolesModule,
