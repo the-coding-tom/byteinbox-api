@@ -1,23 +1,15 @@
 # Copy this to .env file and update the values
 
 # Database Configuration (REQUIRED)
-DATABASE_URL="postgresql://username:password@localhost:5432/nestjs_auth_db"
+DATABASE_URL="postgresql://postgres:123@localhost:5432/test-db-2?schema=public&connection_limit=10&socket_timeout=3"
 
 # JWT Configuration (REQUIRED)
-JWT_SECRET="your-super-secure-jwt-secret-key-change-this-in-production"
+JWT_SECRET="dev-secret-key-123"
 
 # Application Configuration
 NODE_ENV=development
-PORT=3000
+PORT=3001
 APP_NAME="Your App"
-
-# Logging Configuration (Production Ready)
-LOG_LEVEL=INFO
-ENABLE_REQUEST_LOGGING=true
-ENABLE_DATABASE_LOGGING=true
-ENABLE_SECURITY_LOGGING=true
-LOG_TO_FILE=false
-LOG_FILE_PATH=./logs/app.log
 
 # Redis Configuration (for queues and caching)
 REDIS_HOST=localhost
@@ -26,8 +18,8 @@ REDIS_URL="redis://localhost:6379"
 
 # OAuth Configuration (Optional - set up when needed)
 # Google OAuth
-# GOOGLE_CLIENT_ID=your-google-client-id
-# GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CLIENT_ID=44888301345-s9lq57ifl6mqfjecl428dan4mm7d4mpu.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
 
 # Facebook OAuth
 # FACEBOOK_CLIENT_ID=your-facebook-client-id
@@ -38,11 +30,11 @@ REDIS_URL="redis://localhost:6379"
 # TWITTER_CLIENT_SECRET=your-twitter-client-secret
 
 # GitHub OAuth
-# GITHUB_CLIENT_ID=your-github-client-id
-# GITHUB_CLIENT_SECRET=your-github-client-secret
+GITHUB_CLIENT_ID=Ov23lip13DJuXCIgpTtv
+GITHUB_CLIENT_SECRET=b07de1d09abaaf35e11ad4e01c6a50c68429ffe1
 
 # OAuth Redirect URI
-# OAUTH_REDIRECT_URI=http://localhost:3000/auth/callback
+OAUTH_REDIRECT_URI=http://localhost:3000/api/v1/auth/callback
 
 # Email Configuration (Optional - for email verification & OTP)
 # SMTP_HOST=smtp.gmail.com
@@ -64,17 +56,9 @@ REDIS_URL="redis://localhost:6379"
 # TOTP_WINDOW=2
 # MAX_OTP_ATTEMPTS=3
 
-# Super Admin Configuration (REQUIRED for production)
-# These credentials will be used to create the initial super admin account
-# Only set these in production - development uses default test accounts
-# SUPER_ADMIN_EMAIL=admin@yourcompany.com
-# SUPER_ADMIN_PASSWORD=your-super-secure-password
-# SUPER_ADMIN_FIRST_NAME=Super
-# SUPER_ADMIN_LAST_NAME=Admin
-
 # External Services (from existing config)
 PAYMENT_SERVICE_URL=http://localhost:3001
 MFA_SERVICE_URL=http://localhost:3002
 NOTIFICATION_SERVICE_URL=http://localhost:3003
 FIAT_WALLET_CRYPTO_TOKEN_ID=your-fiat-wallet-token-id
-CASHCO_WALLET_CRYPTO_TOKEN_ID=your-cashco-wallet-token-id 
+CASHCO_WALLET_CRYPTO_TOKEN_ID=your-cashco-wallet-token-id OAUTH_REDIRECT_URI=http://localhost:3000/api/v1/auth/callback
