@@ -1,5 +1,6 @@
 import { config } from '../config/config';
 
+
 /**
  * Validates email format
  * @param email - Email address to validate
@@ -40,14 +41,4 @@ export function validatePasswordStrength(password: string): { valid: boolean; er
     valid: errors.length === 0,
     errors,
   };
-}
-
-/**
- * Validates phone number format (E.164 international format)
- * @param phoneNumber - Phone number to validate
- * @returns boolean indicating if phone number is valid
- */
-export function validatePhoneNumber(phoneNumber: string): boolean {
-  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-  return phoneRegex.test(phoneNumber);
 }

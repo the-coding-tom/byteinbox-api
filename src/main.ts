@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
+import * as morgan from 'morgan';
 
 import { AppModule } from './app.module';
-import { API_PATHS } from './common/constants/validation.constant';
 import { config } from './config/config';
+import { logInfoMessage } from './utils/logger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,8 +14,14 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Global prefix
-  app.setGlobalPrefix(API_PATHS.BASE);
+  // Add morgan logging middleware
+  app.use(
+    morgan(':method :url :status :res[content-length] - :response-time ms', {
+      stream: {
+        write: message => logInfoMessage(message.replace('\n', '')),
+      },
+    }),
+  );
 
   await app.listen(config.port);
 }

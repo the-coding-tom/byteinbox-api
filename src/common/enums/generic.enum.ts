@@ -26,7 +26,7 @@ export enum UserStatus {
 }
 
 export const Constants = {
-  successMessage: 'Operation completed successfully',
+  successMessage: 'Success',
   errorMessage: 'An error occurred',
   unauthorizedMessage: 'Unauthorized access',
   notFoundMessage: 'Resource not found',

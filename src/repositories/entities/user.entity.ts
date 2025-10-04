@@ -1,4 +1,34 @@
-import { MfaMethod } from '@prisma/client';
+import { UserStatus, UserType } from '@prisma/client';
+
+export class CreateUserData {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  userType?: UserType;
+  emailVerificationToken?: string;
+  emailVerificationExpiresAt?: Date;
+  oauthProvider?: string;
+  oauthId?: string;
+  isEmailVerified?: boolean;
+}
+
+export class UpdateUserData {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  userType?: UserType;
+  status?: UserStatus;
+}
+
+export class UserFilter {
+  offset: number;
+  limit: number;
+  keyword?: string;
+  status?: string;
+  userType?: UserType;
+}
 
 export class UserEntity {
   id: number;
@@ -7,18 +37,14 @@ export class UserEntity {
   firstName: string | null;
   lastName: string | null;
   phoneNumber: string | null;
-  isActive: boolean;
+  userType: UserType;
+  status: UserStatus;
   isEmailVerified: boolean;
   lastLoginAt: Date | null;
   oauthProvider: string | null;
   oauthId: string | null;
-  mfaEnabled: boolean;
-  mfaMethod: MfaMethod | null;
   totpSecret: string | null;
-  emailOtp: string | null;
-  emailOtpExpiresAt: Date | null;
-  smsOtp: string | null;
-  smsOtpExpiresAt: Date | null;
+  totpEnabled: boolean;
   emailVerificationToken: string | null;
   emailVerificationExpiresAt: Date | null;
   passwordResetToken: string | null;

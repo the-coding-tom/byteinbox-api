@@ -18,7 +18,8 @@ model User {
   firstName  String?  @map("first_name")
   lastName   String?  @map("last_name")
   phoneNumber String? @map("phone_number")
-  isActive   Boolean  @default(true) @map("is_active")
+  userType   UserType @default(USER) @map("user_type") // User type (user, admin, etc.)
+  status     UserStatus @default(PENDING) @map("status")
   isEmailVerified Boolean @default(false) @map("is_email_verified")
   lastLoginAt DateTime? @map("last_login_at")
   
@@ -26,16 +27,9 @@ model User {
   oauthProvider String? @map("oauth_provider") // google, facebook, etc.
   oauthId      String? @map("oauth_id")
   
-  // MFA fields
-  mfaEnabled   Boolean @default(false) @map("mfa_enabled")
-  mfaMethod    MfaMethod? @map("mfa_method")
+  // 2FA fields
   totpSecret   String? @map("totp_secret") // For authenticator apps
-  
-  // OTP fields
-  emailOtp     String? @map("email_otp")
-  emailOtpExpiresAt DateTime? @map("email_otp_expires_at")
-  smsOtp       String? @map("sms_otp")
-  smsOtpExpiresAt DateTime? @map("sms_otp_expires_at")
+  totpEnabled  Boolean @default(false) @map("totp_enabled") // Whether TOTP is enabled and verified
   
   // Verification tokens
   emailVerificationToken String? @map("email_verification_token")
@@ -58,10 +52,51 @@ model User {
   
   // Session tracking
   refreshTokens RefreshToken[]
+  mfaSessions MfaSession[]
+  otpRequests OtpRequest[]
+  otpRateLimits OtpRateLimit[]
+  recoverySessions RecoverySession[]
 
   // Email template relations
   emailTemplatesCreated EmailTemplate[] @relation("EmailTemplateCreatedBy")
   emailTemplatesUpdated EmailTemplate[] @relation("EmailTemplateUpdatedBy")
+
+  // Blacklist relations
+  blacklistsCreated Blacklist[] @relation("BlacklistCreatedBy")
+  blacklistsUpdated Blacklist[] @relation("BlacklistUpdatedBy")
+
+  // Roles and Permissions
+  userRoles UserRole[]
+  userPermissions UserPermission[]
+  
+  // Role and Permission creation tracking
+  rolesCreated Role[] @relation("RoleCreatedBy")
+  rolesUpdated Role[] @relation("RoleUpdatedBy")
+  permissionsCreated Permission[] @relation("PermissionCreatedBy")
+  permissionsUpdated Permission[] @relation("PermissionUpdatedBy")
+  userRolesCreated UserRole[] @relation("UserRoleCreatedBy")
+  userPermissionsGranted UserPermission[] @relation("UserPermissionGrantedBy")
+  rolePermissionsCreated RolePermission[] @relation("RolePermissionCreatedBy")
+
+  // API Key relations
+  apiKeys ApiKey[]
+  
+  // Backup Codes relations
+  backupCodes BackupCode[]
+  
+  // Login Activity relations
+  loginActivities LoginActivity[]
+
+  // Team Management
+  teamsCreated Team[] @relation("TeamCreatedBy")
+  teamsUpdated Team[] @relation("TeamUpdatedBy")
+  teamMembers TeamMember[]
+  teamMembersInvited TeamMember[] @relation("TeamMemberInvitedBy")
+  teamInvitationsCreated TeamInvitation[] @relation("TeamInvitationCreatedBy")
+  teamInvitationsUsedBy TeamInvitation[] @relation("TeamInvitationUsedBy")
+  teamApiKeysCreated TeamApiKey[] @relation("TeamApiKeyCreatedBy")
+  teamProjectsCreated TeamProject[] @relation("TeamProjectCreatedBy")
+  teamActivities TeamActivity[]
 
   @@map("users")
 }
@@ -80,32 +115,15 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-enum UserStatus {
-  active
-  inactive
-  pending
-  suspended
-  
-  @@map("user_status")
-}
-
-enum MfaMethod {
-  email
-  sms
-  totp // Time-based One-Time Password (Authenticator apps)
-  
-  @@map("mfa_method")
-}
-
+// Email Template Management
 model EmailTemplate {
   id          Int      @id @default(autoincrement())
-  name        String   @unique // e.g., "otp-verification", "email-verification", "password-reset"
-  subject     String   // Email subject line
-  htmlContent String   @map("html_content") // Handlebars template content
-  description String?  // Optional description of the template
+  name        String   @unique
+  subject     String
+  htmlContent String   @map("html_content")
+  textContent String?  @map("text_content")
   isActive    Boolean  @default(true) @map("is_active")
-  isDefault   Boolean  @default(false) @map("is_default") // Indicates if this is a system default template
-  version     Int      @default(1) // Template version for tracking changes
+  isDefault   Boolean  @default(false) @map("is_default")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   createdBy   Int?     @map("created_by")
@@ -116,4 +134,558 @@ model EmailTemplate {
   updatedByUser User? @relation("EmailTemplateUpdatedBy", fields: [updatedBy], references: [id])
 
   @@map("email_templates")
-} 
+}
+
+// MFA Session Management
+model MfaSession {
+  id          Int      @id @default(autoincrement())
+  sessionToken String  @unique @map("session_token")
+  userId      Int      @map("user_id")
+  email       String
+  mfaMethod   MfaMethod @map("mfa_method")
+  isVerified  Boolean  @default(false) @map("is_verified")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mfa_sessions")
+}
+
+// OTP Request Management
+model OtpRequest {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  sessionToken String  @map("session_token")
+  mfaMethod   MfaMethod @map("mfa_method")
+  otpCode     String   @map("otp_code")
+  otpExpiresAt DateTime @map("otp_expires_at")
+  ipAddress   String   @map("ip_address")
+  userAgent   String   @map("user_agent")
+  status      OtpRequestStatus @default(PENDING)
+  failureReason String? @map("failure_reason")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otp_requests")
+}
+
+// Recovery Session Management
+model RecoverySession {
+  id            Int      @id @default(autoincrement())
+  recoveryToken String   @unique @map("recovery_token")
+  userId        Int      @map("user_id")
+  isUsed        Boolean  @default(false) @map("is_used")
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("recovery_sessions")
+}
+
+// OTP Rate Limiting
+model OtpRateLimit {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  mfaMethod   MfaMethod @map("mfa_method")
+  attemptCount Int     @default(0) @map("attempt_count")
+  lastAttemptAt DateTime @map("last_attempt_at")
+  blockedUntil DateTime? @map("blocked_until")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mfaMethod])
+  @@map("otp_rate_limits")
+}
+
+// Blacklist Management
+model Blacklist {
+  id        Int      @id @default(autoincrement())
+  type      BlacklistType
+  value     String   // IP address, email, phone, etc.
+  reason    BlacklistReason
+  duration  BlacklistDuration
+  expiresAt DateTime? @map("expires_at")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy Int?     @map("created_by")
+  updatedBy Int?     @map("updated_by")
+
+  // Relations
+  createdByUser User? @relation("BlacklistCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User? @relation("BlacklistUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@unique([type, value])
+  @@map("blacklists")
+}
+
+// Role and Permission Management
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        RoleName @unique
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   Int?     @map("created_by")
+  updatedBy   Int?     @map("updated_by")
+
+  // Relations
+  createdByUser User? @relation("RoleCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User? @relation("RoleUpdatedBy", fields: [updatedBy], references: [id])
+  
+  // Role assignments and permissions
+  userRoles UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        PermissionName @unique
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   Int?     @map("created_by")
+  updatedBy   Int?     @map("updated_by")
+
+  // Relations
+  createdByUser User? @relation("PermissionCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User? @relation("PermissionUpdatedBy", fields: [updatedBy], references: [id])
+  
+  // Permission assignments
+  userPermissions UserPermission[]
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id     Int  @id @default(autoincrement())
+  userId Int  @map("user_id")
+  roleId Int  @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy Int? @map("created_by")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdByUser User? @relation("UserRoleCreatedBy", fields: [createdBy], references: [id])
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserPermission {
+  id           Int        @id @default(autoincrement())
+  userId       Int        @map("user_id")
+  permissionId Int        @map("permission_id")
+  granted      Boolean    @default(true)
+  grantedAt    DateTime   @default(now()) @map("granted_at")
+  grantedBy    Int?       @map("granted_by")
+  expiresAt    DateTime?  @map("expires_at") // For temporary permissions
+  reason       String?    // Why this permission was granted/revoked
+
+  // Relations
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  grantedByUser User?     @relation("UserPermissionGrantedBy", fields: [grantedBy], references: [id])
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int        @map("role_id")
+  permissionId Int        @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  createdBy    Int?       @map("created_by")
+
+  // Relations
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdByUser User?     @relation("RolePermissionCreatedBy", fields: [createdBy], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// API Key Management System
+model ApiKey {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique // API key (e.g., "ak_live_abc123...")
+  name        String   // Human-readable name
+  description String?  // Optional description
+  userId      Int      @map("user_id") // Owner of the API key
+  scopes      String[] // Permissions/scopes for this key
+  isActive    Boolean  @default(true) @map("is_active")
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKeyLogs ApiKeyLog[]
+
+  @@map("api_keys")
+}
+
+// API Key Usage Logs
+model ApiKeyLog {
+  id        Int      @id @default(autoincrement())
+  apiKeyId  Int      @map("api_key_id")
+  action    String   // create, read, update, delete, etc.
+  endpoint  String?  // API endpoint accessed
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  requestBody String? @map("request_body")
+  responseStatus Int? @map("response_status")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  
+  @@map("api_key_logs")
+}
+
+// Backup Codes for 2FA Recovery
+model BackupCode {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  code      String   // Hashed backup code
+  isUsed    Boolean  @default(false) @map("is_used")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("backup_codes")
+}
+
+// Login Activity Tracking for Security Alerts
+model LoginActivity {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  ipAddress  String   @map("ip_address")
+  userAgent  String   @map("user_agent")
+  location   String?  // Country/city (optional, can use a geo-IP service)
+  success    Boolean  // Whether the login attempt was successful
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("login_activities")
+}
+
+// Team Management System
+model Team {
+  id          Int      @id @default(autoincrement())
+  name        String   // Team name
+  description String?  // Optional description
+  slug        String   @unique // URL-friendly identifier (e.g., "my-team")
+  avatar      String?  // Team avatar/logo URL
+  isDefault   Boolean  @default(false) @map("is_default") // Whether this is a default team
+  isPublic    Boolean  @default(false) @map("is_public") // Whether team is visible to all users
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   Int      @map("created_by")
+  updatedBy   Int?     @map("updated_by")
+
+  // Relations
+  createdByUser User @relation("TeamCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User? @relation("TeamUpdatedBy", fields: [updatedBy], references: [id])
+  
+  // Team members and resources
+  teamMembers TeamMember[]
+  teamApiKeys TeamApiKey[]
+  teamProjects TeamProject[] // For future project management
+  teamInvitations TeamInvitation[]
+  teamActivities TeamActivity[]
+
+  @@map("teams")
+}
+
+// Team Membership with Roles
+model TeamMember {
+  id        Int        @id @default(autoincrement())
+  teamId    Int        @map("team_id")
+  userId    Int        @map("user_id")
+  role      TeamRole   @default(MEMBER)
+  status    TeamMemberStatus @default(ACTIVE)
+  joinedAt  DateTime   @default(now()) @map("joined_at")
+  invitedBy Int?       @map("invited_by")
+  invitedAt DateTime?  @map("invited_at")
+  acceptedAt DateTime? @map("accepted_at")
+  leftAt    DateTime?  @map("left_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedByUser User?  @relation("TeamMemberInvitedBy", fields: [invitedBy], references: [id])
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+// Team-specific API Keys
+model TeamApiKey {
+  id          Int      @id @default(autoincrement())
+  teamId      Int      @map("team_id")
+  key         String   @unique
+  name        String
+  description String?
+  scopes      String[] // Team-specific permissions
+  isActive    Boolean  @default(true) @map("is_active")
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   Int      @map("created_by")
+
+  // Relations
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdByUser User   @relation("TeamApiKeyCreatedBy", fields: [createdBy], references: [id])
+  teamApiKeyLogs TeamApiKeyLog[]
+
+  @@map("team_api_keys")
+}
+
+// Team API Key Usage Logs
+model TeamApiKeyLog {
+  id        Int      @id @default(autoincrement())
+  teamApiKeyId Int   @map("team_api_key_id")
+  action    String
+  endpoint  String?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  requestBody String? @map("request_body")
+  responseStatus Int? @map("response_status")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  teamApiKey TeamApiKey @relation(fields: [teamApiKeyId], references: [id], onDelete: Cascade)
+  
+  @@map("team_api_key_logs")
+}
+
+// Team Projects (for future expansion)
+model TeamProject {
+  id          Int      @id @default(autoincrement())
+  teamId      Int      @map("team_id")
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   Int      @map("created_by")
+
+  // Relations
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdByUser User   @relation("TeamProjectCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("team_projects")
+}
+
+// Team Invitations
+model TeamInvitation {
+  id          Int      @id @default(autoincrement())
+  teamId      Int      @map("team_id")
+  token       String   @unique // Unique invitation token
+  email       String   // Email of the person being invited
+  role        TeamRole @default(MEMBER)
+  expiresAt   DateTime @map("expires_at")
+  isUsed      Boolean  @default(false) @map("is_used")
+  usedAt      DateTime? @map("used_at")
+  usedBy      Int?     @map("used_by") // User who accepted the invitation
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   Int      @map("created_by")
+
+  // Relations
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  usedByUser  User?    @relation("TeamInvitationUsedBy", fields: [usedBy], references: [id])
+  createdByUser User   @relation("TeamInvitationCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("team_invitations")
+}
+
+// Team Activity Log
+model TeamActivity {
+  id        Int      @id @default(autoincrement())
+  teamId    Int      @map("team_id")
+  userId    Int      @map("user_id")
+  action    String   // "create_api_key", "view_logs", "invite_member", etc.
+  resourceType String? // "api_key", "log", "member", etc.
+  resourceId Int?    @map("resource_id") // ID of the specific resource
+  details   String?  // Additional details about the action
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("team_activities")
+}
+
+// ENUMS - All enums organized at the bottom for better readability
+
+// User Enums
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  DELETED
+  
+  @@map("user_status")
+}
+
+enum UserType {
+  USER
+  ADMIN
+  SUPER_ADMIN
+  
+  @@map("user_type")
+}
+
+enum MfaMethod {
+  EMAIL
+  TOTP
+  SMS
+  
+  @@map("mfa_method")
+}
+
+// OTP Request Status
+enum OtpRequestStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  FAILED
+  
+  @@map("otp_request_status")
+}
+
+// Blacklist Management Enums
+enum BlacklistType {
+  IP_ADDRESS
+  EMAIL
+  PHONE
+  USER_AGENT
+  
+  @@map("blacklist_type")
+}
+
+enum BlacklistReason {
+  SUSPICIOUS_ACTIVITY
+  SPAM
+  ABUSE
+  SECURITY_VIOLATION
+  MANUAL_BAN
+  
+  @@map("blacklist_reason")
+}
+
+enum BlacklistDuration {
+  TEMPORARY
+  PERMANENT
+  CUSTOM
+  
+  @@map("blacklist_duration")
+}
+
+// Role and Permission Enums
+enum RoleName {
+  USER_MANAGER
+  SECURITY_ADMIN
+  CONTENT_MODERATOR
+  SUPPORT_AGENT
+  SYSTEM_ADMIN
+  FINANCE_ADMIN
+  AUDIT_ADMIN
+  
+  @@map("role_name")
+}
+
+enum PermissionName {
+  // User Management
+  VIEW_USERS
+  CREATE_USERS
+  UPDATE_USERS
+  DELETE_USERS
+  RESET_USER_MFA
+  UNLOCK_USER_ACCOUNT
+  DEACTIVATE_USER_ACCOUNT
+  VIEW_USER_SESSIONS
+  REVOKE_USER_SESSIONS
+  
+  // Security Management
+  VIEW_BLACKLIST
+  MANAGE_BLACKLIST
+  VIEW_AUDIT_LOGS
+  MANAGE_SECURITY_SETTINGS
+  VIEW_SECURITY_REPORTS
+  
+  // Content Management
+  MODERATE_CONTENT
+  APPROVE_CONTENT
+  DELETE_CONTENT
+  VIEW_CONTENT_REPORTS
+  
+  // System Management
+  MANAGE_SYSTEM_SETTINGS
+  VIEW_SYSTEM_LOGS
+  MANAGE_EMAIL_TEMPLATES
+  VIEW_SYSTEM_METRICS
+  
+  // Financial Management
+  VIEW_FINANCIAL_DATA
+  MANAGE_PAYMENTS
+  VIEW_TRANSACTION_LOGS
+  MANAGE_REFUNDS
+  
+  // Audit and Compliance
+  VIEW_AUDIT_TRAILS
+  EXPORT_AUDIT_DATA
+  MANAGE_COMPLIANCE_REPORTS
+  
+  @@map("permission_name")
+}
+
+// Team and Team Member Enums
+enum TeamRole {
+  OWNER       // Full control over team
+  ADMIN       // Can manage members and settings
+  EDITOR      // Can create/edit resources but not manage members
+  MEMBER      // Regular team member
+  GUEST       // Limited access
+  
+  @@map("team_role")
+}
+
+enum TeamMemberStatus {
+  INVITED     // Invited but not accepted
+  ACTIVE      // Active member
+  SUSPENDED   // Temporarily suspended
+  LEFT        // Left the team
+  
+  @@map("team_member_status")
+}

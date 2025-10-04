@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-
-import { SeederService } from './seeder.service';
+import { SeedService } from './seed.service';
 
 @Module({
-  providers: [SeederService],
+  providers: [SeedService],
 })
-export class SeedsModule {} 
+export class SeedsModule {}

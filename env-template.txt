@@ -64,6 +64,14 @@ REDIS_URL="redis://localhost:6379"
 # TOTP_WINDOW=2
 # MAX_OTP_ATTEMPTS=3
 
+# Super Admin Configuration (REQUIRED for production)
+# These credentials will be used to create the initial super admin account
+# Only set these in production - development uses default test accounts
+# SUPER_ADMIN_EMAIL=admin@yourcompany.com
+# SUPER_ADMIN_PASSWORD=your-super-secure-password
+# SUPER_ADMIN_FIRST_NAME=Super
+# SUPER_ADMIN_LAST_NAME=Admin
+
 # External Services (from existing config)
 PAYMENT_SERVICE_URL=http://localhost:3001
 MFA_SERVICE_URL=http://localhost:3002

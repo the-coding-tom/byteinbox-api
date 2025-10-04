@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-// Import cron services as they are created
-// import { PaymentStatusCheckerService } from './processes/payment-status-checker.service';
+
+import { MfaRepository } from '../repositories/mfa.repository';
+import { OtpCleanupCron } from './processes/otp-cleanup.cron';
+import { OtpExpirationCron } from './processes/otp-expiration.cron';
 
 @Module({
   imports: [ScheduleModule.forRoot()],
-  providers: [
-    // Cron services
-    // PaymentStatusCheckerService,
-  ],
+  providers: [MfaRepository, OtpCleanupCron, OtpExpirationCron],
 })
 export class CronsModule {}

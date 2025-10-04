@@ -1,8 +1,9 @@
+import 'dotenv/config';
+
 // Time constants
 const SECONDS_IN_MINUTE = 60;
 const MINUTES_IN_HOUR = 60;
 const HOURS_IN_DAY = 24;
-const DAYS_IN_MONTH = 30;
 const MILLISECONDS_IN_SECOND = 1000;
 const MILLISECONDS_IN_DAY
   = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND;
@@ -25,7 +26,6 @@ const BEARER_TOKEN_PREFIX_LENGTH = 7; // "Bearer ".length
 // Time-based constants
 const PAYMENT_STATUS_CHECKER_TTL_MINUTES = 30;
 const PAYMENT_STATUS_CHECKER_REPEAT_INTERVAL_MINUTES = 2;
-const EMAIL_VERIFICATION_TOKEN_EXPIRY_MINUTES = 30;
 
 // Fee constants
 const MIN_FEE_RANGE_1 = 0;
@@ -101,14 +101,8 @@ export const config = {
     otpLength: parseInt(process.env.OTP_LENGTH || '6'),
     totpWindow: parseInt(process.env.TOTP_WINDOW || '2'),
     maxOtpAttempts: parseInt(process.env.MAX_OTP_ATTEMPTS || '3'),
-    sms: {
-      twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
-      twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
-      twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
-    },
     rateLimit: {
       emailOtpLimit: parseInt(process.env.EMAIL_OTP_RATE_LIMIT || '5'),
-      smsOtpLimit: parseInt(process.env.SMS_OTP_RATE_LIMIT || '3'),
       windowMinutes: parseInt(process.env.OTP_RATE_LIMIT_WINDOW_MINUTES || '15'),
     },
   },
@@ -117,6 +111,9 @@ export const config = {
   validation: {
     password: {
       minLength: MIN_PASSWORD_LENGTH,
+      maxLength: 128,
+      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      patternMessage: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
     },
     name: {
       minLength: MIN_NAME_LENGTH,
@@ -173,10 +170,6 @@ export const config = {
     disbursementInitiated: 'disbursement.initiated',
     disbursementCompleted: 'disbursement.completed',
   },
-
-  // Email Verification
-  emailVerificationTokenExpirationInMilliseconds:
-    EMAIL_VERIFICATION_TOKEN_EXPIRY_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 30 minutes
 
   // Application
   nodeEnv: process.env.NODE_ENV || 'development',

@@ -1,98 +1,42 @@
 import * as Handlebars from 'handlebars';
-
 import { config } from '../config/config';
-import { EmailTemplateRepository } from '../repositories/email-template.repository';
-
-export interface EmailTemplateData {
-  [key: string]: any;
-}
-
-export interface OtpEmailData extends EmailTemplateData {
-  otp: string;
-  firstName?: string;
-  expiryMinutes: number;
-  appName: string;
-}
-
-export interface EmailVerificationData extends EmailTemplateData {
-  firstName?: string;
-  verificationUrl: string;
-  expiryHours: number;
-  appName: string;
-}
-
-export interface PasswordResetData extends EmailTemplateData {
-  firstName?: string;
-  resetUrl: string;
-  expiryMinutes: number;
-  appName: string;
-}
+import { EmailTemplateData, OtpEmailData, EmailVerificationData, PasswordResetData, SecurityAlertData } from '../common/entities/email.entity';
 
 /**
  * Email template utility class for handling Handlebars templates
+ * Pure utility - no database coupling, just template rendering
+ * 
+ * Usage example:
+ * ```typescript
+ * // In your service
+ * const template = await this.emailTemplateRepository.findActiveEmailTemplateByName('otp-verification');
+ * const html = EmailTemplateUtil.renderOtpEmail(template.htmlContent, {
+ *   email: 'user@example.com',
+ *   otp: '123456',
+ *   firstName: 'John'
+ * });
+ * ```
  */
 export class EmailTemplateUtil {
-  private static templateCache: Map<string, HandlebarsTemplateDelegate> = new Map();
-  private static emailTemplateRepository: EmailTemplateRepository;
-
-  /**
-   * Set the email template repository (called during initialization)
-   * @param repository - EmailTemplateRepository instance
-   */
-  static setRepository(repository: EmailTemplateRepository): void {
-    this.emailTemplateRepository = repository;
-  }
-
-  /**
-   * Initialize the email template utility with repository
-   * @param repository - EmailTemplateRepository instance
-   */
-  static initialize(repository: EmailTemplateRepository): void {
-    this.setRepository(repository);
-  }
-
-  /**
-   * Compiles and caches a Handlebars template from database
-   * @param templateName - Name of the template
-   * @returns Compiled Handlebars template
-   */
-  private static async getTemplate(templateName: string): Promise<HandlebarsTemplateDelegate> {
-    if (this.templateCache.has(templateName)) {
-      return this.templateCache.get(templateName)!;
-    }
-
-    if (!this.emailTemplateRepository) {
-      throw new Error('EmailTemplateRepository not initialized. Call setRepository() first.');
-    }
-
-    const template = await this.emailTemplateRepository.findActiveEmailTemplateByName(templateName);
-    if (!template) {
-      throw new Error(`Email template not found: ${templateName}`);
-    }
-
-    const compiledTemplate = Handlebars.compile(template.htmlContent);
-    this.templateCache.set(templateName, compiledTemplate);
-    return compiledTemplate;
-  }
-
   /**
    * Renders an email template with the provided data
-   * @param templateName - Name of the template
+   * @param templateHtml - Raw HTML template string
    * @param data - Data to inject into the template
    * @returns Rendered HTML string
    */
-  static async renderTemplate(templateName: string, data: EmailTemplateData): Promise<string> {
-    const template = await this.getTemplate(templateName);
+  static renderTemplate(templateHtml: string, data: EmailTemplateData): string {
+    const template = Handlebars.compile(templateHtml);
     return template(data);
   }
 
   /**
    * Renders OTP verification email template
+   * @param templateHtml - Raw HTML template string
    * @param data - OTP email data
    * @returns Rendered HTML string
    */
-  static async renderOtpEmail(data: OtpEmailData): Promise<string> {
-    return this.renderTemplate('otp-verification', {
+  static renderOtpEmail(templateHtml: string, data: OtpEmailData): string {
+    return this.renderTemplate(templateHtml, {
       ...data,
       appName: data.appName || config.email.fromName,
     });
@@ -100,11 +44,12 @@ export class EmailTemplateUtil {
 
   /**
    * Renders email verification template
+   * @param templateHtml - Raw HTML template string
    * @param data - Email verification data
    * @returns Rendered HTML string
    */
-  static async renderEmailVerification(data: EmailVerificationData): Promise<string> {
-    return this.renderTemplate('email-verification', {
+  static renderEmailVerification(templateHtml: string, data: EmailVerificationData): string {
+    return this.renderTemplate(templateHtml, {
       ...data,
       appName: data.appName || config.email.fromName,
     });
@@ -112,20 +57,27 @@ export class EmailTemplateUtil {
 
   /**
    * Renders password reset template
+   * @param templateHtml - Raw HTML template string
    * @param data - Password reset data
    * @returns Rendered HTML string
    */
-  static async renderPasswordReset(data: PasswordResetData): Promise<string> {
-    return this.renderTemplate('password-reset', {
+  static renderPasswordReset(templateHtml: string, data: PasswordResetData): string {
+    return this.renderTemplate(templateHtml, {
       ...data,
       appName: data.appName || config.email.fromName,
     });
   }
 
   /**
-   * Clears the template cache (useful for development)
+   * Renders security alert template
+   * @param templateHtml - Raw HTML template string
+   * @param data - Security alert data
+   * @returns Rendered HTML string
    */
-  static clearCache(): void {
-    this.templateCache.clear();
+  static renderSecurityAlert(templateHtml: string, data: SecurityAlertData): string {
+    return this.renderTemplate(templateHtml, {
+      ...data,
+      appName: data.appName || config.email.fromName,
+    });
   }
 }

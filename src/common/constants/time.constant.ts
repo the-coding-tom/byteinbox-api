@@ -16,14 +16,8 @@ export const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MILLISECONDS_IN_HOUR;
 
 // Authentication and security constants
 export const MIN_PASSWORD_LENGTH = 6;
-export const JWT_ACCESS_TOKEN_EXPIRY_MINUTES = 15;
-export const JWT_REFRESH_TOKEN_EXPIRY_DAYS = 7;
 export const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = 30;
 export const EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
-
-// JWT time format constants (for JWT library compatibility)
-export const JWT_ACCESS_TOKEN_EXPIRY_FORMAT = `${JWT_ACCESS_TOKEN_EXPIRY_MINUTES}m`;
-export const JWT_REFRESH_TOKEN_EXPIRY_FORMAT = `${JWT_REFRESH_TOKEN_EXPIRY_DAYS}d`;
 
 // MFA (Multi-Factor Authentication) constants
 export const OTP_EXPIRY_MINUTES = 5;

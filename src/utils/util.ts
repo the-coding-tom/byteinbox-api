@@ -1,13 +1,5 @@
-import { HttpStatus, BadRequestException, HttpException } from '@nestjs/common';
-
-import { CaughtError } from './entities/utils.entity';
-
-export class RequestResponse {
-  statusCode: number;
-  message: string;
-  data?: any;
-  meta?: any;
-}
+import { HttpStatus } from '@nestjs/common';
+import { CaughtError, RequestResponse } from './entities/utils.entity';
 
 export function generateSuccessResponse(response: RequestResponse) {
   if (!response.data) return {
@@ -26,13 +18,14 @@ export function generateSuccessResponse(response: RequestResponse) {
 export function generateErrorResponse(error: CaughtError | any) {
   if (error.response && error.response.status === HttpStatus.BAD_REQUEST) return {
     status: error.response.status,
+    errorCode: 'badRequest',
     message: error.response.data.message,
   };
 
   if (!error.code || typeof error.code === 'string') return {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
-    message: 'Internal server error',
     errorCode: 'serverError',
+    message: 'Internal server error',
   };
 
   return {
