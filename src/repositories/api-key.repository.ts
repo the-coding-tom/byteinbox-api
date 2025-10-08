@@ -47,15 +47,6 @@ export class ApiKeyRepository {
     });
   }
 
-  async findByUserIdAndName(userId: number, name: string): Promise<any | null> {
-    return prisma.apiKey.findFirst({
-      where: {
-        createdBy: userId,
-        name,
-      },
-    });
-  }
-
   async findWithPagination(filter: {
     teamId?: string;
     status?: string;
@@ -178,42 +169,5 @@ export class ApiKeyRepository {
       orderBy: { timestamp: 'desc' },
       take: limit,
     });
-  }
-
-  async getStats(apiKeyId: number): Promise<{
-    totalRequests: number;
-    lastUsedAt: Date | null;
-    errorRate: number;
-    avgResponseTime: number;
-  }> {
-    // Note: Using logs table instead of api_key_logs
-    const result = await prisma.$queryRaw<
-      {
-        total_requests: number;
-        last_used: Date | null;
-        error_count: number;
-      }[]
-    >`
-      SELECT 
-        COALESCE(COUNT(l.id), 0) as total_requests,
-        ak.last_used,
-        COALESCE(COUNT(CASE WHEN l.level = 'ERROR' THEN 1 END), 0) as error_count
-      FROM api_keys ak
-      LEFT JOIN logs l ON ak.id = l.api_key_id
-      WHERE ak.id = ${apiKeyId}
-      GROUP BY ak.id, ak.last_used
-    `;
-
-    const stats = result[0];
-    const totalRequests = Number(stats?.total_requests || 0);
-    const errorCount = Number(stats?.error_count || 0);
-    const errorRate = totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0;
-
-    return {
-      totalRequests,
-      lastUsedAt: stats?.last_used || null,
-      errorRate,
-      avgResponseTime: 0, // Not available in current schema
-    };
   }
 }

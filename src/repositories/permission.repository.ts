@@ -82,46 +82,35 @@ export class PermissionRepository {
     });
   }
 
-  // Note: userPermission and userRole models don't exist in new schema
-  // These methods return placeholder values
   async findUserPermissions(userId: number): Promise<string[]> {
     // User-permission relationship doesn't exist in new schema
     // Would need to be implemented differently
     return [];
   }
 
-  async grantPermissionToUser(
-    userId: number,
-    permissionId: number
-  ): Promise<void> {
-    // User-permission relationship doesn't exist in new schema
-    console.warn('grantPermissionToUser: Not implemented in new schema');
-  }
-
-  async revokePermissionFromUser(
-    userId: number,
-    permissionId: number
-  ): Promise<void> {
-    // User-permission relationship doesn't exist in new schema
-    console.warn('revokePermissionFromUser: Not implemented in new schema');
-  }
-
-  // Check if user has specific permission
   async hasPermission(userId: number, permissionName: PermissionName): Promise<boolean> {
     // User-permission relationship doesn't exist in new schema
     // Would need to check user's role-based permissions
     return false;
   }
 
-  // Check if user has any of the specified permissions
   async hasAnyPermission(userId: number, permissionNames: PermissionName[]): Promise<boolean> {
     // User-permission relationship doesn't exist in new schema
     return false;
   }
 
-  // Check if user has all of the specified permissions
   async hasAllPermissions(userId: number, permissionNames: PermissionName[]): Promise<boolean> {
     // User-permission relationship doesn't exist in new schema
     return false;
+  }
+
+  async grantPermissionToUser(userId: number, permissionId: number): Promise<void> {
+    // User-permission relationship doesn't exist in new schema
+    console.warn('grantPermissionToUser: User-permission relationship not implemented in new schema');
+  }
+
+  async revokePermissionFromUser(userId: number, permissionId: number): Promise<void> {
+    // User-permission relationship doesn't exist in new schema
+    console.warn('revokePermissionFromUser: User-permission relationship not implemented in new schema');
   }
 } 

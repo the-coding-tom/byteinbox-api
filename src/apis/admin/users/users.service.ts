@@ -22,27 +22,20 @@ export class AdminUsersService {
         lastName: validatedData.lastName,
         phoneNumber: validatedData.phoneNumber,
         userType: validatedData.userType || 'user',
-        status: validatedData.status || 'PENDING', // Assuming 'PENDING' is the default status
+        status: validatedData.status || 'PENDING',
         isEmailVerified: validatedData.isEmailVerified || false,
       };
 
-      // Handle password if provided
       if (validatedData.password) {
-        // Assuming hashPassword is available or will be added
-        // userData.password = await hashPassword(validatedData.password); 
+        // userData.password = await hashPassword(validatedData.password);
       }
 
-      // Generate email verification token if email is not verified
       if (!validatedData.isEmailVerified) {
         // userData.emailVerificationToken = uuidv4();
         // userData.emailVerificationExpiresAt = new Date(Date.now() + MILLISECONDS_IN_DAY);
       }
 
-      // Create user with default team in transaction
-      const result = await this.userRepository.createWithDefaultTeam({
-        userData,
-        userEmail: validatedData.email,
-      });
+      const result = await this.userRepository.createUserAndPersonalTeam(userData);
 
       const { user } = result;
 
@@ -176,54 +169,12 @@ export class AdminUsersService {
     }
   }
 
-  async resetUserMfa(resetMfaDto: any): Promise<{ status: number; message: string }> {
-    try {
-      const { user } = await this.adminUsersValidator.validateResetUserMfa(resetMfaDto);
-
-      const updatedUser = { ...user, status: 'ACTIVE' }; // Assuming 'ACTIVE' is the status for reset MFA
-      await this.userRepository.updateUser(updatedUser);
-      
-      // await this.notificationQueue.add('mfa-reset', {
-      //   userId: user.id,
-      //   email: user.email,
-      // });
-
-      return generateSuccessResponse({
-        statusCode: HttpStatus.OK,
-        message: 'User MFA reset successfully',
-      });
-    } catch (error) {
-      return handleServiceError('Error resetting user MFA', error);
-    }
-  }
-
-  async unlockUserAccount(unlockDto: any): Promise<{ status: number; message: string }> {
-    try {
-      const { user } = await this.adminUsersValidator.validateUnlockUserAccount(unlockDto);
-
-      const updatedUser = { ...user, status: 'ACTIVE' }; // Assuming 'ACTIVE' is the status for unlocked account
-      await this.userRepository.updateUser(updatedUser);
-      
-      // await this.notificationQueue.add('account-unlocked', {
-      //   userId: user.id,
-      //   email: user.email,
-      // });
-
-      return generateSuccessResponse({
-        statusCode: HttpStatus.OK,
-        message: 'User account unlocked successfully',
-      });
-    } catch (error) {
-      return handleServiceError('Error unlocking user account', error);
-    }
-  }
-
   async deactivateUserAccount(deactivateDto: any): Promise<{ status: number; message: string }> {
     try {
       const { user } = await this.adminUsersValidator.validateDeactivateUserAccount(deactivateDto);
 
       const updatedUser = { ...user, status: 'SUSPENDED' }; // Assuming 'SUSPENDED' is the status for deactivated account
-      await this.userRepository.updateUser(updatedUser);
+      await this.userRepository.updateUser(updatedUser.id, updatedUser);
       
       // await this.notificationQueue.add('account-deactivated', {
       //   userId: user.id,
@@ -257,53 +208,4 @@ export class AdminUsersService {
       return handleServiceError('Error deleting user account', error);
     }
   }
-
-  async getUserStats(): Promise<{ status: number; message: string; data: any }> {
-    try {
-      // Use repository methods to get actual statistics
-      const totalUsers = await this.userRepository.getUserCount();
-      const activeUsers = await this.userRepository.getActiveUserCount();
-      
-      const stats: any = {
-        totalUsers,
-        activeUsers,
-        inactiveUsers: 0, // TODO: Implement
-        pendingUsers: 0, // TODO: Implement
-        suspendedUsers: 0, // TODO: Implement
-        emailVerifiedUsers: 0, // TODO: Implement
-      };
-
-      return generateSuccessResponse({
-        statusCode: HttpStatus.OK,
-        message: 'User statistics retrieved successfully',
-        data: stats,
-      });
-    } catch (error) {
-      return handleServiceError('Error retrieving user statistics', error);
-    }
-  }
-
-  async getSystemStats(): Promise<{ status: number; message: string; data: any }> {
-    try {
-      const totalUsers = await this.userRepository.getTotalUserCount();
-      const activeUsers = await this.userRepository.getActiveUserCount();
-      const pendingUsers = await this.userRepository.getPendingUserCount();
-      const suspendedUsers = await this.userRepository.getSuspendedUserCount();
-
-      return generateSuccessResponse({
-        statusCode: HttpStatus.OK,
-        message: 'System stats retrieved successfully',
-        data: {
-          totalUsers,
-          activeUsers,
-          pendingUsers,
-          suspendedUsers,
-        },
-      });
-    } catch (error) {
-      return handleServiceError('Error retrieving system stats', error);
-    }
-  }
-
-
 } 

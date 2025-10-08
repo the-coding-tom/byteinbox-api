@@ -178,20 +178,6 @@ export class TeamRepository {
     });
   }
 
-  async findPendingInvitations(teamId: number): Promise<any[]> {
-    return prisma.teamInvitation.findMany({
-      where: {
-        teamId,
-        status: 'pending',
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  // Note: teamApiKey model doesn't exist - use apiKey instead
   async createTeamApiKey(data: {
     teamId: number;
     key: string;
@@ -232,56 +218,6 @@ export class TeamRepository {
       },
       orderBy: { createdAt: 'desc' },
     });
-  }
-
-  async findTeamApiKeyById(id: number): Promise<any> {
-    return prisma.apiKey.findUnique({
-      where: { id },
-      include: {
-        team: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-      },
-    });
-  }
-
-  async updateTeamApiKey(id: number, data: any): Promise<any> {
-    return prisma.apiKey.update({
-      where: { id },
-      data,
-    });
-  }
-
-  async deleteTeamApiKey(id: number): Promise<any> {
-    return prisma.apiKey.update({
-      where: { id },
-      data: { status: 'revoked' },
-    });
-  }
-
-  // Note: teamActivity model doesn't exist in new schema
-  async createTeamActivity(data: {
-    teamId: number;
-    userId: number;
-    action: string;
-    resourceType?: string;
-    resourceId?: string;
-    details?: string;
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<any> {
-    // Team activity tracking not implemented in new schema
-    console.warn('createTeamActivity: Not implemented in new schema');
-    return null;
-  }
-
-  async findTeamActivities(teamId: number, limit: number = 50): Promise<any[]> {
-    // Team activity tracking not implemented in new schema
-    return [];
   }
 
   async update(id: number, data: any): Promise<any> {

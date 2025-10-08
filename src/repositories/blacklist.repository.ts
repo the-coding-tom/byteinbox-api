@@ -83,7 +83,6 @@ export class BlacklistRepository {
     });
   }
 
-  // Existing methods
   async findBlacklist(type: BlacklistType, value: string): Promise<any | null> {
     return prisma.blacklist.findUnique({
       where: {
@@ -93,29 +92,5 @@ export class BlacklistRepository {
         },
       },
     });
-  }
-
-  async getBlacklistStats(): Promise<any> {
-    const result = await prisma.$queryRaw<{
-      total_blacklists: number;
-      by_type: Record<string, number>;
-    }[]>`
-      SELECT 
-        COUNT(*) as total_blacklists,
-        json_object_agg(type, count) FILTER (WHERE type IS NOT NULL) as by_type
-      FROM (
-        SELECT 
-          type,
-          COUNT(*) as count
-        FROM blacklists 
-        GROUP BY type
-      ) grouped_data
-    `;
-
-    const stats = result[0];
-    return {
-      totalBlacklists: Number(stats?.total_blacklists || 0),
-      byType: stats?.by_type || {},
-    };
   }
 } 

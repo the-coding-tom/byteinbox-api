@@ -5,29 +5,13 @@ import { generateSlug } from '../utils/string.util';
 
 @Injectable()
 export class UserRepository {
-  // Basic CRUD operations
-  async create(data: any): Promise<any> {
-    return prisma.user.create({
-      data,
-    });
-  }
-
-  /**
-   * Create user and default team in a single transaction
-   * Note: Team fields simplified in new schema
-   */
-  async createWithDefaultTeam(data: {
-    userData: any;
-    userEmail: string;
-  }): Promise<{ user: any; team: any }> {
+  async createUserAndPersonalTeam(data: any): Promise<any> {
     return prisma.$transaction(async (tx) => {
-      // Create the user
       const user = await tx.user.create({
-        data: data.userData,
+        data,
       });
 
-      // Generate team name and slug
-      const emailPrefix = data.userEmail.split('@')[0];
+      const emailPrefix = data.email.split('@')[0];
       const teamName = `${emailPrefix}'s Team`;
       const baseSlug = generateSlug(teamName);
       
@@ -56,7 +40,7 @@ export class UserRepository {
         },
       });
 
-      return { user, team };
+      return user;
     });
   }
 
@@ -72,8 +56,6 @@ export class UserRepository {
     });
   }
 
-  // Note: oauthProvider and oauthId no longer on User model
-  // OAuth info is in OAuthAccount model
   async findByOAuth(oauthProvider: string, oauthId: string): Promise<any | null> {
     const oauthAccount = await prisma.oAuthAccount.findFirst({
       where: {
@@ -88,12 +70,6 @@ export class UserRepository {
     return oauthAccount?.user || null;
   }
 
-  // Note: phoneNumber field doesn't exist in new User model
-  async findByPhoneNumber(phoneNumber: string): Promise<any | null> {
-    // Phone number not supported in new schema
-    return null;
-  }
-
   async update(id: number, updateData: any): Promise<any> {
     return prisma.user.update({
       where: { id },
@@ -101,11 +77,10 @@ export class UserRepository {
     });
   }
 
-  async updateUser(userData: any): Promise<any> {
-    const { id, ...updateData } = userData;
+  async updateUser(id: number, data:any): Promise<any> {
     return prisma.user.update({
       where: { id },
-      data: updateData,
+      data,
     });
   }
 
@@ -115,47 +90,6 @@ export class UserRepository {
     });
   }
 
-  // Email verification methods
-  // Note: emailVerificationToken no longer on User model - use VerificationRequest
-  async findByEmailVerificationToken(token: string): Promise<any | null> {
-    const verificationRequest = await prisma.verificationRequest.findFirst({
-      where: {
-        token,
-        type: 'EMAIL_VERIFICATION',
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-    });
-    
-    if (!verificationRequest) return null;
-    
-    return prisma.user.findUnique({
-      where: { email: verificationRequest.email },
-    });
-  }
-
-  // Password reset methods
-  // Note: passwordResetToken no longer on User model - use VerificationRequest
-  async findByPasswordResetToken(token: string): Promise<any | null> {
-    const verificationRequest = await prisma.verificationRequest.findFirst({
-      where: {
-        token,
-        type: 'PASSWORD_RESET',
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-    });
-    
-    if (!verificationRequest) return null;
-    
-    return prisma.user.findUnique({
-      where: { email: verificationRequest.email },
-    });
-  }
-
-  // User statistics
   async getUserCount(): Promise<number> {
     return await prisma.user.count();
   }
@@ -166,7 +100,6 @@ export class UserRepository {
     });
   }
 
-  // Note: PENDING status doesn't exist in new schema
   async getPendingUserCount(): Promise<number> {
     return 0;
   }
@@ -181,7 +114,6 @@ export class UserRepository {
     return await prisma.user.count();
   }
 
-  // Pagination and filtering
   async findWithPagination(filter: { offset: number; limit: number; keyword?: string; status?: string }): Promise<any> {
     const { offset, limit, keyword, status } = filter;
 
@@ -239,8 +171,6 @@ export class UserRepository {
     };
   }
 
-  // OAuth-related methods
-  // Note: OAuth info now in OAuthAccount model, not User model
   async findUserByOAuthId(provider: string, oauthId: string): Promise<any> {
     const oauthAccount = await prisma.oAuthAccount.findFirst({
       where: {
@@ -256,7 +186,6 @@ export class UserRepository {
   }
 
   async linkOAuthAccount(userId: number, provider: string, oauthId: string, accessToken?: string): Promise<any> {
-    // Create OAuthAccount entry
     return prisma.oAuthAccount.create({
       data: {
         userId,
@@ -299,19 +228,6 @@ export class UserRepository {
       });
 
       return user;
-    });
-  }
-
-  async updateOAuthAccessToken(userId: number, provider: string, accessToken: string): Promise<any> {
-    // Update OAuthAccount accessToken
-    return prisma.oAuthAccount.updateMany({
-      where: {
-        userId,
-        provider: provider as any,
-      },
-      data: {
-        accessToken,
-      },
     });
   }
 }

@@ -3,7 +3,6 @@ import { AdminSecurityController } from './security.controller';
 import { AdminSecurityService } from './security.service';
 import { AdminSecurityValidator } from './security.validator';
 import { BlacklistRepository } from '../../../repositories/blacklist.repository';
-import { LoginActivityRepository } from '../../../repositories/login-activity.repository';
 import { SessionRepository } from '../../../repositories/session.repository';
 import { MfaRepository } from '../../../repositories/mfa.repository';
 import { QueueProducersModule } from '../../../queues/queue-producers.module';
@@ -15,7 +14,6 @@ import { QueueProducersModule } from '../../../queues/queue-producers.module';
     AdminSecurityService,
     AdminSecurityValidator,
     BlacklistRepository,
-    LoginActivityRepository,
     SessionRepository,
     MfaRepository,
   ],

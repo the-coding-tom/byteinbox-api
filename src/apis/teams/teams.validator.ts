@@ -72,37 +72,6 @@ export class TeamsValidator {
     return { teamId: validatedTeamId, team };
   }
 
-  async validateGetTeamActivities(teamId: string, userId: number, teamRepository: any): Promise<{ teamId: number; team: any }> {
-    // Validate team ID
-    const teamIdSchema = Joi.object({
-      teamId: Joi.number().integer().positive().required(),
-    });
-    const teamIdError = validateJoiSchema(teamIdSchema, { teamId: parseInt(teamId) });
-    if (teamIdError) throwError('Invalid team ID', HttpStatus.BAD_REQUEST, 'validationError');
-    
-    const validatedTeamId = parseInt(teamId);
-
-    // Validate user ID
-    const userIdSchema = Joi.object({
-      userId: Joi.number().integer().positive().required(),
-    });
-    const userIdError = validateJoiSchema(userIdSchema, { userId });
-    if (userIdError) throwError('Invalid user ID', HttpStatus.BAD_REQUEST, 'validationError');
-
-    // Validate team exists and user has access
-    const team = await teamRepository.findById(validatedTeamId);
-    if (!team) {
-      throwError('Team not found', HttpStatus.NOT_FOUND, 'teamNotFound');
-    }
-
-    const teamMember = await teamRepository.findTeamMember(validatedTeamId, userId);
-    if (!teamMember) {
-      throwError('Access denied', HttpStatus.FORBIDDEN, 'accessDenied');
-    }
-
-    return { teamId: validatedTeamId, team };
-  }
-
   async validateGetTeamDetails(teamId: string, userId: number, teamRepository: any): Promise<{ teamId: number; team: any }> {
     // Validate team ID
     const teamIdSchema = Joi.object({

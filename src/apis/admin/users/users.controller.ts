@@ -5,8 +5,6 @@ import {
   CreateUserByAdminDto,
   UpdateUserByAdminDto,
   AdminUserFilterDto,
-  ResetUserMfaDto,
-  UnlockUserAccountDto,
   DeactivateUserAccountDto,
   DeleteUserAccountDto,
 } from './dto/users.dto';
@@ -24,12 +22,6 @@ export class AdminUsersController {
   @Get()
   async getUsers(@Query() filter: AdminUserFilterDto, @Res() res: Response) {
     const { status, ...restOfResponse } = await this.adminUsersService.getUsers(filter);
-    return res.status(status).json(restOfResponse);
-  }
-
-  @Get('stats')
-  async getUserStats(@Res() res: Response) {
-    const { status, ...restOfResponse } = await this.adminUsersService.getUserStats();
     return res.status(status).json(restOfResponse);
   }
 
@@ -53,18 +45,6 @@ export class AdminUsersController {
   @Delete(':id')
   async deleteUser(@Param('id') id: string, @Res() res: Response) {
     const { status, ...restOfResponse } = await this.adminUsersService.deleteUser(id);
-    return res.status(status).json(restOfResponse);
-  }
-
-  @Post('reset-mfa')
-  async resetUserMfa(@Body() resetMfaDto: ResetUserMfaDto, @Res() res: Response) {
-    const { status, ...restOfResponse } = await this.adminUsersService.resetUserMfa(resetMfaDto);
-    return res.status(status).json(restOfResponse);
-  }
-
-  @Post('unlock-account')
-  async unlockUserAccount(@Body() unlockDto: UnlockUserAccountDto, @Res() res: Response) {
-    const { status, ...restOfResponse } = await this.adminUsersService.unlockUserAccount(unlockDto);
     return res.status(status).json(restOfResponse);
   }
 

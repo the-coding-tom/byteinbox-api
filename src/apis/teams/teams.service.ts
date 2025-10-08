@@ -116,24 +116,6 @@ export class TeamsService {
     }
   }
 
-  async getTeamActivities(teamId: string, userId: number): Promise<any> {
-    try {
-      // Validate team access
-      const { teamId: validatedTeamId } = await this.teamsValidator.validateGetTeamActivities(teamId, userId, this.teamRepository);
-      
-      // Get team activities
-      const activities = await this.teamRepository.findTeamActivities(validatedTeamId, 50);
-
-      return generateSuccessResponse({
-        statusCode: HttpStatus.OK,
-        message: 'Team activities retrieved successfully',
-        data: activities,
-      });
-    } catch (error) {
-      return handleServiceError('Error getting team activities', error);
-    }
-  }
-
   async getTeamDetails(teamId: string, userId: number): Promise<any> {
     try {
       // Validate team access

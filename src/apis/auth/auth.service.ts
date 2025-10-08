@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from '../../repositories/user.repository';
 import { SessionRepository } from '../../repositories/session.repository';
-import { LoginActivityRepository } from '../../repositories/login-activity.repository';
 import { BackupCodeRepository } from '../../repositories/backup-code.repository';
 import { MfaRepository } from '../../repositories/mfa.repository';
 import { AuthValidator } from './auth.validator';
@@ -23,7 +22,6 @@ export class AuthService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly sessionRepository: SessionRepository,
-    private readonly loginActivityRepository: LoginActivityRepository,
     private readonly backupCodeRepository: BackupCodeRepository,
     private readonly mfaRepository: MfaRepository,
     private readonly authValidator: AuthValidator,
@@ -43,7 +41,7 @@ export class AuthService {
         const sessionToken = generateSessionToken();
 
         // Store session token temporarily
-        await this.sessionRepository.createRefreshToken({
+        await this.sessionRepository.createSession({
           userId: user.id,
           token: sessionToken,
           expiresAt: moment().add(10, 'minutes').toDate(),
@@ -65,7 +63,7 @@ export class AuthService {
       const { accessToken, refreshToken } = tokens;
 
       // Create session
-      await this.sessionRepository.createRefreshToken({
+      await this.sessionRepository.createSession({
         userId: user.id,
         token: refreshToken,
         expiresAt: moment().add(7, 'days').toDate(),
@@ -73,17 +71,8 @@ export class AuthService {
       });
 
       // Update user login time
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         lastLoginAt: moment().toDate(),
-      });
-
-      // Log login activity
-      await this.loginActivityRepository.create({
-        userId: user.id,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
       });
 
       const response: LoginResponseDto = {
@@ -189,7 +178,7 @@ export class AuthService {
         }
       } else {
         // Update OAuth access token
-        await this.userRepository.updateOAuthAccessToken(user.id, OAuthProvider.google, tokens.access_token);
+        await this.userRepository.updateUser(user.id, { oauthProvider: OAuthProvider.google, accessToken: tokens.access_token });
       }
 
       // Generate tokens
@@ -197,25 +186,17 @@ export class AuthService {
       const { accessToken, refreshToken } = jwtTokens;
 
       // Create session
-      await this.sessionRepository.createRefreshToken({
+      await this.sessionRepository.createSession({
         userId: user.id,
         token: refreshToken,
         expiresAt: moment().add(7, 'days').toDate(),
-        isRevoked: false,
+        userAgent: request.headers['user-agent'] || 'unknown',
+        ipAddress: request.ip || 'unknown',
       });
 
       // Update user login time
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         lastLoginAt: moment().toDate(),
-      });
-
-      // Log login activity
-      await this.loginActivityRepository.create({
-        userId: user.id,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
       });
 
       const response: OAuthLoginResponseDto = {
@@ -318,7 +299,7 @@ export class AuthService {
         }
       } else {
         // Update OAuth access token
-        await this.userRepository.updateOAuthAccessToken(user.id, OAuthProvider.github, tokenData.access_token);
+        await this.userRepository.updateUser(user.id, { oauthProvider: OAuthProvider.github, accessToken: tokenData.access_token });
       }
 
       // Generate tokens
@@ -326,25 +307,17 @@ export class AuthService {
       const { accessToken, refreshToken } = jwtTokens;
 
       // Create session
-      await this.sessionRepository.createRefreshToken({
+      await this.sessionRepository.createSession({
         userId: user.id,
         token: refreshToken,
         expiresAt: moment().add(7, 'days').toDate(),
-        isRevoked: false,
+        userAgent: request.headers['user-agent'] || 'unknown',
+        ipAddress: request.ip || 'unknown',
       });
 
       // Update user login time
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         lastLoginAt: moment().toDate(),
-      });
-
-      // Log login activity
-      await this.loginActivityRepository.create({
-        userId: user.id,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
       });
 
       const response: OAuthLoginResponseDto = {
@@ -377,22 +350,14 @@ export class AuthService {
       const validatedData = await this.authValidator.validateLogout(logoutDto);
 
       // Find the session by refresh token
-      const session = await this.sessionRepository.findRefreshToken(validatedData.refreshToken);
+      const session = await this.sessionRepository.findSessionByRefreshToken(validatedData.refreshToken);
 
       if (!session) {
         throw new Error('Invalid refresh token');
       }
 
       // Revoke the refresh token
-      await this.sessionRepository.revokeRefreshToken(validatedData.refreshToken);
-
-      // Log logout activity
-      await this.loginActivityRepository.create({
-        userId: session.userId,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
-      });
+      await this.sessionRepository.deleteSessionByRefreshToken(validatedData.refreshToken);
 
       return generateSuccessResponse({
         statusCode: 200,
@@ -410,26 +375,19 @@ export class AuthService {
       const { user } = await this.authValidator.validateRefreshToken(refreshTokenDto);
 
       // Revoke the old refresh token
-      await this.sessionRepository.revokeRefreshToken(refreshTokenDto.refreshToken);
+      await this.sessionRepository.deleteSessionByRefreshToken(refreshTokenDto.refreshToken);
 
       // Generate new tokens
       const tokens = await generateTokens(user, this.jwtService);
       const { accessToken, refreshToken } = tokens;
 
       // Create new session with new refresh token
-      await this.sessionRepository.createRefreshToken({
+      await this.sessionRepository.createSession({
         userId: user.id,
         token: refreshToken,
         expiresAt: moment().add(7, 'days').toDate(),
-        isRevoked: false,
-      });
-
-      // Log refresh activity
-      await this.loginActivityRepository.create({
-        userId: user.id,
-        ipAddress: request.ip || 'unknown',
         userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
+        ipAddress: request.ip || 'unknown',
       });
 
       return generateSuccessResponse({
@@ -448,7 +406,7 @@ export class AuthService {
   async logoutAllDevices(userId: number, request: any): Promise<any> {
     try {
       // Revoke all user sessions
-      await this.sessionRepository.revokeAllSessions(userId);
+      await this.sessionRepository.deleteAllUserSessionsByuserId(userId);
 
       return generateSuccessResponse({
         statusCode: 200,
@@ -471,11 +429,12 @@ export class AuthService {
         const resetToken = generateSessionToken(); // Using the same token generator for now
 
         // Store reset token with expiration (e.g., 1 hour)
-        await this.sessionRepository.createRefreshToken({
+        await this.sessionRepository.createSession({
           userId: user.id,
           token: resetToken,
           expiresAt: moment().add(1, 'hour').toDate(),
-          isRevoked: false,
+          userAgent: request.headers['user-agent'] || 'unknown',
+          ipAddress: request.ip || 'unknown',
         });
 
         // TODO: Send password reset email with resetToken
@@ -502,24 +461,15 @@ export class AuthService {
       const hashedPassword = await hashPassword(resetPasswordConfirmDto.newPassword);
 
       // Update user password
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         password: hashedPassword,
       });
 
       // Revoke the reset token
-      await this.sessionRepository.revokeRefreshToken(resetPasswordConfirmDto.token);
+      await this.sessionRepository.deleteSessionByRefreshToken(resetPasswordConfirmDto.token);
 
       // Revoke all user sessions to force re-login
-      await this.sessionRepository.revokeAllSessions(user.id);
-
-      // Log password reset activity
-      await this.loginActivityRepository.create({
-        userId: user.id,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
-      });
+      await this.sessionRepository.deleteAllUserSessionsByuserId(user.id);
 
       return generateSuccessResponse({
         statusCode: 200,
@@ -540,17 +490,8 @@ export class AuthService {
       const hashedPassword = await hashPassword(changePasswordDto.newPassword);
 
       // Update user password
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         password: hashedPassword,
-      });
-
-      // Log password change activity
-      await this.loginActivityRepository.create({
-        userId: user.id,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
       });
 
       return generateSuccessResponse({
@@ -572,7 +513,7 @@ export class AuthService {
       const hashedPassword = await hashPassword(validatedData.password);
 
       // Create new user
-      const user = await this.userRepository.create({
+      const user = await this.userRepository.createUserAndPersonalTeam({
         email: validatedData.email,
         password: hashedPassword,
         name: validatedData.name,
@@ -602,8 +543,7 @@ export class AuthService {
       const { user } = await this.authValidator.validateVerifyEmail(verifyEmailDto);
 
       // Update user email verification status
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         isEmailVerified: true,
       });
 
@@ -630,8 +570,7 @@ export class AuthService {
       const verificationExpiresAt = moment().add(1, 'day').toDate();
 
       // Update user with new verification token
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         emailVerificationToken: verificationToken,
         emailVerificationExpiresAt: verificationExpiresAt,
       });
@@ -706,15 +645,6 @@ export class AuthService {
       const hashedCodes = await Promise.all(backupCodes.map(code => hashBackupCode(code)));
       await this.backupCodeRepository.createBackupCodes(userId, hashedCodes);
 
-      // Log successful TOTP setup
-      await this.loginActivityRepository.createTwoFactorActivity({
-        userId,
-        ipAddress: 'unknown', // Could be passed from request context
-        userAgent: 'unknown', // Could be passed from request context
-        success: true,
-        activityType: '2FA_TOTP_SETUP',
-      });
-
       // Build response
       const response: TotpVerifySetupResponseDto = {
         backup_codes: backupCodes.map(code => maskBackupCode(code)),
@@ -733,32 +663,24 @@ export class AuthService {
   async challengeMfa(mfaChallengeDto: MfaChallengeDto, request: any): Promise<any> {
     try {
       // Validate MFA challenge data
-      const { session, user } = await this.authValidator.validateMfaChallenge(mfaChallengeDto);
+      const { user } = await this.authValidator.validateMfaChallenge(mfaChallengeDto);
 
       // Generate tokens
       const tokens = await generateTokens(user, this.jwtService);
       const { accessToken, refreshToken } = tokens;
 
       // Create session
-      await this.sessionRepository.createRefreshToken({
+      await this.sessionRepository.createSession({
         userId: user.id,
         token: refreshToken,
         expiresAt: moment().add(7, 'days').toDate(),
-        isRevoked: false,
+        userAgent: request.headers['user-agent'] || 'unknown',
+        ipAddress: request.ip || 'unknown',
       });
 
       // Update user login time
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         lastLoginAt: moment().toDate(),
-      });
-
-      // Log successful 2FA verification
-      await this.loginActivityRepository.create({
-        userId: session.userId,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
       });
 
       // Clean up MFA session
@@ -815,7 +737,7 @@ export class AuthService {
   async consumeBackupCode(mfaBackupCodeConsumeDto: MfaBackupCodeConsumeDto, request: any): Promise<any> {
     try {
       // Validate backup code consumption data
-      const { session, user, matchingCode } = await this.authValidator.validateMfaBackupCodeConsume(mfaBackupCodeConsumeDto);
+      const { user, matchingCode } = await this.authValidator.validateMfaBackupCodeConsume(mfaBackupCodeConsumeDto);
 
       // Mark backup code as used
       await this.backupCodeRepository.markAsUsed(matchingCode.id);
@@ -825,25 +747,17 @@ export class AuthService {
       const { accessToken, refreshToken } = tokens;
 
       // Create session
-      await this.sessionRepository.createRefreshToken({
+      await this.sessionRepository.createSession({
         userId: user.id,
         token: refreshToken,
         expiresAt: moment().add(7, 'days').toDate(),
-        isRevoked: false,
+        userAgent: request.headers['user-agent'] || 'unknown',
+        ipAddress: request.ip || 'unknown',
       });
 
       // Update user login time
-      await this.userRepository.updateUser({
-        ...user,
+      await this.userRepository.updateUser(user.id, {
         lastLoginAt: moment().toDate(),
-      });
-
-      // Log successful 2FA verification with backup code
-      await this.loginActivityRepository.create({
-        userId: session.userId,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
       });
 
       // Clean up MFA session
@@ -886,15 +800,6 @@ export class AuthService {
       // Clean up backup codes
       await this.backupCodeRepository.deleteByUserId(userId);
 
-      // Log TOTP disable
-      await this.loginActivityRepository.createTwoFactorActivity({
-        userId,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
-        activityType: '2FA_TOTP_DISABLE',
-      });
-
       return generateSuccessResponse({
         statusCode: 200,
         message: 'MFA disabled successfully',
@@ -917,15 +822,6 @@ export class AuthService {
       const backupCodes = await generateBackupCodes();
       const hashedCodes = await Promise.all(backupCodes.map(code => hashBackupCode(code)));
       await this.backupCodeRepository.createBackupCodes(userId, hashedCodes);
-
-      // Log backup codes regeneration
-      await this.loginActivityRepository.createTwoFactorActivity({
-        userId,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
-        activityType: '2FA_BACKUP_CODES_REGENERATED',
-      });
 
       // Build response
       const response: RegenerateBackupCodesResponseDto = {

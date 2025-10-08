@@ -118,7 +118,7 @@ export class AuthValidator {
         }
 
         // Find the session by refresh token
-        const session = await this.sessionRepository.findRefreshToken(data.refreshToken);
+        const session = await this.sessionRepository.findSessionByRefreshToken(data.refreshToken);
         if (!session) {
             throwError('Invalid refresh token', HttpStatus.UNAUTHORIZED, 'invalidRefreshToken');
         }
@@ -193,7 +193,7 @@ export class AuthValidator {
         }
 
         // Find the session by reset token
-        const session = await this.sessionRepository.findRefreshToken(data.token);
+        const session = await this.sessionRepository.findSessionByRefreshToken(data.token);
         if (!session) {
             throwError('Invalid or expired reset token', HttpStatus.UNAUTHORIZED, 'invalidResetToken');
         }
@@ -328,7 +328,7 @@ export class AuthValidator {
         }
 
         // Find the session by verification token
-        const session = await this.sessionRepository.findRefreshToken(data.token);
+        const session = await this.sessionRepository.findSessionByRefreshToken(data.token);
         if (!session) {
             throwError('Invalid or expired verification token', HttpStatus.UNAUTHORIZED, 'invalidVerificationToken');
         }

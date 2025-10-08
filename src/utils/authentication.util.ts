@@ -66,8 +66,7 @@ export async function generateTokens(
 
 // User update functions
 export async function updateUserLoginTime(user: UserEntity, authRepository: any): Promise<void> {
-  const updatedUser = { ...user, lastLoginAt: new Date() };
-  await authRepository.updateUser(updatedUser);
+  await authRepository.updateUser(user.id, { lastLoginAt: new Date() });
 }
 
 // Password reset token generation

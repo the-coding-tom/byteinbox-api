@@ -209,30 +209,4 @@ export class TeamApiKeyRepository {
       },
     });
   }
-
-  async getApiKeyLogs(apiKeyId: number, limit: number = 100): Promise<any[]> {
-    return prisma.log.findMany({
-      where: { apiKeyId },
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-    });
-  }
-
-  async getApiKeyStats(apiKeyId: number): Promise<{
-    totalRequests: number;
-    lastUsedAt: Date | null;
-  }> {
-    const logs = await prisma.log.findMany({
-      where: { apiKeyId },
-      select: {
-        timestamp: true,
-      },
-      orderBy: { timestamp: 'desc' },
-    });
-
-    return {
-      totalRequests: logs.length,
-      lastUsedAt: logs.length > 0 ? logs[0].timestamp : null,
-    };
-  }
 } 

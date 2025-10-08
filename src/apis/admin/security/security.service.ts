@@ -125,7 +125,7 @@ export class AdminSecurityService {
       
       // TODO: Implement security activity retrieval from session repository
       // For now, return placeholder data
-      const securityActivity = await this.sessionRepository.getSecurityActivity(validatedFilter.userId || 0);
+      const securityActivity = await this.sessionRepository.getSessionsByUserId(validatedFilter.userId!);
       
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,

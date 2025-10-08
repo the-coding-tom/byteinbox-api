@@ -1,0 +1,3978 @@
+{
+	"info": {
+		"_postman_id": "324408a1-36f3-4659-8adb-534b2f874aa3",
+		"name": "ByteInbox API",
+		"description": "ByteInbox email platform API - Complete collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "31032267"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Sign In",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/api/v1/auth/login",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"email\": \"user@example.com\",\r\n  \"password\": \"password123\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/auth/login",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjMiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJpYXQiOjE3MTA5NzI4MDAsImV4cCI6MTcxMDk3NjQwMH0.abc123xyz\",\n  \"refreshToken\": \"refresh_abc123xyz789\",\n  \"user\": {\n    \"id\": \"123\",\n    \"email\": \"user@example.com\",\n    \"name\": \"John Doe\",\n    \"avatar\": \"https://example.com/avatar.jpg\",\n    \"createdAt\": \"2024-01-01T00:00:00Z\",\n    \"updatedAt\": \"2024-01-15T10:00:00Z\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Sign Up",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"John Doe\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/api/v1/auth/signup",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"John Doe\"\n}"
+								},
+								"url": {
+									"raw": "{{auth_url}}/api/v1/auth/signup",
+									"host": [
+										"{{auth_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"auth",
+										"signup"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Account created successfully. Please check your email to verify your account.\",\n  \"data\": {\n    \"verificationRequired\": true\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/api/v1/auth/refresh",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"refresh"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+								},
+								"url": {
+									"raw": "{{auth_url}}/api/v1/auth/refresh",
+									"host": [
+										"{{auth_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"auth",
+										"refresh"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjMiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJpYXQiOjE3MTA5NzI4MDAsImV4cCI6MTcxMDk3NjQwMH0.new_token_xyz\",\n  \"refreshToken\": \"refresh_new_token_abc123\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/auth/forgot-password",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\"\n}"
+								},
+								"url": {
+									"raw": "{{auth_url}}/auth/forgot-password",
+									"host": [
+										"{{auth_url}}"
+									],
+									"path": [
+										"auth",
+										"forgot-password"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Password reset email sent successfully\",\n  \"email\": \"user@example.com\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"reset_token_here\",\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/auth/reset-password",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"auth",
+								"reset-password"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"token\": \"reset_token_here\",\n  \"newPassword\": \"newpassword123\"\n}"
+								},
+								"url": {
+									"raw": "{{auth_url}}/auth/reset-password",
+									"host": [
+										"{{auth_url}}"
+									],
+									"path": [
+										"auth",
+										"reset-password"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Password reset successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{auth_url}}/auth/logout",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{auth_url}}/auth/logout",
+									"host": [
+										"{{auth_url}}"
+									],
+									"path": [
+										"auth",
+										"logout"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Logged out successfully\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Onboarding",
+			"item": [
+				{
+					"name": "Get Languages",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/languages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"languages"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/languages",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"languages"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"languages\": [\n    {\n      \"id\": \"javascript\",\n      \"name\": \"JavaScript\",\n      \"extension\": \"js\",\n      \"example\": \"const response = await fetch('https://api.byteinbox.com/v1/email', { method: 'POST', headers: { 'Authorization': 'Bearer YOUR_API_KEY', 'Content-Type': 'application/json' }, body: JSON.stringify({ to: 'user@example.com', from: 'sender@example.com', subject: 'Hello', html: '<p>Hello World!</p>' }) });\"\n    },\n    {\n      \"id\": \"python\",\n      \"name\": \"Python\",\n      \"extension\": \"py\",\n      \"example\": \"import requests\\n\\nresponse = requests.post('https://api.byteinbox.com/v1/email', headers={'Authorization': 'Bearer YOUR_API_KEY', 'Content-Type': 'application/json'}, json={'to': 'user@example.com', 'from': 'sender@example.com', 'subject': 'Hello', 'html': '<p>Hello World!</p>'})\"\n    },\n    {\n      \"id\": \"php\",\n      \"name\": \"PHP\",\n      \"extension\": \"php\",\n      \"example\": \"$response = file_get_contents('https://api.byteinbox.com/v1/email', false, stream_context_create(['http' => ['method' => 'POST', 'header' => 'Authorization: Bearer YOUR_API_KEY\\\\r\\\\nContent-Type: application/json', 'content' => json_encode(['to' => 'user@example.com', 'from' => 'sender@example.com', 'subject' => 'Hello', 'html' => '<p>Hello World!</p>'])]]));\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Steps",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/steps",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"steps"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/steps",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"steps"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"steps\": [\n    {\n      \"id\": \"step_1\",\n      \"title\": \"Create API Key\",\n      \"description\": \"Generate your first API key to start sending emails\",\n      \"isComplete\": true,\n      \"order\": 1\n    },\n    {\n      \"id\": \"step_2\",\n      \"title\": \"Verify Domain\",\n      \"description\": \"Add and verify your sending domain\",\n      \"isComplete\": false,\n      \"order\": 2\n    },\n    {\n      \"id\": \"step_3\",\n      \"title\": \"Send Test Email\",\n      \"description\": \"Send your first email using our API\",\n      \"isComplete\": false,\n      \"order\": 3\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Generate API Key",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api-keys",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api-keys"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api-keys",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api-keys"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"4\",\n  \"name\": \"Onboarding Key\",\n  \"key\": \"byteinbox_onboarding_abc123xyz\",\n  \"permission\": \"Full access\",\n  \"status\": \"active\",\n  \"createdAt\": \"2024-01-15T17:00:00Z\",\n  \"message\": \"API key generated successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Step",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"isComplete\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/steps/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"steps",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "step_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"isComplete\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/steps/:id",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"steps",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "step_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Step updated successfully\",\n  \"stepId\": \"step_2\",\n  \"isComplete\": true,\n  \"completedAt\": \"2024-01-15T17:15:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Send Test Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"apiKey\": \"your_api_key\",\n  \"language\": \"nodejs\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/test-email",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"test-email"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"apiKey\": \"your_api_key\",\n  \"language\": \"nodejs\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/test-email",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"test-email"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Test email sent successfully\",\n  \"emailId\": \"email_126\",\n  \"to\": \"test@example.com\",\n  \"language\": \"nodejs\",\n  \"sentAt\": \"2024-01-15T17:30:00Z\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"profile"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"123\",\n  \"email\": \"user@example.com\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"timezone\": \"UTC\",\n  \"language\": \"en\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-15T10:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"profile"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"123\",\n  \"email\": \"user@example.com\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"timezone\": \"UTC\",\n  \"language\": \"en\",\n  \"updatedAt\": \"2024-01-15T16:45:00Z\",\n  \"message\": \"Profile updated successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Email",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"new@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/profile/email",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"profile",
+								"email"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"new@example.com\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/profile/email",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"profile",
+										"email"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Email update verification sent\",\n  \"newEmail\": \"new@example.com\",\n  \"verificationRequired\": true\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Auth Providers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth-providers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth-providers"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/auth-providers",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth-providers"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"providers\": [\n    {\n      \"id\": \"google_123\",\n      \"provider\": \"google\",\n      \"email\": \"user@gmail.com\",\n      \"isPrimary\": true,\n      \"connectedAt\": \"2024-01-01T00:00:00Z\"\n    },\n    {\n      \"id\": \"github_456\",\n      \"provider\": \"github\",\n      \"email\": \"user@github.com\",\n      \"isPrimary\": false,\n      \"connectedAt\": \"2024-01-05T09:30:00Z\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Link Provider",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"provider\": \"google\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth-providers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth-providers"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"provider\": \"google\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/auth-providers",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth-providers"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Provider linked successfully\",\n  \"provider\": \"google\",\n  \"authUrl\": \"https://accounts.google.com/oauth/authorize?...\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get MFA",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/mfa",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"mfa"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/mfa",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"mfa"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"enabled\": false,\n  \"method\": null,\n  \"backupCodes\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Enable MFA",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"method\": \"totp\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/mfa",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"mfa"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"method\": \"totp\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/mfa",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"mfa"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"MFA setup initiated\",\n  \"qrCode\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...\",\n  \"secret\": \"JBSWY3DPEHPK3PXP\",\n  \"backupCodes\": [\n    \"12345678\",\n    \"87654321\",\n    \"11223344\"\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Teams",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"teams\": [\n    {\n      \"id\": \"team_123\",\n      \"name\": \"My Company\",\n      \"role\": \"owner\",\n      \"memberCount\": 5,\n      \"createdAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/account",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"account"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/account",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"account"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Account deletion initiated. You will receive a confirmation email.\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "API Keys",
+			"item": [
+				{
+					"name": "Get API Keys",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api-keys?permission=all&status=all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api-keys"
+							],
+							"query": [
+								{
+									"key": "permission",
+									"value": "all"
+								},
+								{
+									"key": "status",
+									"value": "all"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api-keys?permission=all&status=all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api-keys"
+									],
+									"query": [
+										{
+											"key": "permission",
+											"value": "all"
+										},
+										{
+											"key": "status",
+											"value": "all"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"apiKeys\": [\n    {\n      \"id\": \"1\",\n      \"name\": \"Production Key\",\n      \"key\": \"byteinbox_live_abc123xyz789\",\n      \"permission\": \"Full access\",\n      \"status\": \"active\",\n      \"domain\": \"example.com\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"lastUsed\": \"2024-01-15T14:30:00Z\"\n    },\n    {\n      \"id\": \"2\",\n      \"name\": \"Development Key\",\n      \"key\": \"byteinbox_dev_def456uvw012\",\n      \"permission\": \"Send only\",\n      \"status\": \"active\",\n      \"domain\": \"dev.example.com\",\n      \"createdAt\": \"2024-01-10T09:15:00Z\",\n      \"lastUsed\": \"2024-01-14T16:45:00Z\"\n    }\n  ],\n  \"total\": 2\n}"
+						}
+					]
+				},
+				{
+					"name": "Create API Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Production Key\",\n  \"permission\": \"Full access\",\n  \"domain\": \"example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api-keys",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api-keys"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Production Key\",\n  \"permission\": \"Full access\",\n  \"domain\": \"example.com\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api-keys",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api-keys"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"3\",\n  \"name\": \"New Production Key\",\n  \"key\": \"byteinbox_live_ghi789rst345\",\n  \"permission\": \"Full access\",\n  \"status\": \"active\",\n  \"domain\": \"newdomain.com\",\n  \"createdAt\": \"2024-01-15T15:00:00Z\",\n  \"message\": \"API key created successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Revoke API Key",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api-keys/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api-keys",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api-keys/:id",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api-keys",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"API key revoked successfully\",\n  \"id\": \"1\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Domains",
+			"item": [
+				{
+					"name": "Get Domains",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{domains_url}}/domains",
+							"host": [
+								"{{domains_url}}"
+							],
+							"path": [
+								"domains"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{domains_url}}/domains",
+									"host": [
+										"{{domains_url}}"
+									],
+									"path": [
+										"domains"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"domains\": [\n    {\n      \"id\": \"example.com\",\n      \"name\": \"example.com\",\n      \"status\": \"verified\",\n      \"region\": \"us-east-1\",\n      \"dnsRecords\": {\n        \"dkim\": {\n          \"name\": \"byteinbox._domainkey\",\n          \"type\": \"TXT\",\n          \"value\": \"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCrLHiExVd55zd/IQ/J/mRwSRMAocV/hMB3jXwaHH36d9NaVynQFYV8NaWi69c1veUtRzGt7yAioXqLj7Z4TeEUoOLgrKsn8YnckGs9i3B3tVFB+Ch/4mPhXWiNfNdynHWBcPcbJ8kjEQ2U8y78dHZj1YeRXXVvWob2OaKynO8/lQIDAQAB\",\n          \"verified\": true,\n          \"status\": \"verified\"\n        },\n        \"spf\": {\n          \"name\": \"send\",\n          \"type\": \"TXT\",\n          \"value\": \"v=spf1 include:amazonses.com ~all\",\n          \"verified\": true,\n          \"status\": \"verified\"\n        },\n        \"dmarc\": {\n          \"name\": \"_dmarc\",\n          \"type\": \"TXT\",\n          \"value\": \"v=DMARC1; p=quarantine; rua=mailto:dmarc@byteinbox.com\",\n          \"verified\": true,\n          \"status\": \"verified\"\n        },\n        \"mx\": {\n          \"name\": \"send\",\n          \"type\": \"MX\",\n          \"value\": \"10 feedback-smtp.us-east-1.amazonses.com\",\n          \"verified\": true,\n          \"status\": \"verified\"\n        },\n        \"tracking\": {\n          \"name\": \"track\",\n          \"type\": \"CNAME\",\n          \"value\": \"track.byteinbox.com\",\n          \"verified\": true,\n          \"status\": \"verified\"\n        }\n      },\n      \"clickTracking\": true,\n      \"openTracking\": true,\n      \"tlsMode\": \"enforced\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"total\": 1\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Domain",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{domains_url}}/domains/:id",
+							"host": [
+								"{{domains_url}}"
+							],
+							"path": [
+								"domains",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "example.com"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{domains_url}}/domains/:id",
+									"host": [
+										"{{domains_url}}"
+									],
+									"path": [
+										"domains",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "example.com"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"example.com\",\n  \"name\": \"example.com\",\n  \"status\": \"verified\",\n  \"region\": \"us-east-1\",\n  \"dnsRecords\": {\n    \"dkim\": {\n      \"name\": \"byteinbox._domainkey\",\n      \"type\": \"TXT\",\n      \"value\": \"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCrLHiExVd55zd/IQ/J/mRwSRMAocV/hMB3jXwaHH36d9NaVynQFYV8NaWi69c1veUtRzGt7yAioXqLj7Z4TeEUoOLgrKsn8YnckGs9i3B3tVFB+Ch/4mPhXWiNfNdynHWBcPcbJ8kjEQ2U8y78dHZj1YeRXXVvWob2OaKynO8/lQIDAQAB\",\n      \"verified\": true,\n      \"status\": \"verified\"\n    },\n    \"spf\": {\n      \"name\": \"send\",\n      \"type\": \"TXT\",\n      \"value\": \"v=spf1 include:amazonses.com ~all\",\n      \"verified\": true,\n      \"status\": \"verified\"\n    },\n    \"dmarc\": {\n      \"name\": \"_dmarc\",\n      \"type\": \"TXT\",\n      \"value\": \"v=DMARC1; p=quarantine; rua=mailto:dmarc@byteinbox.com\",\n      \"verified\": true,\n      \"status\": \"verified\"\n    },\n    \"mx\": {\n      \"name\": \"send\",\n      \"type\": \"MX\",\n      \"value\": \"10 feedback-smtp.us-east-1.amazonses.com\",\n      \"verified\": true,\n      \"status\": \"verified\"\n    },\n    \"tracking\": {\n      \"name\": \"track\",\n      \"type\": \"CNAME\",\n      \"value\": \"track.byteinbox.com\",\n      \"verified\": true,\n      \"status\": \"verified\"\n    }\n  },\n  \"clickTracking\": true,\n  \"openTracking\": true,\n  \"tlsMode\": \"enforced\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Add Domain",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"example.com\",\n  \"region\": \"us-east-1\"\n}"
+						},
+						"url": {
+							"raw": "{{domains_url}}/domains",
+							"host": [
+								"{{domains_url}}"
+							],
+							"path": [
+								"domains"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"example.com\",\n  \"region\": \"us-east-1\"\n}"
+								},
+								"url": {
+									"raw": "{{domains_url}}/domains",
+									"host": [
+										"{{domains_url}}"
+									],
+									"path": [
+										"domains"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"newdomain.com\",\n  \"name\": \"newdomain.com\",\n  \"status\": \"pending_verification\",\n  \"region\": \"us-east-1\",\n  \"dnsRecords\": {\n    \"dkim\": {\n      \"name\": \"byteinbox._domainkey\",\n      \"type\": \"TXT\",\n      \"value\": \"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCrLHiExVd55zd/IQ/J/mRwSRMAocV/hMB3jXwaHH36d9NaVynQFYV8NaWi69c1veUtRzGt7yAioXqLj7Z4TeEUoOLgrKsn8YnckGs9i3B3tVFB+Ch/4mPhXWiNfNdynHWBcPcbJ8kjEQ2U8y78dHZj1YeRXXVvWob2OaKynO8/lQIDAQAB\",\n      \"verified\": false,\n      \"status\": \"pending\"\n    },\n    \"spf\": {\n      \"name\": \"send\",\n      \"type\": \"TXT\",\n      \"value\": \"v=spf1 include:amazonses.com ~all\",\n      \"verified\": false,\n      \"status\": \"pending\"\n    },\n    \"dmarc\": {\n      \"name\": \"_dmarc\",\n      \"type\": \"TXT\",\n      \"value\": \"v=DMARC1; p=quarantine; rua=mailto:dmarc@byteinbox.com\",\n      \"verified\": false,\n      \"status\": \"pending\"\n    },\n    \"mx\": {\n      \"name\": \"send\",\n      \"type\": \"MX\",\n      \"value\": \"10 feedback-smtp.us-east-1.amazonses.com\",\n      \"verified\": false,\n      \"status\": \"pending\"\n    },\n    \"tracking\": {\n      \"name\": \"track\",\n      \"type\": \"CNAME\",\n      \"value\": \"track.byteinbox.com\",\n      \"verified\": false,\n      \"status\": \"pending\"\n    }\n  },\n  \"message\": \"Domain added successfully. Please verify DNS records.\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Regions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{domains_url}}/regions",
+							"host": [
+								"{{domains_url}}"
+							],
+							"path": [
+								"regions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{domains_url}}/regions",
+									"host": [
+										"{{domains_url}}"
+									],
+									"path": [
+										"regions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"regions\": [\n    {\n      \"id\": \"us-east-1\",\n      \"name\": \"US East (N. Virginia)\",\n      \"available\": true\n    },\n    {\n      \"id\": \"us-west-2\",\n      \"name\": \"US West (Oregon)\",\n      \"available\": true\n    },\n    {\n      \"id\": \"eu-west-1\",\n      \"name\": \"Europe (Ireland)\",\n      \"available\": true\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Config",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"clickTracking\": true,\n  \"openTracking\": true,\n  \"tlsMode\": \"enforced\"\n}"
+						},
+						"url": {
+							"raw": "{{domains_url}}/domains/:id/configuration",
+							"host": [
+								"{{domains_url}}"
+							],
+							"path": [
+								"domains",
+								":id",
+								"configuration"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "example.com"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"clickTracking\": true,\n  \"openTracking\": true,\n  \"tlsMode\": \"enforced\"\n}"
+								},
+								"url": {
+									"raw": "{{domains_url}}/domains/:id/configuration",
+									"host": [
+										"{{domains_url}}"
+									],
+									"path": [
+										"domains",
+										":id",
+										"configuration"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "example.com"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Domain configuration updated successfully\",\n  \"domain\": \"example.com\",\n  \"config\": {\n    \"clickTracking\": true,\n    \"openTracking\": true,\n    \"tlsMode\": \"enforced\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Restart Domain",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{domains_url}}/domains/:id/restart",
+							"host": [
+								"{{domains_url}}"
+							],
+							"path": [
+								"domains",
+								":id",
+								"restart"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "example.com"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{domains_url}}/domains/:id/restart",
+									"host": [
+										"{{domains_url}}"
+									],
+									"path": [
+										"domains",
+										":id",
+										"restart"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "example.com"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Domain verification restarted\",\n  \"domain\": \"example.com\",\n  \"status\": \"pending_verification\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Emails",
+			"item": [
+				{
+					"name": "Get Emails",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{emails_url}}/emails?timeRange=3d&status=all",
+							"host": [
+								"{{emails_url}}"
+							],
+							"path": [
+								"emails"
+							],
+							"query": [
+								{
+									"key": "timeRange",
+									"value": "3d"
+								},
+								{
+									"key": "status",
+									"value": "all"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{emails_url}}/emails?timeRange=3d&status=all",
+									"host": [
+										"{{emails_url}}"
+									],
+									"path": [
+										"emails"
+									],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "3d"
+										},
+										{
+											"key": "status",
+											"value": "all"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"emails\": [\n    {\n      \"id\": \"email_123\",\n      \"to\": \"recipient@example.com\",\n      \"from\": \"sender@example.com\",\n      \"subject\": \"Welcome to ByteInbox\",\n      \"status\": \"delivered\",\n      \"sentAt\": \"2024-01-15T10:30:00Z\",\n      \"deliveredAt\": \"2024-01-15T10:31:00Z\",\n      \"opened\": true,\n      \"clicked\": false,\n      \"apiKey\": \"Production Key\"\n    },\n    {\n      \"id\": \"email_124\",\n      \"to\": \"user@example.com\",\n      \"from\": \"noreply@example.com\",\n      \"subject\": \"Password Reset\",\n      \"status\": \"delivered\",\n      \"sentAt\": \"2024-01-15T09:15:00Z\",\n      \"deliveredAt\": \"2024-01-15T09:16:00Z\",\n      \"opened\": false,\n      \"clicked\": false,\n      \"apiKey\": \"Development Key\"\n    }\n  ],\n  \"total\": 2,\n  \"timeRange\": \"3d\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Email",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{emails_url}}/emails/:id",
+							"host": [
+								"{{emails_url}}"
+							],
+							"path": [
+								"emails",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "email_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{emails_url}}/emails/:id",
+									"host": [
+										"{{emails_url}}"
+									],
+									"path": [
+										"emails",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "email_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"email_123\",\n  \"to\": \"recipient@example.com\",\n  \"from\": \"sender@example.com\",\n  \"subject\": \"Welcome to ByteInbox\",\n  \"html\": \"<h1>Welcome!</h1><p>Thank you for joining ByteInbox.</p>\",\n  \"status\": \"delivered\",\n  \"sentAt\": \"2024-01-15T10:30:00Z\",\n  \"deliveredAt\": \"2024-01-15T10:31:00Z\",\n  \"openedAt\": \"2024-01-15T10:35:00Z\",\n  \"opened\": true,\n  \"clicked\": false,\n  \"apiKey\": \"Production Key\",\n  \"events\": [\n    {\n      \"type\": \"sent\",\n      \"timestamp\": \"2024-01-15T10:30:00Z\"\n    },\n    {\n      \"type\": \"delivered\",\n      \"timestamp\": \"2024-01-15T10:31:00Z\"\n    },\n    {\n      \"type\": \"opened\",\n      \"timestamp\": \"2024-01-15T10:35:00Z\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Send Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"from\": \"sender@example.com\",\n  \"to\": \"recipient@example.com\",\n  \"subject\": \"Hello\",\n  \"html\": \"<p>Email content</p>\"\n}"
+						},
+						"url": {
+							"raw": "{{emails_url}}/v1/email",
+							"host": [
+								"{{emails_url}}"
+							],
+							"path": [
+								"v1",
+								"email"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"from\": \"sender@example.com\",\n  \"to\": \"recipient@example.com\",\n  \"subject\": \"Hello\",\n  \"html\": \"<p>Email content</p>\"\n}"
+								},
+								"url": {
+									"raw": "{{emails_url}}/v1/email",
+									"host": [
+										"{{emails_url}}"
+									],
+									"path": [
+										"v1",
+										"email"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"email_125\",\n  \"message\": \"Email sent successfully\",\n  \"to\": \"recipient@example.com\",\n  \"from\": \"sender@example.com\",\n  \"subject\": \"Hello\",\n  \"status\": \"queued\",\n  \"sentAt\": \"2024-01-15T15:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Statuses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{emails_url}}/email-statuses",
+							"host": [
+								"{{emails_url}}"
+							],
+							"path": [
+								"email-statuses"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{emails_url}}/email-statuses",
+									"host": [
+										"{{emails_url}}"
+									],
+									"path": [
+										"email-statuses"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"statuses\": [\n    {\n      \"id\": \"queued\",\n      \"name\": \"Queued\",\n      \"description\": \"Email is queued for sending\"\n    },\n    {\n      \"id\": \"sent\",\n      \"name\": \"Sent\",\n      \"description\": \"Email has been sent\"\n    },\n    {\n      \"id\": \"delivered\",\n      \"name\": \"Delivered\",\n      \"description\": \"Email has been delivered\"\n    },\n    {\n      \"id\": \"opened\",\n      \"name\": \"Opened\",\n      \"description\": \"Email has been opened\"\n    },\n    {\n      \"id\": \"clicked\",\n      \"name\": \"Clicked\",\n      \"description\": \"Email link has been clicked\"\n    },\n    {\n      \"id\": \"bounced\",\n      \"name\": \"Bounced\",\n      \"description\": \"Email bounced\"\n    },\n    {\n      \"id\": \"complained\",\n      \"name\": \"Complained\",\n      \"description\": \"Email marked as spam\"\n    }\n  ]\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Broadcasts",
+			"item": [
+				{
+					"name": "Get Broadcasts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts?status=all&audience=all",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "all"
+								},
+								{
+									"key": "audience",
+									"value": "all"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts?status=all&audience=all",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "all"
+										},
+										{
+											"key": "audience",
+											"value": "all"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"broadcasts\": [\n    {\n      \"id\": \"broadcast_123\",\n      \"name\": \"Monthly Newsletter\",\n      \"subject\": \"January 2024 Updates\",\n      \"status\": \"sent\",\n      \"audience\": \"all\",\n      \"sentAt\": \"2024-01-01T09:00:00Z\",\n      \"recipients\": 1250,\n      \"opened\": 890,\n      \"clicked\": 156,\n      \"createdAt\": \"2023-12-28T14:30:00Z\"\n    },\n    {\n      \"id\": \"broadcast_124\",\n      \"name\": \"Product Launch\",\n      \"subject\": \"New Feature Release\",\n      \"status\": \"draft\",\n      \"audience\": \"premium\",\n      \"recipients\": 0,\n      \"opened\": 0,\n      \"clicked\": 0,\n      \"createdAt\": \"2024-01-10T11:15:00Z\"\n    }\n  ],\n  \"total\": 2\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Broadcast",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts/:id",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "broadcast_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts/:id",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "broadcast_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"broadcast_123\",\n  \"name\": \"Monthly Newsletter\",\n  \"subject\": \"January 2024 Updates\",\n  \"htmlContent\": \"<h1>January Updates</h1><p>Here are the latest updates...</p>\",\n  \"status\": \"sent\",\n  \"audience\": \"all\",\n  \"sentAt\": \"2024-01-01T09:00:00Z\",\n  \"recipients\": 1250,\n  \"opened\": 890,\n  \"clicked\": 156,\n  \"createdAt\": \"2023-12-28T14:30:00Z\",\n  \"updatedAt\": \"2024-01-01T09:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Newsletter\",\n  \"subject\": \"Monthly Update\",\n  \"htmlContent\": \"<p>Content</p>\"\n}"
+						},
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Newsletter\",\n  \"subject\": \"Monthly Update\",\n  \"htmlContent\": \"<p>Content</p>\"\n}"
+								},
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"broadcast_125\",\n  \"name\": \"New Newsletter\",\n  \"subject\": \"Monthly Update\",\n  \"htmlContent\": \"<p>Content</p>\",\n  \"status\": \"draft\",\n  \"audience\": \"all\",\n  \"recipients\": 0,\n  \"opened\": 0,\n  \"clicked\": 0,\n  \"createdAt\": \"2024-01-15T15:00:00Z\",\n  \"message\": \"Broadcast created successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated\",\n  \"subject\": \"Updated Subject\"\n}"
+						},
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts/:id",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "broadcast_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated\",\n  \"subject\": \"Updated Subject\"\n}"
+								},
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts/:id",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "broadcast_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"broadcast_125\",\n  \"name\": \"Updated Newsletter\",\n  \"subject\": \"Updated Subject\",\n  \"htmlContent\": \"<p>Updated content</p>\",\n  \"status\": \"draft\",\n  \"updatedAt\": \"2024-01-15T15:30:00Z\",\n  \"message\": \"Broadcast updated successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Auto-save",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"broadcast_id\",\n  \"content\": \"<p>Draft</p>\"\n}"
+						},
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts/autosave",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts",
+								"autosave"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"id\": \"broadcast_id\",\n  \"content\": \"<p>Draft</p>\"\n}"
+								},
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts/autosave",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts",
+										"autosave"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Draft saved successfully\",\n  \"id\": \"broadcast_125\",\n  \"savedAt\": \"2024-01-15T15:45:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Send Test",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"broadcastId\": \"broadcast_id\",\n  \"testEmail\": \"test@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts/test-send",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts",
+								"test-send"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"broadcastId\": \"broadcast_id\",\n  \"testEmail\": \"test@example.com\"\n}"
+								},
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts/test-send",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts",
+										"test-send"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Test email sent successfully\",\n  \"broadcastId\": \"broadcast_125\",\n  \"testEmail\": \"test@example.com\",\n  \"sentAt\": \"2024-01-15T15:50:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Send",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts/:id/send",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts",
+								":id",
+								"send"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "broadcast_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts/:id/send",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts",
+										":id",
+										"send"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "broadcast_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Broadcast sent successfully\",\n  \"id\": \"broadcast_125\",\n  \"status\": \"sent\",\n  \"recipients\": 1250,\n  \"sentAt\": \"2024-01-15T16:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Drafts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts/drafts",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts",
+								"drafts"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts/drafts",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts",
+										"drafts"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"drafts\": [\n    {\n      \"id\": \"broadcast_126\",\n      \"name\": \"Draft Newsletter\",\n      \"subject\": \"Weekly Update Draft\",\n      \"status\": \"draft\",\n      \"content\": \"<p>Draft content...</p>\",\n      \"lastSavedAt\": \"2024-01-15T14:30:00Z\",\n      \"createdAt\": \"2024-01-14T10:00:00Z\"\n    },\n    {\n      \"id\": \"broadcast_127\",\n      \"name\": \"Another Draft\",\n      \"subject\": \"Product Announcement\",\n      \"status\": \"draft\",\n      \"content\": \"<p>More draft content...</p>\",\n      \"lastSavedAt\": \"2024-01-15T16:20:00Z\",\n      \"createdAt\": \"2024-01-15T09:15:00Z\"\n    }\n  ],\n  \"total\": 2\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Broadcast",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{broadcasts_url}}/broadcasts/:id",
+							"host": [
+								"{{broadcasts_url}}"
+							],
+							"path": [
+								"broadcasts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "broadcast_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{broadcasts_url}}/broadcasts/:id",
+									"host": [
+										"{{broadcasts_url}}"
+									],
+									"path": [
+										"broadcasts",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "broadcast_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Broadcast deleted successfully\",\n  \"id\": \"broadcast_126\",\n  \"deletedAt\": \"2024-01-15T17:00:00Z\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Templates",
+			"item": [
+				{
+					"name": "Get Templates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{templates_url}}/templates?category=all&search=",
+							"host": [
+								"{{templates_url}}"
+							],
+							"path": [
+								"templates"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "all"
+								},
+								{
+									"key": "search",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{templates_url}}/templates?category=all&search=",
+									"host": [
+										"{{templates_url}}"
+									],
+									"path": [
+										"templates"
+									],
+									"query": [
+										{
+											"key": "category",
+											"value": "all"
+										},
+										{
+											"key": "search",
+											"value": ""
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"templates\": [\n    {\n      \"id\": \"template_123\",\n      \"name\": \"Welcome Email\",\n      \"subject\": \"Welcome to ByteInbox\",\n      \"category\": \"transactional\",\n      \"html\": \"<h1>Welcome!</h1><p>Thank you for joining us.</p>\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-10T12:00:00Z\",\n      \"description\": \"Welcome Email - Professional email template\",\n      \"lastModified\": \"2 days ago\",\n      \"status\": \"active\",\n      \"opens\": 89,\n      \"clicks\": 34\n    },\n    {\n      \"id\": \"template_124\",\n      \"name\": \"Password Reset\",\n      \"subject\": \"Reset Your Password\",\n      \"category\": \"transactional\",\n      \"html\": \"<h1>Password Reset</h1><p>Click here to reset your password.</p>\",\n      \"createdAt\": \"2024-01-05T09:30:00Z\",\n      \"updatedAt\": \"2024-01-05T09:30:00Z\",\n      \"description\": \"Password Reset - Professional email template\",\n      \"lastModified\": \"2 days ago\",\n      \"status\": \"active\",\n      \"opens\": 89,\n      \"clicks\": 34\n    }\n  ],\n  \"total\": 2\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Template",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{templates_url}}/templates/:id",
+							"host": [
+								"{{templates_url}}"
+							],
+							"path": [
+								"templates",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "template_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{templates_url}}/templates/:id",
+									"host": [
+										"{{templates_url}}"
+									],
+									"path": [
+										"templates",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "template_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"template_123\",\n  \"name\": \"Welcome Email\",\n  \"subject\": \"Welcome to ByteInbox\",\n  \"category\": \"transactional\",\n  \"html\": \"<h1>Welcome!</h1><p>Thank you for joining ByteInbox. We're excited to have you on board.</p><p>Best regards,<br>The ByteInbox Team</p>\",\n  \"variables\": [\n    \"name\",\n    \"email\"\n  ],\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-10T12:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Template",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Welcome Email\",\n  \"subject\": \"Welcome\",\n  \"html\": \"<p>Welcome</p>\",\n  \"category\": \"transactional\"\n}"
+						},
+						"url": {
+							"raw": "{{templates_url}}/templates",
+							"host": [
+								"{{templates_url}}"
+							],
+							"path": [
+								"templates"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Welcome Email\",\n  \"subject\": \"Welcome\",\n  \"html\": \"<p>Welcome</p>\",\n  \"category\": \"transactional\"\n}"
+								},
+								"url": {
+									"raw": "{{templates_url}}/templates",
+									"host": [
+										"{{templates_url}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"template_125\",\n  \"name\": \"New Welcome Email\",\n  \"subject\": \"Welcome\",\n  \"category\": \"transactional\",\n  \"html\": \"<p>Welcome</p>\",\n  \"createdAt\": \"2024-01-15T16:00:00Z\",\n  \"message\": \"Template created successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Template",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Template\",\n  \"html\": \"<p>Updated</p>\"\n}"
+						},
+						"url": {
+							"raw": "{{templates_url}}/templates/:id",
+							"host": [
+								"{{templates_url}}"
+							],
+							"path": [
+								"templates",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "template_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Template\",\n  \"html\": \"<p>Updated</p>\"\n}"
+								},
+								"url": {
+									"raw": "{{templates_url}}/templates/:id",
+									"host": [
+										"{{templates_url}}"
+									],
+									"path": [
+										"templates",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "template_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"template_125\",\n  \"name\": \"Updated Template\",\n  \"subject\": \"Updated Welcome\",\n  \"html\": \"<p>Updated content</p>\",\n  \"updatedAt\": \"2024-01-15T16:15:00Z\",\n  \"message\": \"Template updated successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Template",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{templates_url}}/templates/:id",
+							"host": [
+								"{{templates_url}}"
+							],
+							"path": [
+								"templates",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "template_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{templates_url}}/templates/:id",
+									"host": [
+										"{{templates_url}}"
+									],
+									"path": [
+										"templates",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "template_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Template deleted successfully\",\n  \"id\": \"template_125\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "Get Webhooks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/webhooks?status=all&eventType=all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"webhooks"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "all"
+								},
+								{
+									"key": "eventType",
+									"value": "all"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/webhooks?status=all&eventType=all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"webhooks"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "all"
+										},
+										{
+											"key": "eventType",
+											"value": "all"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"webhooks\": [\n    {\n      \"id\": \"webhook_123\",\n      \"url\": \"https://example.com/webhook\",\n      \"events\": [\n        \"email.delivered\",\n        \"email.opened\",\n        \"email.clicked\"\n      ],\n      \"status\": \"enabled\",\n      \"secret\": \"webhook_secret_abc123\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"lastTriggered\": \"2024-01-15T14:30:00Z\"\n    }\n  ],\n  \"total\": 1\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://example.com/webhook\",\n  \"events\": [\"email.delivered\", \"email.opened\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/webhooks",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"webhooks"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"url\": \"https://example.com/webhook\",\n  \"events\": [\"email.delivered\", \"email.opened\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/webhooks",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"webhooks"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"webhook_124\",\n  \"url\": \"https://example.com/webhook\",\n  \"events\": [\n    \"email.delivered\",\n    \"email.opened\"\n  ],\n  \"status\": \"enabled\",\n  \"secret\": \"webhook_secret_xyz789\",\n  \"createdAt\": \"2024-01-15T16:30:00Z\",\n  \"message\": \"Webhook created successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Webhook",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/webhooks/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"webhooks",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "webhook_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/webhooks/:id",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"webhooks",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "webhook_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Webhook deleted successfully\",\n  \"id\": \"webhook_124\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Toggle Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"enabled\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/webhooks/:id/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"webhooks",
+								":id",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "webhook_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"enabled\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/webhooks/:id/status",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"webhooks",
+										":id",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "webhook_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Webhook status updated successfully\",\n  \"id\": \"webhook_124\",\n  \"status\": \"enabled\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/webhook-events",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"webhook-events"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/webhook-events",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"webhook-events"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"events\": [\n    {\n      \"id\": \"email.sent\",\n      \"name\": \"Email Sent\",\n      \"description\": \"Triggered when an email is sent\"\n    },\n    {\n      \"id\": \"email.delivered\",\n      \"name\": \"Email Delivered\",\n      \"description\": \"Triggered when an email is delivered\"\n    },\n    {\n      \"id\": \"email.opened\",\n      \"name\": \"Email Opened\",\n      \"description\": \"Triggered when an email is opened\"\n    },\n    {\n      \"id\": \"email.clicked\",\n      \"name\": \"Email Clicked\",\n      \"description\": \"Triggered when a link in an email is clicked\"\n    },\n    {\n      \"id\": \"email.bounced\",\n      \"name\": \"Email Bounced\",\n      \"description\": \"Triggered when an email bounces\"\n    }\n  ]\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Audiences",
+			"item": [
+				{
+					"name": "Get Audience",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{audiences_url}}/audiences/:id",
+							"host": [
+								"{{audiences_url}}"
+							],
+							"path": [
+								"audiences",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "audience_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{audiences_url}}/audiences/:id",
+									"host": [
+										"{{audiences_url}}"
+									],
+									"path": [
+										"audiences",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "audience_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"audience_123\",\n  \"name\": \"All Subscribers\",\n  \"description\": \"All email subscribers\",\n  \"contactCount\": 1250,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-15T10:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Contacts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{audiences_url}}/audiences/:id/contacts?status=all&search=",
+							"host": [
+								"{{audiences_url}}"
+							],
+							"path": [
+								"audiences",
+								":id",
+								"contacts"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "all"
+								},
+								{
+									"key": "search",
+									"value": ""
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "audience_id"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{audiences_url}}/audiences/:id/contacts?status=all&search=",
+									"host": [
+										"{{audiences_url}}"
+									],
+									"path": [
+										"audiences",
+										":id",
+										"contacts"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "all"
+										},
+										{
+											"key": "search",
+											"value": ""
+										}
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "audience_id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"contacts\": [\n    {\n      \"id\": \"contact_123\",\n      \"email\": \"user1@example.com\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"status\": \"subscribed\",\n      \"subscribedAt\": \"2024-01-01T00:00:00Z\",\n      \"lastActivity\": \"2024-01-15T14:30:00Z\"\n    },\n    {\n      \"id\": \"contact_124\",\n      \"email\": \"user2@example.com\",\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Smith\",\n      \"status\": \"subscribed\",\n      \"subscribedAt\": \"2024-01-05T09:15:00Z\",\n      \"lastActivity\": \"2024-01-14T16:45:00Z\"\n    }\n  ],\n  \"total\": 2,\n  \"audienceId\": \"audience_123\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Statuses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{audiences_url}}/audience-statuses",
+							"host": [
+								"{{audiences_url}}"
+							],
+							"path": [
+								"audience-statuses"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{audiences_url}}/audience-statuses",
+									"host": [
+										"{{audiences_url}}"
+									],
+									"path": [
+										"audience-statuses"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"statuses\": [\n    {\n      \"id\": \"subscribed\",\n      \"name\": \"Subscribed\",\n      \"description\": \"Active subscriber\"\n    },\n    {\n      \"id\": \"unsubscribed\",\n      \"name\": \"Unsubscribed\",\n      \"description\": \"Unsubscribed from emails\"\n    },\n    {\n      \"id\": \"bounced\",\n      \"name\": \"Bounced\",\n      \"description\": \"Email address bounced\"\n    },\n    {\n      \"id\": \"complained\",\n      \"name\": \"Complained\",\n      \"description\": \"Marked emails as spam\"\n    }\n  ]\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Metrics",
+			"item": [
+				{
+					"name": "Get Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{metrics_url}}/metrics?timeRange=2weeks",
+							"host": [
+								"{{metrics_url}}"
+							],
+							"path": [
+								"metrics"
+							],
+							"query": [
+								{
+									"key": "timeRange",
+									"value": "2weeks"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{metrics_url}}/metrics?timeRange=2weeks",
+									"host": [
+										"{{metrics_url}}"
+									],
+									"path": [
+										"metrics"
+									],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "2weeks"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"timeRange\": \"2weeks\",\n  \"summary\": {\n    \"emailsSent\": 12500,\n    \"emailsDelivered\": 11875,\n    \"emailsOpened\": 7125,\n    \"emailsClicked\": 1187,\n    \"bounceRate\": 0.05,\n    \"openRate\": 0.6,\n    \"clickRate\": 0.1\n  },\n  \"daily\": [\n    {\n      \"date\": \"2024-01-01\",\n      \"sent\": 500,\n      \"delivered\": 475,\n      \"opened\": 285,\n      \"clicked\": 48\n    },\n    {\n      \"date\": \"2024-01-02\",\n      \"sent\": 750,\n      \"delivered\": 712,\n      \"opened\": 427,\n      \"clicked\": 71\n    }\n  ],\n  \"topDomains\": [\n    {\n      \"domain\": \"example.com\",\n      \"sent\": 5000,\n      \"delivered\": 4750,\n      \"openRate\": 0.62\n    }\n  ]\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Logs",
+			"item": [
+				{
+					"name": "Get Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/logs?status=All&timeRange=7days&userAgent=All&apiKey=All",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"logs"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "All",
+									"description": "Filter by status: All, Delivered, Failed, Bounced"
+								},
+								{
+									"key": "timeRange",
+									"value": "7days",
+									"description": "Time range: 3days, 7days, 30days"
+								},
+								{
+									"key": "userAgent",
+									"value": "All",
+									"description": "Filter by user agent: All, Desktop, Mobile, Tablet"
+								},
+								{
+									"key": "apiKey",
+									"value": "All",
+									"description": "Filter by API key: All, Production, Test"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/logs?status=All&timeRange=7days&userAgent=All&apiKey=All",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"logs"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "All"
+										},
+										{
+											"key": "timeRange",
+											"value": "7days"
+										},
+										{
+											"key": "userAgent",
+											"value": "All"
+										},
+										{
+											"key": "apiKey",
+											"value": "All"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"id\": \"5f99bcff-fc1f-4925-9016-5a5ca55ce495\",\n    \"endpoint\": \"/emails\",\n    \"method\": \"POST\",\n    \"status\": \"200\",\n    \"timestamp\": \"2024-01-15T10:30:00Z\",\n    \"userAgent\": \"byteinbox-node:4.7.0-preview-topics.2\"\n  },\n  {\n    \"id\": \"4e88acef-eb2e-3814-8905-4b4fb9ca44c4\",\n    \"endpoint\": \"/emails\",\n    \"method\": \"POST\",\n    \"status\": \"200\",\n    \"timestamp\": \"2024-01-15T09:15:00Z\",\n    \"userAgent\": \"byteinbox-python:3.2.1\"\n  },\n  {\n    \"id\": \"3d77bcdf-da1d-2703-7894-3a3ea8b9bb33\",\n    \"endpoint\": \"/emails\",\n    \"method\": \"POST\",\n    \"status\": \"400\",\n    \"timestamp\": \"2024-01-15T08:45:00Z\",\n    \"userAgent\": \"byteinbox-ruby:2.5.0\"\n  },\n  {\n    \"id\": \"2c66abdde-ca0c-1602-6783-2a2d97a8aa22\",\n    \"endpoint\": \"/emails\",\n    \"method\": \"POST\",\n    \"status\": \"200\",\n    \"timestamp\": \"2024-01-15T07:20:00Z\",\n    \"userAgent\": \"byteinbox-node:4.7.0-preview-topics.2\"\n  },\n  {\n    \"id\": \"1b55a9ccd-b90b-0501-5672-1a1c86a7992a\",\n    \"endpoint\": \"/emails\",\n    \"method\": \"POST\",\n    \"status\": \"500\",\n    \"timestamp\": \"2024-01-15T06:10:00Z\",\n    \"userAgent\": \"byteinbox-go:1.8.3\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Get Log by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/logs/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"logs",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "5f99bcff-fc1f-4925-9016-5a5ca55ce495"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/logs/5f99bcff-fc1f-4925-9016-5a5ca55ce495",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"logs",
+										"5f99bcff-fc1f-4925-9016-5a5ca55ce495"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"5f99bcff-fc1f-4925-9016-5a5ca55ce495\",\n  \"endpoint\": \"/emails\",\n  \"method\": \"POST\",\n  \"status\": \"200\",\n  \"date\": \"2 days ago\",\n  \"exactDate\": \"August 21, 2025 - 07:03:14 PM\",\n  \"userAgent\": \"byteinbox-node:4.7.0-preview-topics.2\",\n  \"responseBody\": {\n    \"id\": \"5f99bcff-fc1f-4925-9016-5a5ca55ce495\"\n  },\n  \"requestBody\": {\n    \"bcc\": [],\n    \"cc\": [],\n    \"from\": \"onboarding@byteinbox.dev\",\n    \"replyTo\": [],\n    \"subject\": \"Hello World\",\n    \"to\": [\"ilouis4me@gmail.com\"],\n    \"html\": \"<p>Congrats on sending your <strong>first email</strong>!</p><hr /><p style=\\\"color:#898989;font-size:12px;\\\">2261 Market Street #5039 - San Francisco, CA 94114</p>\",\n    \"text\": \"Congrats on sending your first email!\"\n  }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Teams",
+			"item": [
+				{
+					"name": "Create Team",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"My Team\",\n  \"slug\": \"my-team\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"My Team\",\n  \"slug\": \"my-team\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/teams",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"team_123\",\n  \"name\": \"My Team\",\n  \"slug\": \"my-team\",\n  \"avatar\": null,\n  \"plan\": \"free\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T10:30:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Teams",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"id\": \"team_123\",\n    \"name\": \"My Team\",\n    \"slug\": \"my-team\",\n    \"avatar\": null,\n    \"plan\": \"free\",\n    \"role\": \"owner\",\n    \"createdAt\": \"2025-01-15T10:30:00Z\",\n    \"updatedAt\": \"2025-01-15T10:30:00Z\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Get Team by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "team_123"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams/team_123",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"team_123\",\n  \"name\": \"My Team\",\n  \"slug\": \"my-team\",\n  \"avatar\": null,\n  \"plan\": \"free\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T10:30:00Z\",\n  \"members\": [\n    {\n      \"id\": \"member_1\",\n      \"userId\": \"user_123\",\n      \"role\": \"owner\",\n      \"user\": {\n        \"id\": \"user_123\",\n        \"email\": \"owner@example.com\",\n        \"name\": \"John Doe\",\n        \"avatar\": null\n      },\n      \"createdAt\": \"2025-01-15T10:30:00Z\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Team",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Team Name\",\n  \"avatar\": \"https://example.com/avatar.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "team_123"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Team Name\",\n  \"avatar\": \"https://example.com/avatar.jpg\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/teams/team_123",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"team_123\",\n  \"name\": \"Updated Team Name\",\n  \"slug\": \"my-team\",\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"plan\": \"free\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T11:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Team",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "team_123"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams/team_123",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Team deleted successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Invite Team Member",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"newmember@example.com\",\n  \"role\": \"member\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/:id/invitations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":id",
+								"invitations"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "team_123"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"newmember@example.com\",\n  \"role\": \"member\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/teams/team_123/invitations",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123",
+										"invitations"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"invite_123\",\n  \"teamId\": \"team_123\",\n  \"email\": \"newmember@example.com\",\n  \"role\": \"member\",\n  \"status\": \"pending\",\n  \"token\": \"inv_token_abc123\",\n  \"expiresAt\": \"2025-01-22T10:30:00Z\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Team Invitations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams/:id/invitations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":id",
+								"invitations"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "team_123"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams/team_123/invitations",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123",
+										"invitations"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"id\": \"invite_123\",\n    \"teamId\": \"team_123\",\n    \"email\": \"newmember@example.com\",\n    \"role\": \"member\",\n    \"status\": \"pending\",\n    \"invitedBy\": \"user_123\",\n    \"expiresAt\": \"2025-01-22T10:30:00Z\",\n    \"createdAt\": \"2025-01-15T10:30:00Z\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Accept Invitation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"inv_token_abc123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/invitations/accept",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								"invitations",
+								"accept"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"token\": \"inv_token_abc123\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/teams/invitations/accept",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"invitations",
+										"accept"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Invitation accepted successfully\",\n  \"team\": {\n    \"id\": \"team_123\",\n    \"name\": \"My Team\",\n    \"slug\": \"my-team\",\n    \"role\": \"member\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Cancel Invitation",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams/:teamId/invitations/:invitationId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":teamId",
+								"invitations",
+								":invitationId"
+							],
+							"variable": [
+								{
+									"key": "teamId",
+									"value": "team_123"
+								},
+								{
+									"key": "invitationId",
+									"value": "invite_123"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams/team_123/invitations/invite_123",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123",
+										"invitations",
+										"invite_123"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Invitation cancelled successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Resend Invitation",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams/:teamId/invitations/:invitationId/resend",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":teamId",
+								"invitations",
+								":invitationId",
+								"resend"
+							],
+							"variable": [
+								{
+									"key": "teamId",
+									"value": "team_123"
+								},
+								{
+									"key": "invitationId",
+									"value": "invite_123"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams/team_123/invitations/invite_123/resend",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123",
+										"invitations",
+										"invite_123",
+										"resend"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"invite_123\",\n  \"teamId\": \"team_123\",\n  \"email\": \"newmember@example.com\",\n  \"role\": \"member\",\n  \"status\": \"pending\",\n  \"token\": \"inv_token_abc123\",\n  \"expiresAt\": \"2025-01-29T10:30:00Z\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-22T10:30:00Z\",\n  \"message\": \"Invitation resent successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Team Member Role",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/:teamId/members/:memberId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":teamId",
+								"members",
+								":memberId"
+							],
+							"variable": [
+								{
+									"key": "teamId",
+									"value": "team_123"
+								},
+								{
+									"key": "memberId",
+									"value": "member_456"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"role\": \"admin\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/teams/team_123/members/member_456",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123",
+										"members",
+										"member_456"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"id\": \"member_456\",\n  \"teamId\": \"team_123\",\n  \"userId\": \"user_456\",\n  \"role\": \"admin\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T11:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Remove Team Member",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teams/:teamId/members/:memberId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teams",
+								":teamId",
+								"members",
+								":memberId"
+							],
+							"variable": [
+								{
+									"key": "teamId",
+									"value": "team_123"
+								},
+								{
+									"key": "memberId",
+									"value": "member_456"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams/team_123/members/member_456",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"teams",
+										"team_123",
+										"members",
+										"member_456"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Team member removed successfully\"\n}"
+						}
+					]
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	}
+}

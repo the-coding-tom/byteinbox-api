@@ -10,7 +10,6 @@ import { PermissionRepository } from './permission.repository';
 import { ApiKeyRepository } from './api-key.repository';
 import { TeamApiKeyRepository } from './team-api-key.repository';
 import { BackupCodeRepository } from './backup-code.repository';
-import { LoginActivityRepository } from './login-activity.repository';
 // Import other repositories as they are created
 // import { CustomerRepository } from './customer.repository';
 // import { AccountRepository } from './account.repository';
@@ -29,7 +28,6 @@ import { LoginActivityRepository } from './login-activity.repository';
     ApiKeyRepository,
     TeamApiKeyRepository,
     BackupCodeRepository,
-    LoginActivityRepository,
     // CustomerRepository,
     // AccountRepository,
     // TransactionRepository,
@@ -58,7 +56,6 @@ import { LoginActivityRepository } from './login-activity.repository';
     ApiKeyRepository,
     TeamApiKeyRepository,
     BackupCodeRepository,
-    LoginActivityRepository,
     // CustomerRepository,
     // AccountRepository,
     // TransactionRepository,
