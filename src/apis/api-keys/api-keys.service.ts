@@ -12,8 +12,6 @@ export class ApiKeysService {
     private readonly apiKeysValidator: ApiKeysValidator,
   ) {}
 
-  // API KEY CRUD OPERATIONS
-
   async getApiKeys(query: GetApiKeysDto, headers: any, user: any) {
     try {
       // Validate and parse team ID from headers
@@ -29,7 +27,7 @@ export class ApiKeysService {
       // Get API keys with pagination
       const apiKeys = await this.teamApiKeyRepository.findByTeamIdWithPagination({
         teamId: validatedTeamId,
-        isActive: validatedData.status === 'ACTIVE' ? true : validatedData.status === 'INACTIVE' ? false : undefined,
+        status: validatedData.status,
         keyword: validatedData.search,
         offset: (page - 1) * limit,
         limit: limit
@@ -61,10 +59,9 @@ export class ApiKeysService {
       const newApiKey = await this.teamApiKeyRepository.create({
         key: apiKey,
         name: validatedData.name,
-        description: validatedData.description,
         teamId: validatedTeamId,
-        scopes: validatedData.scopes,
-        expiresAt: validatedData.expiresAt,
+        permission: validatedData.permission || 'read',
+        domain: validatedData.domain,
         createdBy: user.id
       });
       
@@ -141,32 +138,7 @@ export class ApiKeysService {
     }
   }
 
-  // API KEY TESTING
-
-  async testApiKey(headers: any) {
-    try {
-      // Validate API key header
-      const apiKey = this.validateApiKeyHeader(headers);
-      
-      // Validate API key and get details
-      const { apiKeyData } = await this.apiKeysValidator.validateTestApiKey(apiKey);
-      
-      return generateSuccessResponse({
-        statusCode: HttpStatus.OK,
-        message: 'API key is valid',
-        data: {
-          teamId: apiKeyData.teamId,
-          name: apiKeyData.name,
-          scopes: apiKeyData.scopes
-        }
-      });
-    } catch (error) {
-      return handleServiceError('Error testing API key', error);
-    }
-  }
-
   // UTILITY METHODS
-
   private validateAndParseTeamId(headers: any): number {
     const teamId = headers['x-team-id'];
     if (!teamId) {
@@ -188,15 +160,6 @@ export class ApiKeysService {
     }
     
     return parsedId;
-  }
-
-  private validateApiKeyHeader(headers: any): string {
-    const apiKey = headers['x-api-key'] || headers['authorization']?.replace('Bearer ', '');
-    if (!apiKey) {
-      throwError('API key is required', HttpStatus.UNAUTHORIZED, 'apiKeyRequired');
-    }
-    
-    return apiKey;
   }
 
   private generateApiKey(): string {

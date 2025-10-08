@@ -36,7 +36,6 @@ export class ApiKeysValidator {
       where: {
         teamId: teamId,
         userId: userId,
-        status: 'ACTIVE'
       }
     });
     if (!member) {
@@ -83,7 +82,6 @@ export class ApiKeysValidator {
       where: {
         teamId: teamId,
         userId: userId,
-        status: 'ACTIVE'
       }
     });
     if (!member) {
@@ -112,7 +110,6 @@ export class ApiKeysValidator {
       where: {
         teamId: teamId,
         userId: userId,
-        status: 'ACTIVE'
       }
     });
     if (!member) {
@@ -166,7 +163,6 @@ export class ApiKeysValidator {
       where: {
         teamId: teamId,
         userId: userId,
-        status: 'ACTIVE'
       }
     });
     if (!member) {
@@ -207,7 +203,6 @@ export class ApiKeysValidator {
       where: {
         teamId: teamId,
         userId: userId,
-        status: 'ACTIVE'
       }
     });
     if (!member) {

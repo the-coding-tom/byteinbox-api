@@ -1,4 +1,4 @@
-import { BlacklistType, BlacklistDuration } from '@prisma/client';
+import { BlacklistType } from '@prisma/client';
 import { BlacklistRepository } from '../repositories/blacklist.repository';
 import { RateLimitContext, RateLimitResult } from '../common/entities/rate-limit.entity';
 
@@ -32,25 +32,24 @@ export async function checkBlacklist(
 }
 
 /**
- * Check blacklists (IP, user account, device fingerprint, etc.)
+ * Check blacklists (IP, user account, domain, etc.)
+ * Note: USER_AGENT blacklist type removed from new schema
  */
 async function checkBlacklists(blacklistRepository: BlacklistRepository, context: RateLimitContext): Promise<RateLimitResult> {
   const checks = [
-    blacklistRepository.findBlacklist(BlacklistType.EMAIL, context.userId.toString()),
+    blacklistRepository.findBlacklist(BlacklistType.USER_ID, context.userId.toString()),
     blacklistRepository.findBlacklist(BlacklistType.IP_ADDRESS, context.ipAddress || ''),
-    blacklistRepository.findBlacklist(BlacklistType.USER_AGENT, context.userAgent || ''),
+    // USER_AGENT type no longer exists in schema
   ];
 
   const results = await Promise.all(checks);
-  const activeBlacklist = results.find(result => result && result.isActive);
+  const activeBlacklist = results.find(result => result !== null);
 
   if (activeBlacklist) {
     return {
       allowed: false,
-      isPermanentlyBlocked: activeBlacklist.duration === BlacklistDuration.PERMANENT,
-      nextAttemptWaitMinutes: activeBlacklist.expiresAt 
-        ? Math.ceil((activeBlacklist.expiresAt.getTime() - Date.now()) / (1000 * 60))
-        : 0,
+      isPermanentlyBlocked: true, // All blacklists are permanent in new schema
+      nextAttemptWaitMinutes: 0,
       remainingAttempts: 0,
     };
   }

@@ -1,6 +1,7 @@
-import { BlacklistType, BlacklistReason, BlacklistDuration } from '@prisma/client';
+import { BlacklistType } from '@prisma/client';
 
 // Admin Security DTOs
+// Note: BlacklistReason and BlacklistDuration enums removed from new schema
 export class GetSecurityActivityDto {
   userId?: number;
   startDate?: string;
@@ -18,29 +19,22 @@ export class GetBlacklistEntriesDto {
   offset?: number;
   limit?: number;
   type?: BlacklistType;
-  isActive?: boolean;
   keyword?: string;
 }
 
 export class CreateBlacklistEntryDto {
   type: BlacklistType;
   value: string;
-  reason: BlacklistReason;
-  duration: BlacklistDuration;
-  description?: string;
-  metadata?: any;
+  reason?: string;
+  createdBy?: number;
 }
 
 export class UpdateBlacklistEntryDto {
-  reason?: BlacklistReason;
-  duration?: BlacklistDuration;
-  description?: string;
-  metadata?: any;
-  isActive?: boolean;
+  reason?: string;
 }
 
 export class GetRateLimitStatsDto {
-  userId?: number;
+  userId?: string;
   startDate?: string;
   endDate?: string;
 }

@@ -5,13 +5,11 @@ export async function seedRolesAndPermissions(prisma: PrismaClient) {
 
   // Create default roles
   const defaultRoles = [
-    { name: RoleName.USER_MANAGER, description: 'Can manage user accounts' },
-    { name: RoleName.SECURITY_ADMIN, description: 'Can manage security settings and blacklists' },
-    { name: RoleName.CONTENT_MODERATOR, description: 'Can moderate content' },
-    { name: RoleName.SUPPORT_AGENT, description: 'Can provide customer support' },
-    { name: RoleName.SYSTEM_ADMIN, description: 'Can manage system settings' },
-    { name: RoleName.FINANCE_ADMIN, description: 'Can manage financial operations' },
-    { name: RoleName.AUDIT_ADMIN, description: 'Can view audit logs and reports' },
+    { name: RoleName.SUPER_ADMIN, description: 'Full system access with all permissions' },
+    { name: RoleName.ADMIN, description: 'Administrative access to manage users and content' },
+    { name: RoleName.MANAGER, description: 'Can manage team resources and content' },
+    { name: RoleName.USER, description: 'Standard user with basic permissions' },
+    { name: RoleName.GUEST, description: 'Limited read-only access' },
   ];
 
   for (const roleData of defaultRoles) {
@@ -30,38 +28,93 @@ export async function seedRolesAndPermissions(prisma: PrismaClient) {
   // Create default permissions
   const defaultPermissions = [
     // User Management
-    { name: PermissionName.VIEW_USERS, description: 'Can view user accounts' },
-    { name: PermissionName.CREATE_USERS, description: 'Can create new user accounts' },
-    { name: PermissionName.UPDATE_USERS, description: 'Can update user account information' },
-    { name: PermissionName.DELETE_USERS, description: 'Can delete user accounts' },
-    { name: PermissionName.RESET_USER_MFA, description: 'Can reset user MFA settings' },
-    { name: PermissionName.UNLOCK_USER_ACCOUNT, description: 'Can unlock user accounts' },
+    { name: PermissionName.USER_CREATE, description: 'Can create new user accounts' },
+    { name: PermissionName.USER_READ, description: 'Can view user accounts' },
+    { name: PermissionName.USER_UPDATE, description: 'Can update user account information' },
+    { name: PermissionName.USER_DELETE, description: 'Can delete user accounts' },
+    { name: PermissionName.USER_LIST, description: 'Can list all users' },
 
-    // Security Management
-    { name: PermissionName.VIEW_BLACKLIST, description: 'Can view blacklist entries' },
-    { name: PermissionName.MANAGE_BLACKLIST, description: 'Can manage blacklist entries' },
-    { name: PermissionName.VIEW_AUDIT_LOGS, description: 'Can view audit logs' },
-    { name: PermissionName.MANAGE_SECURITY_SETTINGS, description: 'Can manage security settings' },
+    // Role Management
+    { name: PermissionName.ROLE_CREATE, description: 'Can create new roles' },
+    { name: PermissionName.ROLE_READ, description: 'Can view role details' },
+    { name: PermissionName.ROLE_UPDATE, description: 'Can update role information' },
+    { name: PermissionName.ROLE_DELETE, description: 'Can delete roles' },
+    { name: PermissionName.ROLE_LIST, description: 'Can list all roles' },
 
-    // Content Management
-    { name: PermissionName.MODERATE_CONTENT, description: 'Can moderate content' },
-    { name: PermissionName.APPROVE_CONTENT, description: 'Can approve content' },
-    { name: PermissionName.DELETE_CONTENT, description: 'Can delete content' },
+    // Permission Management
+    { name: PermissionName.PERMISSION_CREATE, description: 'Can create new permissions' },
+    { name: PermissionName.PERMISSION_READ, description: 'Can view permission details' },
+    { name: PermissionName.PERMISSION_UPDATE, description: 'Can update permission information' },
+    { name: PermissionName.PERMISSION_DELETE, description: 'Can delete permissions' },
+    { name: PermissionName.PERMISSION_LIST, description: 'Can list all permissions' },
 
-    // System Management
-    { name: PermissionName.MANAGE_SYSTEM_SETTINGS, description: 'Can manage system settings' },
-    { name: PermissionName.VIEW_SYSTEM_LOGS, description: 'Can view system logs' },
-    { name: PermissionName.MANAGE_EMAIL_TEMPLATES, description: 'Can manage email templates' },
+    // Domain Management
+    { name: PermissionName.DOMAIN_CREATE, description: 'Can create new domains' },
+    { name: PermissionName.DOMAIN_READ, description: 'Can view domain details' },
+    { name: PermissionName.DOMAIN_UPDATE, description: 'Can update domain settings' },
+    { name: PermissionName.DOMAIN_DELETE, description: 'Can delete domains' },
+    { name: PermissionName.DOMAIN_LIST, description: 'Can list all domains' },
 
-    // Financial Management
-    { name: PermissionName.VIEW_FINANCIAL_DATA, description: 'Can view financial data' },
-    { name: PermissionName.MANAGE_PAYMENTS, description: 'Can manage payments' },
-    { name: PermissionName.VIEW_TRANSACTION_LOGS, description: 'Can view transaction logs' },
+    // Email Management
+    { name: PermissionName.EMAIL_CREATE, description: 'Can create emails' },
+    { name: PermissionName.EMAIL_READ, description: 'Can view emails' },
+    { name: PermissionName.EMAIL_UPDATE, description: 'Can update emails' },
+    { name: PermissionName.EMAIL_DELETE, description: 'Can delete emails' },
+    { name: PermissionName.EMAIL_LIST, description: 'Can list all emails' },
+    { name: PermissionName.EMAIL_SEND, description: 'Can send emails' },
 
-    // Audit and Compliance
-    { name: PermissionName.VIEW_AUDIT_TRAILS, description: 'Can view audit trails' },
-    { name: PermissionName.EXPORT_AUDIT_DATA, description: 'Can export audit data' },
-    { name: PermissionName.MANAGE_COMPLIANCE_REPORTS, description: 'Can manage compliance reports' },
+    // Template Management
+    { name: PermissionName.TEMPLATE_CREATE, description: 'Can create email templates' },
+    { name: PermissionName.TEMPLATE_READ, description: 'Can view email templates' },
+    { name: PermissionName.TEMPLATE_UPDATE, description: 'Can update email templates' },
+    { name: PermissionName.TEMPLATE_DELETE, description: 'Can delete email templates' },
+    { name: PermissionName.TEMPLATE_LIST, description: 'Can list all templates' },
+
+    // Webhook Management
+    { name: PermissionName.WEBHOOK_CREATE, description: 'Can create webhooks' },
+    { name: PermissionName.WEBHOOK_READ, description: 'Can view webhooks' },
+    { name: PermissionName.WEBHOOK_UPDATE, description: 'Can update webhooks' },
+    { name: PermissionName.WEBHOOK_DELETE, description: 'Can delete webhooks' },
+    { name: PermissionName.WEBHOOK_LIST, description: 'Can list all webhooks' },
+
+    // Contact Management
+    { name: PermissionName.CONTACT_CREATE, description: 'Can create contacts' },
+    { name: PermissionName.CONTACT_READ, description: 'Can view contacts' },
+    { name: PermissionName.CONTACT_UPDATE, description: 'Can update contacts' },
+    { name: PermissionName.CONTACT_DELETE, description: 'Can delete contacts' },
+    { name: PermissionName.CONTACT_LIST, description: 'Can list all contacts' },
+
+    // Audience Management
+    { name: PermissionName.AUDIENCE_CREATE, description: 'Can create audiences' },
+    { name: PermissionName.AUDIENCE_READ, description: 'Can view audiences' },
+    { name: PermissionName.AUDIENCE_UPDATE, description: 'Can update audiences' },
+    { name: PermissionName.AUDIENCE_DELETE, description: 'Can delete audiences' },
+    { name: PermissionName.AUDIENCE_LIST, description: 'Can list all audiences' },
+
+    // Broadcast Management
+    { name: PermissionName.BROADCAST_CREATE, description: 'Can create broadcasts' },
+    { name: PermissionName.BROADCAST_READ, description: 'Can view broadcasts' },
+    { name: PermissionName.BROADCAST_UPDATE, description: 'Can update broadcasts' },
+    { name: PermissionName.BROADCAST_DELETE, description: 'Can delete broadcasts' },
+    { name: PermissionName.BROADCAST_LIST, description: 'Can list all broadcasts' },
+    { name: PermissionName.BROADCAST_SEND, description: 'Can send broadcasts' },
+
+    // Analytics & Metrics
+    { name: PermissionName.METRICS_READ, description: 'Can view metrics and analytics' },
+    { name: PermissionName.ANALYTICS_READ, description: 'Can view detailed analytics' },
+
+    // System Administration
+    { name: PermissionName.SYSTEM_ADMIN, description: 'Full system administration access' },
+    { name: PermissionName.SYSTEM_SETTINGS, description: 'Can manage system settings' },
+
+    // Team Management
+    { name: PermissionName.TEAM_CREATE, description: 'Can create teams' },
+    { name: PermissionName.TEAM_READ, description: 'Can view team details' },
+    { name: PermissionName.TEAM_UPDATE, description: 'Can update team information' },
+    { name: PermissionName.TEAM_DELETE, description: 'Can delete teams' },
+    { name: PermissionName.TEAM_LIST, description: 'Can list all teams' },
+    { name: PermissionName.TEAM_MEMBER_INVITE, description: 'Can invite team members' },
+    { name: PermissionName.TEAM_MEMBER_REMOVE, description: 'Can remove team members' },
   ];
 
   for (const permissionData of defaultPermissions) {
@@ -82,58 +135,153 @@ export async function seedRolesAndPermissions(prisma: PrismaClient) {
 }
 
 async function assignDefaultPermissionsToRoles(prisma: PrismaClient) {
-  // User Manager permissions
-  await assignRolePermissions(prisma, RoleName.USER_MANAGER, [
-    PermissionName.VIEW_USERS,
-    PermissionName.CREATE_USERS,
-    PermissionName.UPDATE_USERS,
-    PermissionName.RESET_USER_MFA,
-    PermissionName.UNLOCK_USER_ACCOUNT,
+  // SUPER_ADMIN - All permissions
+  await assignRolePermissions(prisma, RoleName.SUPER_ADMIN, [
+    // All User permissions
+    PermissionName.USER_CREATE,
+    PermissionName.USER_READ,
+    PermissionName.USER_UPDATE,
+    PermissionName.USER_DELETE,
+    PermissionName.USER_LIST,
+    // All Role permissions
+    PermissionName.ROLE_CREATE,
+    PermissionName.ROLE_READ,
+    PermissionName.ROLE_UPDATE,
+    PermissionName.ROLE_DELETE,
+    PermissionName.ROLE_LIST,
+    // All Permission permissions
+    PermissionName.PERMISSION_CREATE,
+    PermissionName.PERMISSION_READ,
+    PermissionName.PERMISSION_UPDATE,
+    PermissionName.PERMISSION_DELETE,
+    PermissionName.PERMISSION_LIST,
+    // System permissions
+    PermissionName.SYSTEM_ADMIN,
+    PermissionName.SYSTEM_SETTINGS,
   ]);
 
-  // Security Admin permissions
-  await assignRolePermissions(prisma, RoleName.SECURITY_ADMIN, [
-    PermissionName.VIEW_BLACKLIST,
-    PermissionName.MANAGE_BLACKLIST,
-    PermissionName.VIEW_AUDIT_LOGS,
-    PermissionName.MANAGE_SECURITY_SETTINGS,
+  // ADMIN - Most permissions except system-level
+  await assignRolePermissions(prisma, RoleName.ADMIN, [
+    // User management
+    PermissionName.USER_CREATE,
+    PermissionName.USER_READ,
+    PermissionName.USER_UPDATE,
+    PermissionName.USER_DELETE,
+    PermissionName.USER_LIST,
+    // Domain management
+    PermissionName.DOMAIN_CREATE,
+    PermissionName.DOMAIN_READ,
+    PermissionName.DOMAIN_UPDATE,
+    PermissionName.DOMAIN_DELETE,
+    PermissionName.DOMAIN_LIST,
+    // Email management
+    PermissionName.EMAIL_CREATE,
+    PermissionName.EMAIL_READ,
+    PermissionName.EMAIL_UPDATE,
+    PermissionName.EMAIL_DELETE,
+    PermissionName.EMAIL_LIST,
+    PermissionName.EMAIL_SEND,
+    // Template management
+    PermissionName.TEMPLATE_CREATE,
+    PermissionName.TEMPLATE_READ,
+    PermissionName.TEMPLATE_UPDATE,
+    PermissionName.TEMPLATE_DELETE,
+    PermissionName.TEMPLATE_LIST,
+    // Team management
+    PermissionName.TEAM_READ,
+    PermissionName.TEAM_UPDATE,
+    PermissionName.TEAM_MEMBER_INVITE,
+    PermissionName.TEAM_MEMBER_REMOVE,
+    // Analytics
+    PermissionName.METRICS_READ,
+    PermissionName.ANALYTICS_READ,
   ]);
 
-  // Content Moderator permissions
-  await assignRolePermissions(prisma, RoleName.CONTENT_MODERATOR, [
-    PermissionName.MODERATE_CONTENT,
-    PermissionName.APPROVE_CONTENT,
-    PermissionName.DELETE_CONTENT,
+  // MANAGER - Team and content management
+  await assignRolePermissions(prisma, RoleName.MANAGER, [
+    // User viewing
+    PermissionName.USER_READ,
+    PermissionName.USER_LIST,
+    // Domain management
+    PermissionName.DOMAIN_CREATE,
+    PermissionName.DOMAIN_READ,
+    PermissionName.DOMAIN_UPDATE,
+    PermissionName.DOMAIN_LIST,
+    // Email management
+    PermissionName.EMAIL_CREATE,
+    PermissionName.EMAIL_READ,
+    PermissionName.EMAIL_UPDATE,
+    PermissionName.EMAIL_LIST,
+    PermissionName.EMAIL_SEND,
+    // Template management
+    PermissionName.TEMPLATE_CREATE,
+    PermissionName.TEMPLATE_READ,
+    PermissionName.TEMPLATE_UPDATE,
+    PermissionName.TEMPLATE_LIST,
+    // Webhook management
+    PermissionName.WEBHOOK_CREATE,
+    PermissionName.WEBHOOK_READ,
+    PermissionName.WEBHOOK_UPDATE,
+    PermissionName.WEBHOOK_LIST,
+    // Contact management
+    PermissionName.CONTACT_CREATE,
+    PermissionName.CONTACT_READ,
+    PermissionName.CONTACT_UPDATE,
+    PermissionName.CONTACT_LIST,
+    // Audience management
+    PermissionName.AUDIENCE_CREATE,
+    PermissionName.AUDIENCE_READ,
+    PermissionName.AUDIENCE_UPDATE,
+    PermissionName.AUDIENCE_LIST,
+    // Broadcast management
+    PermissionName.BROADCAST_CREATE,
+    PermissionName.BROADCAST_READ,
+    PermissionName.BROADCAST_UPDATE,
+    PermissionName.BROADCAST_LIST,
+    PermissionName.BROADCAST_SEND,
+    // Team management
+    PermissionName.TEAM_READ,
+    PermissionName.TEAM_MEMBER_INVITE,
+    // Analytics
+    PermissionName.METRICS_READ,
   ]);
 
-  // Support Agent permissions
-  await assignRolePermissions(prisma, RoleName.SUPPORT_AGENT, [
-    PermissionName.VIEW_USERS,
-    PermissionName.UPDATE_USERS,
-    PermissionName.RESET_USER_MFA,
-    PermissionName.UNLOCK_USER_ACCOUNT,
+  // USER - Basic permissions
+  await assignRolePermissions(prisma, RoleName.USER, [
+    // Email management
+    PermissionName.EMAIL_CREATE,
+    PermissionName.EMAIL_READ,
+    PermissionName.EMAIL_LIST,
+    PermissionName.EMAIL_SEND,
+    // Template viewing
+    PermissionName.TEMPLATE_READ,
+    PermissionName.TEMPLATE_LIST,
+    // Contact management
+    PermissionName.CONTACT_CREATE,
+    PermissionName.CONTACT_READ,
+    PermissionName.CONTACT_UPDATE,
+    PermissionName.CONTACT_LIST,
+    // Audience viewing
+    PermissionName.AUDIENCE_READ,
+    PermissionName.AUDIENCE_LIST,
+    // Broadcast viewing
+    PermissionName.BROADCAST_READ,
+    PermissionName.BROADCAST_LIST,
   ]);
 
-  // System Admin permissions
-  await assignRolePermissions(prisma, RoleName.SYSTEM_ADMIN, [
-    PermissionName.MANAGE_SYSTEM_SETTINGS,
-    PermissionName.VIEW_SYSTEM_LOGS,
-    PermissionName.MANAGE_EMAIL_TEMPLATES,
-    PermissionName.VIEW_AUDIT_LOGS,
-  ]);
-
-  // Finance Admin permissions
-  await assignRolePermissions(prisma, RoleName.FINANCE_ADMIN, [
-    PermissionName.VIEW_FINANCIAL_DATA,
-    PermissionName.MANAGE_PAYMENTS,
-    PermissionName.VIEW_TRANSACTION_LOGS,
-  ]);
-
-  // Audit Admin permissions
-  await assignRolePermissions(prisma, RoleName.AUDIT_ADMIN, [
-    PermissionName.VIEW_AUDIT_TRAILS,
-    PermissionName.EXPORT_AUDIT_DATA,
-    PermissionName.VIEW_AUDIT_LOGS,
+  // GUEST - Read-only permissions
+  await assignRolePermissions(prisma, RoleName.GUEST, [
+    // View only
+    PermissionName.EMAIL_READ,
+    PermissionName.EMAIL_LIST,
+    PermissionName.TEMPLATE_READ,
+    PermissionName.TEMPLATE_LIST,
+    PermissionName.CONTACT_READ,
+    PermissionName.CONTACT_LIST,
+    PermissionName.AUDIENCE_READ,
+    PermissionName.AUDIENCE_LIST,
+    PermissionName.BROADCAST_READ,
+    PermissionName.BROADCAST_LIST,
   ]);
 }
 

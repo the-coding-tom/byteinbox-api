@@ -40,10 +40,4 @@ export class ApiKeysController {
     const { status, ...restOfResponse } = await this.apiKeysService.deleteApiKey(id, request.headers, request.user);
     return response.status(status).json(restOfResponse);
   }
-
-  @Get('public/test')
-  async testApiKey(@Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.apiKeysService.testApiKey(request.headers);
-    return response.status(status).json(restOfResponse);
-  }
 } 

@@ -14,6 +14,7 @@ export class UserRepository {
 
   /**
    * Create user and default team in a single transaction
+   * Note: Team fields simplified in new schema
    */
   async createWithDefaultTeam(data: {
     userData: any;
@@ -38,26 +39,20 @@ export class UserRepository {
         counter++;
       }
 
-      // Create the default team
+      // Create the default team (removed description, isDefault, isPublic, createdBy)
       const team = await tx.team.create({
         data: {
           name: teamName,
-          description: 'Your default team for managing API keys and resources',
           slug,
-          isDefault: true,
-          isPublic: false,
-          createdBy: user.id,
         },
       });
 
-      // Add the user as the team owner
+      // Add the user as the team owner (removed status, joinedAt)
       await tx.teamMember.create({
         data: {
           teamId: team.id,
           userId: user.id,
-          role: 'OWNER',
-          status: 'ACTIVE',
-          joinedAt: new Date(),
+          role: 'owner',
         },
       });
 
@@ -77,19 +72,26 @@ export class UserRepository {
     });
   }
 
+  // Note: oauthProvider and oauthId no longer on User model
+  // OAuth info is in OAuthAccount model
   async findByOAuth(oauthProvider: string, oauthId: string): Promise<any | null> {
-    return prisma.user.findFirst({
+    const oauthAccount = await prisma.oAuthAccount.findFirst({
       where: {
-        oauthProvider,
-        oauthId,
+        provider: oauthProvider as any,
+        providerUserId: oauthId,
+      },
+      include: {
+        user: true,
       },
     });
+    
+    return oauthAccount?.user || null;
   }
 
+  // Note: phoneNumber field doesn't exist in new User model
   async findByPhoneNumber(phoneNumber: string): Promise<any | null> {
-    return prisma.user.findFirst({
-      where: { phoneNumber },
-    });
+    // Phone number not supported in new schema
+    return null;
   }
 
   async update(id: number, updateData: any): Promise<any> {
@@ -114,26 +116,42 @@ export class UserRepository {
   }
 
   // Email verification methods
+  // Note: emailVerificationToken no longer on User model - use VerificationRequest
   async findByEmailVerificationToken(token: string): Promise<any | null> {
-    return prisma.user.findFirst({
+    const verificationRequest = await prisma.verificationRequest.findFirst({
       where: {
-        emailVerificationToken: token,
-        emailVerificationExpiresAt: {
+        token,
+        type: 'EMAIL_VERIFICATION',
+        expiresAt: {
           gt: new Date(),
         },
       },
     });
+    
+    if (!verificationRequest) return null;
+    
+    return prisma.user.findUnique({
+      where: { email: verificationRequest.email },
+    });
   }
 
   // Password reset methods
+  // Note: passwordResetToken no longer on User model - use VerificationRequest
   async findByPasswordResetToken(token: string): Promise<any | null> {
-    return prisma.user.findFirst({
+    const verificationRequest = await prisma.verificationRequest.findFirst({
       where: {
-        passwordResetToken: token,
-        passwordResetExpiresAt: {
+        token,
+        type: 'PASSWORD_RESET',
+        expiresAt: {
           gt: new Date(),
         },
       },
+    });
+    
+    if (!verificationRequest) return null;
+    
+    return prisma.user.findUnique({
+      where: { email: verificationRequest.email },
     });
   }
 
@@ -148,10 +166,9 @@ export class UserRepository {
     });
   }
 
+  // Note: PENDING status doesn't exist in new schema
   async getPendingUserCount(): Promise<number> {
-    return await prisma.user.count({
-      where: { status: 'PENDING' },
-    });
+    return 0;
   }
 
   async getSuspendedUserCount(): Promise<number> {
@@ -223,21 +240,29 @@ export class UserRepository {
   }
 
   // OAuth-related methods
+  // Note: OAuth info now in OAuthAccount model, not User model
   async findUserByOAuthId(provider: string, oauthId: string): Promise<any> {
-    return prisma.user.findFirst({
+    const oauthAccount = await prisma.oAuthAccount.findFirst({
       where: {
-        oauthProvider: provider,
-        oauthId: oauthId,
+        provider: provider as any,
+        providerUserId: oauthId,
+      },
+      include: {
+        user: true,
       },
     });
+    
+    return oauthAccount?.user || null;
   }
 
-  async linkOAuthAccount(userId: number, provider: string, oauthId: string, accessToken: string): Promise<any> {
-    return prisma.user.update({
-      where: { id: userId },
+  async linkOAuthAccount(userId: number, provider: string, oauthId: string, accessToken?: string): Promise<any> {
+    // Create OAuthAccount entry
+    return prisma.oAuthAccount.create({
       data: {
-        oauthProvider: provider,
-        oauthId: oauthId,
+        userId,
+        provider: provider as any,
+        providerUserId: oauthId,
+        accessToken,
       },
     });
   }
@@ -249,24 +274,44 @@ export class UserRepository {
     isEmailVerified: boolean;
     oauthProvider: string;
     oauthId: string;
+    accessToken?: string;
   }): Promise<any> {
-    return prisma.user.create({
-      data: {
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        isEmailVerified: data.isEmailVerified,
-        oauthProvider: data.oauthProvider,
-        oauthId: data.oauthId,
-        status: 'ACTIVE',
-      },
+    return prisma.$transaction(async (tx) => {
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          emailVerifiedAt: data.isEmailVerified ? new Date() : null,
+          status: 'ACTIVE',
+        },
+      });
+
+      // Create OAuth account link
+      await tx.oAuthAccount.create({
+        data: {
+          userId: user.id,
+          provider: data.oauthProvider as any,
+          providerUserId: data.oauthId,
+          accessToken: data.accessToken,
+        },
+      });
+
+      return user;
     });
   }
 
   async updateOAuthAccessToken(userId: number, provider: string, accessToken: string): Promise<any> {
-    // Note: oauthAccessToken field doesn't exist in schema, so we'll just return the user
-    return prisma.user.findUnique({
-      where: { id: userId },
+    // Update OAuthAccount accessToken
+    return prisma.oAuthAccount.updateMany({
+      where: {
+        userId,
+        provider: provider as any,
+      },
+      data: {
+        accessToken,
+      },
     });
   }
 }

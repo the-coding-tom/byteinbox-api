@@ -289,8 +289,15 @@ export class AuthValidator {
                     'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
                     'any.required': 'Password is required',
                 }),
-            firstName: Joi.string().optional().allow(''),
-            lastName: Joi.string().optional().allow(''),
+            name: Joi.string()
+                .min(2)
+                .max(100)
+                .required()
+                .messages({
+                    'string.min': 'Name must be at least 2 characters long',
+                    'string.max': 'Name must be at most 100 characters long',
+                    'any.required': 'Name is required',
+                }),
         });
 
         const validationError = validateJoiSchema(schema, data);
@@ -298,7 +305,7 @@ export class AuthValidator {
             throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
         }
 
-        // Check if user already exists
+        // Check if user already exists by email
         const existingUser = await this.userRepository.findByEmail(data.email);
         if (existingUser) {
             throwError('User with this email already exists', HttpStatus.CONFLICT, 'userAlreadyExists');

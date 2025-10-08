@@ -8,23 +8,27 @@ import { logError } from '../../utils/logger';
 export class TeamContextMiddleware implements NestMiddleware {
   async use(req: any, res: Response, next: NextFunction) {
     try {
-      const teamId = req.headers['x-team-id'] as string;
+      const teamIdStr = req.headers['x-team-id'] as string;
 
-      if (teamId) {
+      if (teamIdStr) {
+        const teamId = parseInt(teamIdStr, 10);
+        if (isNaN(teamId)) {
+          throwError('Invalid team ID', HttpStatus.BAD_REQUEST, 'invalidTeamId');
+        }
+
         // Validate team exists
         const team = await prisma.team.findUnique({
-          where: { id: parseInt(teamId) },
+          where: { id: teamId },
         });
         if (!team) {
           throwError('Team not found', HttpStatus.NOT_FOUND, 'teamNotFound');
         }
 
-        // Verify user has access to this team
+        // Verify user has access to this team (removed status field)
         const member = await prisma.teamMember.findFirst({
           where: {
             teamId: team!.id,
             userId: (req as any).user?.id,
-            status: 'ACTIVE',
           },
         });
         if (!member) {
@@ -37,7 +41,7 @@ export class TeamContextMiddleware implements NestMiddleware {
 
         // Attach team context to request
         req.teamContext = {
-          teamId: team!.id.toString(),
+          teamId: team!.id,
           teamSlug: team!.slug,
           userRole: member!.role,
         };

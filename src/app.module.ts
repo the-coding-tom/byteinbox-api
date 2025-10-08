@@ -6,6 +6,16 @@ import { ProfileModule } from './apis/profile/profile.module';
 import { ApiKeysModule } from './apis/api-keys/api-keys.module';
 import { TeamsModule } from './apis/teams/teams.module';
 import { AccountModule } from './apis/account/account.module';
+import { OnboardingModule } from './apis/onboarding/onboarding.module';
+import { DomainsModule } from './apis/domains/domains.module';
+import { EmailsModule } from './apis/emails/emails.module';
+import { TemplatesModule } from './apis/templates/templates.module';
+import { WebhooksModule } from './apis/webhooks/webhooks.module';
+import { ContactsModule } from './apis/contacts/contacts.module';
+import { BroadcastsModule } from './apis/broadcasts/broadcasts.module';
+import { AudiencesModule } from './apis/audiences/audiences.module';
+import { MetricsModule } from './apis/metrics/metrics.module';
+import { LogsModule } from './apis/logs/logs.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthMiddleware } from './common/middlewares/auth.middleware';
@@ -36,12 +46,22 @@ import { AdminModule } from './apis/admin/admin.module';
     QueueProcessorsModule,
     CronsModule,
     SeedsModule,
-        AuthModule,
+    AuthModule,
     ProfileModule,
     ApiKeysModule,
     TeamsModule,
     AdminModule,
     AccountModule,
+    OnboardingModule,
+    DomainsModule,
+    EmailsModule,
+    TemplatesModule,
+        WebhooksModule,
+        ContactsModule,
+        BroadcastsModule,
+        AudiencesModule,
+        MetricsModule,
+        LogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

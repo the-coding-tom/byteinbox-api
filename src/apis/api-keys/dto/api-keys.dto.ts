@@ -1,8 +1,7 @@
 export class CreateApiKeyDto {
   name: string;
-  description?: string;
-  scopes: string[];
-  expiresAt?: Date;
+  permission?: string;
+  domain?: string;
 }
 
 export class UpdateApiKeyDto {

@@ -575,52 +575,21 @@ export class AuthService {
       const user = await this.userRepository.create({
         email: validatedData.email,
         password: hashedPassword,
-        firstName: validatedData.firstName || null,
-        lastName: validatedData.lastName || null,
+        name: validatedData.name,
         isEmailVerified: false, // Email verification required
         status: 'ACTIVE',
-      });
-
-      // Generate tokens
-      const tokens = await generateTokens(user, this.jwtService);
-      const { accessToken, refreshToken } = tokens;
-
-      // Create session
-      await this.sessionRepository.createRefreshToken({
-        userId: user.id,
-        token: refreshToken,
-        expiresAt: moment().add(7, 'days').toDate(),
-        isRevoked: false,
-      });
-
-      // Log registration activity
-      await this.loginActivityRepository.create({
-        userId: user.id,
-        ipAddress: request.ip || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-        success: true,
       });
 
       // TODO: Send email verification email
       console.log(`Email verification needed for ${user.email}`);
 
-      const response: LoginResponseDto = {
-        accessToken,
-        refreshToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName || undefined,
-          lastName: user.lastName || undefined,
-          isEmailVerified: user.isEmailVerified,
-          status: user.status,
-        },
-      };
-
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Account created successfully. Please verify your email address.',
-        data: response,
+        message: 'Account registered successfully. Please check your email to verify your email.',
+        data: {
+          email: user.email,
+          verificationRequired: true,
+        },
       });
     } catch (error) {
       return handleServiceError(error, 'Registration failed');

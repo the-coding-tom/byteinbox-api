@@ -4,37 +4,38 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TeamApiKeyRepository {
+  // Note: teamApiKey model doesn't exist - using apiKey model instead
   async create(data: {
     key: string;
     name: string;
-    description?: string;
     teamId: number;
-    scopes: string[];
-    expiresAt?: Date;
-    createdBy: number;
+    permission: string;
+    domain?: string;
+    createdBy?: number;
   }): Promise<any> {
-    return prisma.teamApiKey.create({
+    return prisma.apiKey.create({
       data: {
         key: data.key,
         name: data.name,
-        description: data.description,
         teamId: data.teamId,
-        scopes: data.scopes,
-        expiresAt: data.expiresAt,
+        permission: data.permission,
+        domain: data.domain,
         createdBy: data.createdBy,
+        status: 'active',
       },
     });
   }
 
   async findById(id: number): Promise<any | null> {
-    return prisma.teamApiKey.findUnique({
+    return prisma.apiKey.findUnique({
       where: { id },
       include: {
         team: true,
-        createdByUser: {
+        creator: {
           select: {
             id: true,
             email: true,
+            name: true,
             firstName: true,
             lastName: true,
           },
@@ -44,14 +45,15 @@ export class TeamApiKeyRepository {
   }
 
   async findByKey(key: string): Promise<any | null> {
-    return prisma.teamApiKey.findUnique({
+    return prisma.apiKey.findUnique({
       where: { key },
       include: {
         team: true,
-        createdByUser: {
+        creator: {
           select: {
             id: true,
             email: true,
+            name: true,
             firstName: true,
             lastName: true,
           },
@@ -61,14 +63,15 @@ export class TeamApiKeyRepository {
   }
 
   async findByTeamId(teamId: number): Promise<any[]> {
-    return prisma.teamApiKey.findMany({
+    return prisma.apiKey.findMany({
       where: { teamId },
       orderBy: { createdAt: 'desc' },
       include: {
-        createdByUser: {
+        creator: {
           select: {
             id: true,
             email: true,
+            name: true,
             firstName: true,
             lastName: true,
           },
@@ -78,7 +81,7 @@ export class TeamApiKeyRepository {
   }
 
   async findByTeamIdAndName(teamId: number, name: string): Promise<any | null> {
-    return prisma.teamApiKey.findFirst({
+    return prisma.apiKey.findFirst({
       where: {
         teamId,
         name,
@@ -88,52 +91,44 @@ export class TeamApiKeyRepository {
 
   async findByTeamIdWithPagination(filter: {
     teamId: number;
-    isActive?: boolean;
+    status?: string;
     keyword?: string;
     offset: number;
     limit: number;
   }): Promise<{ data: any[]; meta: any }> {
-    const { teamId, isActive, keyword, offset, limit } = filter;
+    const { teamId, status, keyword, offset, limit } = filter;
 
     const whereClause = Prisma.sql`
       WHERE (
-        TAK.name::text ILIKE CONCAT('%', ${keyword}::text, '%') 
-        OR TAK.description::text ILIKE CONCAT('%', ${keyword}::text, '%')
+        AK.name::text ILIKE CONCAT('%', ${keyword}::text, '%') 
         OR COALESCE(${keyword}, NULL) IS NULL
       )
-      AND TAK.team_id = ${teamId}::int
-      AND (TAK.is_active = ${isActive}::boolean OR COALESCE(${isActive}, NULL) IS NULL)
+      AND AK.team_id = ${teamId}::text
+      AND (AK.status = ${status}::text OR COALESCE(${status}, NULL) IS NULL)
     `;
 
     const retrieveApiKeysQuery = Prisma.sql`
       SELECT 
-        TAK.id,
-        TAK.key,
-        TAK.name,
-        TAK.description,
-        TAK.team_id as "teamId",
-        TAK.scopes,
-        TAK.is_active as "isActive",
-        TAK.expires_at as "expiresAt",
-        TAK.last_used_at as "lastUsedAt",
-        TAK.created_at as "createdAt",
-        TAK.updated_at as "updatedAt",
-        TAK.created_by as "createdBy",
-        U.id as "createdByUser.id",
-        U.email as "createdByUser.email",
-        U.first_name as "createdByUser.firstName",
-        U.last_name as "createdByUser.lastName"
-      FROM team_api_keys TAK
-      LEFT JOIN users U ON TAK.created_by = U.id
+        AK.id,
+        AK.key,
+        AK.name,
+        AK.team_id as "teamId",
+        AK.permission,
+        AK.domain,
+        AK.status,
+        AK.last_used as "lastUsed",
+        AK.created_at as "createdAt",
+        AK.created_by as "createdBy"
+      FROM api_keys AK
       ${whereClause} 
-      ORDER BY TAK.created_at DESC 
+      ORDER BY AK.created_at DESC 
       LIMIT ${limit} 
       OFFSET ${offset}
     `;
 
     const countApiKeysQuery = Prisma.sql`
       SELECT COUNT(*)::int 
-      FROM team_api_keys TAK
+      FROM api_keys AK
       ${whereClause}
     `;
 
@@ -155,22 +150,22 @@ export class TeamApiKeyRepository {
     id: number,
     data: {
       name?: string;
-      description?: string;
-      scopes?: string[];
-      isActive?: boolean;
-      expiresAt?: Date;
+      permission?: string;
+      domain?: string;
+      status?: string;
       key?: string;
     },
   ): Promise<any> {
-    return prisma.teamApiKey.update({
+    return prisma.apiKey.update({
       where: { id },
       data,
       include: {
         team: true,
-        createdByUser: {
+        creator: {
           select: {
             id: true,
             email: true,
+            name: true,
             firstName: true,
             lastName: true,
           },
@@ -180,63 +175,64 @@ export class TeamApiKeyRepository {
   }
 
   async updateLastUsed(id: number): Promise<void> {
-    await prisma.teamApiKey.update({
+    await prisma.apiKey.update({
       where: { id },
-      data: { lastUsedAt: new Date() },
+      data: { lastUsed: new Date() },
     });
   }
 
   async delete(id: number): Promise<void> {
-    await prisma.teamApiKey.delete({
+    await prisma.apiKey.delete({
       where: { id },
     });
   }
 
   async createLog(data: {
-    teamApiKeyId: number;
-    action: string;
-    endpoint?: string;
-    ipAddress?: string;
+    apiKeyId: number;
+    endpoint: string;
+    method: string;
+    status: string;
     userAgent?: string;
-    requestBody?: string;
-    responseStatus?: number;
+    requestBody?: any;
+    responseBody?: any;
   }): Promise<void> {
-    await prisma.teamApiKeyLog.create({
+    // Use Log model instead of teamApiKeyLog
+    await prisma.log.create({
       data: {
-        teamApiKeyId: data.teamApiKeyId,
-        action: data.action,
+        apiKeyId: data.apiKeyId,
         endpoint: data.endpoint,
-        ipAddress: data.ipAddress,
+        method: data.method,
+        status: data.status,
         userAgent: data.userAgent,
         requestBody: data.requestBody,
-        responseStatus: data.responseStatus,
+        responseBody: data.responseBody,
       },
     });
   }
 
-  async getApiKeyLogs(teamApiKeyId: number, limit: number = 100): Promise<any[]> {
-    return prisma.teamApiKeyLog.findMany({
-      where: { teamApiKeyId },
-      orderBy: { createdAt: 'desc' },
+  async getApiKeyLogs(apiKeyId: number, limit: number = 100): Promise<any[]> {
+    return prisma.log.findMany({
+      where: { apiKeyId },
+      orderBy: { timestamp: 'desc' },
       take: limit,
     });
   }
 
-  async getApiKeyStats(teamApiKeyId: number): Promise<{
+  async getApiKeyStats(apiKeyId: number): Promise<{
     totalRequests: number;
     lastUsedAt: Date | null;
   }> {
-    const logs = await prisma.teamApiKeyLog.findMany({
-      where: { teamApiKeyId },
+    const logs = await prisma.log.findMany({
+      where: { apiKeyId },
       select: {
-        createdAt: true,
+        timestamp: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { timestamp: 'desc' },
     });
 
     return {
       totalRequests: logs.length,
-      lastUsedAt: logs.length > 0 ? logs[0].createdAt : null,
+      lastUsedAt: logs.length > 0 ? logs[0].timestamp : null,
     };
   }
 } 

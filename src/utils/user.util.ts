@@ -3,6 +3,7 @@ import { UserStatus, UserType } from '@prisma/client';
 import { UserEntity } from '../repositories/entities/user.entity';
 
 // Factory functions for creating users (keep these - they have complex logic)
+// Note: PENDING status no longer exists in new schema, using ACTIVE instead
 export function createLocalUser(data: {
   email: string;
   password: string;
@@ -18,7 +19,7 @@ export function createLocalUser(data: {
     lastName: data.lastName || null,
     phoneNumber: data.phoneNumber || null,
     isEmailVerified: data.isEmailVerified || false,
-    status: UserStatus.PENDING,
+    status: UserStatus.ACTIVE, // Changed from PENDING
   };
 }
 
@@ -39,7 +40,7 @@ export function createOAuthUser(data: {
     oauthProvider: data.oauthProvider,
     oauthId: data.oauthId,
     isEmailVerified: data.isEmailVerified || true,
-    status: UserStatus.PENDING,
+    status: UserStatus.ACTIVE, // Changed from PENDING
   };
 }
 
@@ -51,8 +52,8 @@ export function createUserEntity(userData: Partial<UserEntity>): UserEntity {
     firstName: null,
     lastName: null,
     phoneNumber: null,
-    userType: UserType.USER,
-    status: UserStatus.PENDING,
+    userType: UserType.CUSTOMER, // Changed from USER
+    status: UserStatus.ACTIVE, // Changed from PENDING
     isEmailVerified: false,
     lastLoginAt: null,
     oauthProvider: null,

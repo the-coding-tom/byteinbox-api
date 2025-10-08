@@ -76,8 +76,7 @@ export class ChangePasswordDto {
 export class RegisterDto {
   email: string;
   password: string;
-  firstName?: string;
-  lastName?: string;
+  name: string;
 }
 
 export class VerifyEmailDto {

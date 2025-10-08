@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// This is your Prisma schema file for ByteInbox API
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -10,422 +10,826 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Base models following the style guide patterns
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
 model User {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
-  password   String?  // Nullable for OAuth-only users
-  firstName  String?  @map("first_name")
-  lastName   String?  @map("last_name")
-  phoneNumber String? @map("phone_number")
-  userType   UserType @default(USER) @map("user_type") // User type (user, admin, etc.)
-  status     UserStatus @default(PENDING) @map("status")
-  isEmailVerified Boolean @default(false) @map("is_email_verified")
-  lastLoginAt DateTime? @map("last_login_at")
-  
-  // OAuth fields
-  oauthProvider String? @map("oauth_provider") // google, facebook, etc.
-  oauthId      String? @map("oauth_id")
-  
-  // 2FA fields
-  totpSecret   String? @map("totp_secret") // For authenticator apps
-  totpEnabled  Boolean @default(false) @map("totp_enabled") // Whether TOTP is enabled and verified
-  
-  // Verification tokens
-  emailVerificationToken String? @map("email_verification_token")
-  emailVerificationExpiresAt DateTime? @map("email_verification_expires_at")
-  passwordResetToken String? @map("password_reset_token")
-  passwordResetExpiresAt DateTime? @map("password_reset_expires_at")
-  
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  createdBy  Int?     @map("created_by")
-  updatedBy  Int?     @map("updated_by")
+  id              Int        @id @default(autoincrement())
+  email           String     @unique
+  name            String?
+  firstName       String?    @map("first_name")
+  lastName        String?    @map("last_name")
+  image           String? // Profile picture URL
+  timezone        String     @default("UTC")
+  language        String     @default("en")
+  status          UserStatus @default(ACTIVE)
+  type            UserType   @default(CUSTOMER)
+  emailVerifiedAt DateTime?  @map("email_verified_at") // When email was verified (null = not verified)
+  totpEnabled     Boolean    @default(false) @map("totp_enabled")
+  totpSecret      String?    @map("totp_secret") // TOTP secret (encrypted)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  createdByUser User? @relation("UserCreatedBy", fields: [createdBy], references: [id])
-  updatedByUser User? @relation("UserUpdatedBy", fields: [updatedBy], references: [id])
-  
-  // Self-referencing relations
-  usersCreated User[] @relation("UserCreatedBy")
-  usersUpdated User[] @relation("UserUpdatedBy")
-  
-  // Session tracking
-  refreshTokens RefreshToken[]
-  mfaSessions MfaSession[]
-  recoverySessions RecoverySession[]
-
-  // Email template relations
-  emailTemplatesCreated EmailTemplate[] @relation("EmailTemplateCreatedBy")
-  emailTemplatesUpdated EmailTemplate[] @relation("EmailTemplateUpdatedBy")
-
-  // Blacklist relations
-  blacklistsCreated Blacklist[] @relation("BlacklistCreatedBy")
-  blacklistsUpdated Blacklist[] @relation("BlacklistUpdatedBy")
-
-  // Role and Permission creation tracking
-  rolesCreated Role[] @relation("RoleCreatedBy")
-  rolesUpdated Role[] @relation("RoleUpdatedBy")
-  permissionsCreated Permission[] @relation("PermissionCreatedBy")
-  permissionsUpdated Permission[] @relation("PermissionUpdatedBy")
-
-  // API Key relations
-  apiKeys ApiKey[]
-  
-  // Backup Codes relations
-  backupCodes BackupCode[]
-  
-  // Login Activity relations
-  loginActivities LoginActivity[]
-
-  // Team Management
-  teamsCreated Team[] @relation("TeamCreatedBy")
-  teamsUpdated Team[] @relation("TeamUpdatedBy")
-  teamApiKeysCreated TeamApiKey[] @relation("TeamApiKeyCreatedBy")
+  domains                 Domain[]
+  emails                  Email[]
+  templates               Template[]
+  webhooks                Webhook[]
+  apiKeys                 ApiKey[]
+  broadcasts              Broadcast[]
+  contacts                Contact[]
+  audiences               Audience[]
+  localAuthAccount        LocalAuthAccount? // Password-based auth (optional)
+  oauthAccounts           OAuthAccount[] // OAuth providers (google, github, etc.)
+  sessions                Session[]
+  teamMemberships         TeamMember[]
+  backupCodes             MfaBackupCode[]
+  mfaVerificationSessions MfaVerificationSession[]
+  blacklistsCreated       Blacklist[]
 
   @@map("users")
 }
 
-model RefreshToken {
+model OAuthAccount {
+  id             Int           @id @default(autoincrement())
+  userId         Int           @map("user_id")
+  provider       OAuthProvider // google, github etc.
+  providerUserId String        @map("provider_user_id") // Unique ID from OAuth provider
+  type           String        @default("oauth") // oauth, oidc
+  accessToken    String?       @map("access_token") @db.Text // Encrypt at rest
+  refreshToken   String?       @map("refresh_token") @db.Text // Encrypt at rest
+  expiresAt      Int?          @map("expires_at") // Unix timestamp
+  tokenType      String?       @map("token_type")
+  scope          String?
+  idToken        String?       @map("id_token") @db.Text
+  sessionState   String?       @map("session_state")
+  metadata       Json? // Provider user data (name, profile pic, etc.)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("oauth_accounts")
+}
+
+model LocalAuthAccount {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique @map("user_id") // One password per user
+  passwordHash String   @map("password_hash") // Hashed password (bcrypt/argon2) - Encrypt at rest
+  passwordSalt String?  @map("password_salt") // Optional explicit salt
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("local_auth_accounts")
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  refreshToken String   @map("refresh_token") // Hashed refresh token - Encrypt at rest
+  userAgent    String?  @map("user_agent")
+  ipAddress    String?  @map("ip_address")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationRequest {
+  id        Int                     @id @default(autoincrement())
+  email     String
+  token     String                  @unique
+  type      VerificationRequestType
+  expiresAt DateTime                @map("expires_at")
+  createdAt DateTime                @default(now()) @map("created_at")
+
+  @@unique([email, token])
+  @@map("verification_requests")
+}
+
+model MfaBackupCode {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  code      String // Hashed backup code
+  used      Boolean   @default(false)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mfa_backup_codes")
+}
+
+model MfaVerificationSession {
+  id           Int       @id @default(autoincrement())
+  sessionToken String    @unique @map("session_token")
+  userId       Int       @map("user_id")
+  email        String
+  mfaMethod    MfaMethod @map("mfa_method")
+  isVerified   Boolean   @default(false) @map("is_verified")
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mfa_verification_sessions")
+}
+
+model FailedLoginAttempt {
   id        Int      @id @default(autoincrement())
-  token     String   @unique
-  userId    Int      @map("user_id")
-  expiresAt DateTime @map("expires_at")
-  isRevoked Boolean  @default(false) @map("is_revoked")
+  email     String // Email attempted (user may not exist)
+  ipAddress String   @map("ip_address")
+  userAgent String?  @map("user_agent")
+  reason    String // invalid_password, user_not_found, account_locked, mfa_failed
   createdAt DateTime @default(now()) @map("created_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("refresh_tokens")
+
+  @@index([email, createdAt]) // For rate limiting
+  @@index([ipAddress, createdAt]) // For IP-based blocking
+  @@map("failed_login_attempts")
 }
 
-// Email Template Management
-model EmailTemplate {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  subject     String
-  htmlContent String   @map("html_content")
-  textContent String?  @map("text_content")
-  isActive    Boolean  @default(true) @map("is_active")
-  isDefault   Boolean  @default(false) @map("is_default")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  createdBy   Int?     @map("created_by")
-  updatedBy   Int?     @map("updated_by")
-
-  // Relations
-  createdByUser User? @relation("EmailTemplateCreatedBy", fields: [createdBy], references: [id])
-  updatedByUser User? @relation("EmailTemplateUpdatedBy", fields: [updatedBy], references: [id])
-
-  @@map("email_templates")
-}
-
-// MFA Session Management
-model MfaSession {
-  id          Int      @id @default(autoincrement())
-  sessionToken String  @unique @map("session_token")
-  userId      Int      @map("user_id")
-  email       String
-  mfaMethod   MfaMethod @map("mfa_method")
-  isVerified  Boolean  @default(false) @map("is_verified")
-  expiresAt   DateTime @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("mfa_sessions")
-}
-
-
-// Recovery Session Management
-model RecoverySession {
-  id            Int      @id @default(autoincrement())
-  recoveryToken String   @unique @map("recovery_token")
-  userId        Int      @map("user_id")
-  isUsed        Boolean  @default(false) @map("is_used")
-  expiresAt     DateTime @map("expires_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("recovery_sessions")
-}
-
-
-// Blacklist Management
 model Blacklist {
-  id        Int      @id @default(autoincrement())
+  id        Int           @id @default(autoincrement())
   type      BlacklistType
-  value     String   // IP address, email, phone, etc.
-  reason    BlacklistReason
-  duration  BlacklistDuration
-  expiresAt DateTime? @map("expires_at")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  createdBy Int?     @map("created_by")
-  updatedBy Int?     @map("updated_by")
+  value     String // IP address, email, domain, userId
+  reason    String? // Why this was blacklisted
+  createdAt DateTime      @default(now()) @map("created_at")
+  createdBy Int?          @map("created_by")
 
-  // Relations
-  createdByUser User? @relation("BlacklistCreatedBy", fields: [createdBy], references: [id])
-  updatedByUser User? @relation("BlacklistUpdatedBy", fields: [updatedBy], references: [id])
+  createdByUser User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@unique([type, value])
+  @@index([type, value]) // Fast lookups
   @@map("blacklists")
 }
 
-// Role and Permission Management
-model Role {
-  id          Int      @id @default(autoincrement())
-  name        RoleName @unique
-  description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  createdBy   Int?     @map("created_by")
-  updatedBy   Int?     @map("updated_by")
+// ============================================
+// TEAMS & WORKSPACES
+// ============================================
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  image     String? // Team logo/avatar URL
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  createdByUser User? @relation("RoleCreatedBy", fields: [createdBy], references: [id])
-  updatedByUser User? @relation("RoleUpdatedBy", fields: [updatedBy], references: [id])
+  members       TeamMember[]
+  invitations   TeamInvitation[]
+  domains       Domain[]
+  emails        Email[]
+  templates     Template[]
+  webhooks      Webhook[]
+  apiKeys       ApiKey[]
+  broadcasts    Broadcast[]
+  contacts      Contact[]
+  audiences     Audience[]
+  subscriptions Subscription[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        Int      @id @default(autoincrement())
+  teamId    Int      @map("team_id")
+  userId    Int      @map("user_id")
+  role      String   @default("member") // owner, admin, member, viewer
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model TeamInvitation {
+  id         Int       @id @default(autoincrement())
+  teamId     Int       @map("team_id")
+  email      String
+  role       String    @default("member") // admin, member, viewer
+  token      String    @unique
+  invitedBy  String    @map("invited_by") // userId who sent the invitation
+  status     String    @default("pending") // pending, accepted, expired, cancelled
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  acceptedAt DateTime? @map("accepted_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, email])
+  @@map("team_invitations")
+}
+
+// ============================================
+// PLANS & SUBSCRIPTIONS
+// ============================================
+
+model Plan {
+  id              Int             @id @default(autoincrement())
+  name            String          @unique // "free", "starter", "pro", "business", "enterprise"
+  slug            String          @unique // URL-friendly identifier: "free", "pro-monthly", etc.
+  displayName     String          @map("display_name") // "Free Plan", "Pro Plan", "Enterprise"
+  description     String?
+  price           Decimal         @db.Decimal(10, 2) // Monthly price
+  yearlyPrice     Decimal?        @map("yearly_price") @db.Decimal(10, 2) // Yearly price (if applicable)
+  currency        String          @default("USD")
+  billingInterval BillingInterval @map("billing_interval") // MONTHLY, YEARLY
+
+  // Feature limits
+  maxDomains        Int @map("max_domains")
+  maxEmailsPerMonth Int @map("max_emails_per_month")
+  maxTeamMembers    Int @map("max_team_members")
+  maxTemplates      Int @map("max_templates")
+  maxWebhooks       Int @map("max_webhooks")
+  maxContacts       Int @map("max_contacts")
+  maxAudiences      Int @map("max_audiences")
+  maxBroadcasts     Int @map("max_broadcasts")
+
+  // Feature flags
+  customDomain      Boolean @default(false) @map("custom_domain")
+  advancedAnalytics Boolean @default(false) @map("advanced_analytics")
+  prioritySupport   Boolean @default(false) @map("priority_support")
+  apiAccess         Boolean @default(false) @map("api_access")
+  webhookSupport    Boolean @default(false) @map("webhook_support")
+  teamCollaboration Boolean @default(false) @map("team_collaboration")
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id     Int                @id @default(autoincrement())
+  teamId Int                @map("team_id")
+  planId Int                @map("plan_id")
+  status SubscriptionStatus @default(ACTIVE)
+
+  // Billing details
+  stripeCustomerId      String? @map("stripe_customer_id")
+  stripeSubscriptionId  String? @unique @map("stripe_subscription_id")
+  stripePaymentMethodId String? @map("stripe_payment_method_id")
+
+  // Subscription period
+  currentPeriodStart DateTime  @map("current_period_start")
+  currentPeriodEnd   DateTime  @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+  canceledAt         DateTime? @map("canceled_at")
+
+  // Trial information
+  trialStart DateTime? @map("trial_start")
+  trialEnd   DateTime? @map("trial_end")
+
+  // Usage tracking
+  emailsSentThisMonth Int      @default(0) @map("emails_sent_this_month")
+  lastUsageReset      DateTime @default(now()) @map("last_usage_reset")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ============================================
+// DOMAINS
+// ============================================
+
+model Domain {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  createdBy     Int?     @map("created_by") // User who created this domain
+  teamId        Int      @map("team_id") // Team that owns this domain (personal or shared)
+  status        String   @default("pending") // pending, verified, failed
+  region        String? // us-east-1, eu-west-1, etc.
+  clickTracking Boolean  @default(true) @map("click_tracking")
+  openTracking  Boolean  @default(true) @map("open_tracking")
+  tlsMode       String   @default("enforced") @map("tls_mode") // enforced, opportunistic, disabled
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // DNS Records
+  dnsRecords DnsRecord[]
+
+  // Relations
+  creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  emails  Email[]
+
+  @@map("domains")
+}
+
+model DnsRecord {
+  id         Int     @id @default(autoincrement())
+  domainId   Int     @map("domain_id")
+  type       String // dkim, spf, dmarc, mx, tracking
+  name       String
+  recordType String  @map("record_type") // TXT, MX, CNAME
+  value      String
+  verified   Boolean @default(false)
+  status     String  @default("pending") // pending, verified, failed
+  priority   Int? // for MX records
+
+  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@map("dns_records")
+}
+
+// ============================================
+// EMAILS
+// ============================================
+
+model Email {
+  id          Int       @id @default(autoincrement())
+  createdBy   Int?      @map("created_by") // User who created/sent this email
+  teamId      Int       @map("team_id") // Team that owns this email (personal or shared)
+  domainId    Int?      @map("domain_id")
+  apiKeyId    Int?      @map("api_key_id") // API key used to send the email
+  from        String
+  to          String[] // Array of email addresses
+  cc          String[]  @default([])
+  bcc         String[]  @default([])
+  replyTo     String[]  @default([]) @map("reply_to")
+  subject     String
+  text        String?
+  html        String?
+  status      String    @default("queued") // queued, sent, delivered, failed, bounced
+  opens       Int       @default(0)
+  clicks      Int       @default(0)
+  lastOpened  DateTime? @map("last_opened")
+  lastClicked DateTime? @map("last_clicked")
+  openedAt    DateTime? @map("opened_at") // First open timestamp
+  sentAt      DateTime? @map("sent_at")
+  deliveredAt DateTime? @map("delivered_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  creator     User?        @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  domain      Domain?      @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  apiKey      ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  events      EmailEvent[]
+  attachments Attachment[]
+
+  @@map("emails")
+}
+
+model Attachment {
+  id        Int      @id @default(autoincrement())
+  emailId   Int      @map("email_id")
+  filename  String
+  content   String // Base64 encoded content
+  type      String? // MIME type
+  size      Int? // Size in bytes
+  createdAt DateTime @default(now()) @map("created_at")
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+model EmailEvent {
+  id        Int      @id @default(autoincrement())
+  emailId   Int      @map("email_id")
+  type      String // delivered, opened, clicked, bounced, complained
+  timestamp DateTime @default(now())
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+  location  String?
+  metadata  Json? // Additional event data
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@map("email_events")
+}
+
+// ============================================
+// TEMPLATES
+// ============================================
+
+model Template {
+  id           Int      @id @default(autoincrement())
+  createdBy    Int?     @map("created_by") // User who created this template
+  teamId       Int      @map("team_id") // Team that owns this template (personal or shared)
+  name         String
+  description  String?
+  html         String
+  subject      String?
+  category     String? // transactional, marketing, etc.
+  variables    String[] @default([]) // Template variable names
+  status       String   @default("active") // active, archived
+  opens        Int      @default(0)
+  clicks       Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  lastModified DateTime @updatedAt @map("last_modified")
+
+  creator    User?       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  broadcasts Broadcast[]
+
+  @@map("templates")
+}
+
+// ============================================
+// WEBHOOKS
+// ============================================
+
+model Webhook {
+  id            Int       @id @default(autoincrement())
+  createdBy     Int?      @map("created_by") // User who created this webhook
+  teamId        Int       @map("team_id") // Team that owns this webhook (personal or shared)
+  url           String
+  events        String[] // Array of event types
+  status        String    @default("enabled") // enabled, disabled
+  secret        String // Signing secret
+  lastTriggered DateTime? @map("last_triggered")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  creator    User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id          Int       @id @default(autoincrement())
+  webhookId   Int       @map("webhook_id")
+  eventType   String    @map("event_type")
+  messageId   String?   @map("message_id")
+  status      String // attempting, success, fail
+  request     Json // Request payload
+  response    Json? // Response from webhook URL
+  attempts    Int       @default(1)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_deliveries")
+}
+
+// ============================================
+// API KEYS
+// ============================================
+
+model ApiKey {
+  id         Int       @id @default(autoincrement())
+  createdBy  Int?      @map("created_by") // User who created this API key
+  teamId     Int       @map("team_id") // Team that owns this API key (personal or shared)
+  name       String
+  key        String    @unique // The actual API key (hashed)
+  permission String // Full access, Sending access, Read-only
+  domain     String? // Specific domain or "All domains"
+  status     String    @default("active") // active, revoked
+  lastUsed   DateTime? @map("last_used")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  logs    Log[]
+  emails  Email[]
+
+  @@map("api_keys")
+}
+
+// ============================================
+// CONTACTS & AUDIENCES
+// ============================================
+
+model Contact {
+  id           Int       @id @default(autoincrement())
+  createdBy    Int?      @map("created_by") // User who created this contact
+  teamId       Int       @map("team_id") // Team that owns this contact (personal or shared)
+  email        String
+  firstName    String?   @map("first_name")
+  lastName     String?   @map("last_name")
+  status       String    @default("subscribed") // subscribed, unsubscribed, bounced
+  subscribedAt DateTime? @map("subscribed_at")
+  lastActivity DateTime? @map("last_activity")
+  tags         String[]  @default([])
+  metadata     Json? // Additional custom fields
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  creator             User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team                Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  broadcastRecipients BroadcastRecipient[]
+  audienceContacts    AudienceContact[]
+
+  @@unique([teamId, email])
+  @@map("contacts")
+}
+
+model Audience {
+  id        Int      @id @default(autoincrement())
+  createdBy Int?     @map("created_by") // User who created this audience
+  teamId    Int      @map("team_id") // Team that owns this audience (personal or shared)
+  name      String
+  type      String   @default("custom") // all, premium, custom, etc.
+  filters   Json? // Filter criteria for dynamic audiences
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  creator          User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  audienceContacts AudienceContact[]
+  broadcasts       Broadcast[]
+
+  @@map("audiences")
+}
+
+model AudienceContact {
+  id         Int      @id @default(autoincrement())
+  audienceId Int      @map("audience_id")
+  contactId  Int      @map("contact_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  audience Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([audienceId, contactId])
+  @@map("audience_contacts")
+}
+
+// ============================================
+// BROADCASTS
+// ============================================
+
+model Broadcast {
+  id          Int       @id @default(autoincrement())
+  createdBy   Int?      @map("created_by") // User who created this broadcast
+  teamId      Int       @map("team_id") // Team that owns this broadcast (personal or shared)
+  templateId  Int?      @map("template_id")
+  audienceId  Int?      @map("audience_id") // Audience to send broadcast to
+  name        String
+  subject     String
+  content     String? // HTML content if not using template
+  status      String    @default("draft") // draft, scheduled, sending, sent, cancelled
+  totalSent   Int       @default(0) @map("total_sent")
+  opens       Int       @default(0)
+  clicks      Int       @default(0)
+  scheduledAt DateTime? @map("scheduled_at")
+  sentAt      DateTime? @map("sent_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  creator    User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  team       Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  template   Template?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  audience   Audience?            @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  recipients BroadcastRecipient[]
+
+  @@map("broadcasts")
+}
+
+model BroadcastRecipient {
+  id          Int       @id @default(autoincrement())
+  broadcastId Int       @map("broadcast_id")
+  contactId   Int       @map("contact_id")
+  status      String    @default("pending") // pending, sent, failed, opened, clicked
+  sentAt      DateTime? @map("sent_at")
+  openedAt    DateTime? @map("opened_at")
+  clickedAt   DateTime? @map("clicked_at")
+
+  broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, contactId])
+  @@map("broadcast_recipients")
+}
+
+// ============================================
+// LOGS (API Request Logs)
+// ============================================
+
+model Log {
+  id           Int      @id @default(autoincrement())
+  apiKeyId     Int?     @map("api_key_id")
+  endpoint     String
+  method       String
+  status       String // HTTP status code
+  userAgent    String?  @map("user_agent")
+  requestBody  Json?    @map("request_body")
+  responseBody Json?    @map("response_body")
+  timestamp    DateTime @default(now())
+
+  apiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@map("logs")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum VerificationRequestType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum MfaMethod {
+  TOTP
+  BACKUP_CODE
+}
+
+enum BlacklistType {
+  EMAIL
+  IP_ADDRESS
+  DOMAIN
+  USER_ID
+}
+
+enum OAuthProvider {
+  GOOGLE
+  GITHUB
+}
+
+enum RoleName {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  USER
+  GUEST
+}
+
+enum PermissionName {
+  // User Management
+  USER_CREATE
+  USER_READ
+  USER_UPDATE
+  USER_DELETE
+  USER_LIST
+
+  // Role Management
+  ROLE_CREATE
+  ROLE_READ
+  ROLE_UPDATE
+  ROLE_DELETE
+  ROLE_LIST
+
+  // Permission Management
+  PERMISSION_CREATE
+  PERMISSION_READ
+  PERMISSION_UPDATE
+  PERMISSION_DELETE
+  PERMISSION_LIST
+
+  // Domain Management
+  DOMAIN_CREATE
+  DOMAIN_READ
+  DOMAIN_UPDATE
+  DOMAIN_DELETE
+  DOMAIN_LIST
+
+  // Email Management
+  EMAIL_CREATE
+  EMAIL_READ
+  EMAIL_UPDATE
+  EMAIL_DELETE
+  EMAIL_LIST
+  EMAIL_SEND
+
+  // Template Management
+  TEMPLATE_CREATE
+  TEMPLATE_READ
+  TEMPLATE_UPDATE
+  TEMPLATE_DELETE
+  TEMPLATE_LIST
+
+  // Webhook Management
+  WEBHOOK_CREATE
+  WEBHOOK_READ
+  WEBHOOK_UPDATE
+  WEBHOOK_DELETE
+  WEBHOOK_LIST
+
+  // Contact Management
+  CONTACT_CREATE
+  CONTACT_READ
+  CONTACT_UPDATE
+  CONTACT_DELETE
+  CONTACT_LIST
+
+  // Audience Management
+  AUDIENCE_CREATE
+  AUDIENCE_READ
+  AUDIENCE_UPDATE
+  AUDIENCE_DELETE
+  AUDIENCE_LIST
+
+  // Broadcast Management
+  BROADCAST_CREATE
+  BROADCAST_READ
+  BROADCAST_UPDATE
+  BROADCAST_DELETE
+  BROADCAST_LIST
+  BROADCAST_SEND
+
+  // Analytics & Metrics
+  METRICS_READ
+  ANALYTICS_READ
+
+  // System Administration
+  SYSTEM_ADMIN
+  SYSTEM_SETTINGS
+
+  // Team Management
+  TEAM_CREATE
+  TEAM_READ
+  TEAM_UPDATE
+  TEAM_DELETE
+  TEAM_LIST
+  TEAM_MEMBER_INVITE
+  TEAM_MEMBER_REMOVE
+}
+
+// ============================================
+// ROLES & PERMISSIONS
+// ============================================
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        RoleName         @unique
+  description String?
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   @@map("roles")
 }
 
 model Permission {
-  id          Int      @id @default(autoincrement())
-  name        PermissionName @unique
+  id          Int              @id @default(autoincrement())
+  name        PermissionName   @unique
   description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  createdBy   Int?     @map("created_by")
-  updatedBy   Int?     @map("updated_by")
-
-  // Relations
-  createdByUser User? @relation("PermissionCreatedBy", fields: [createdBy], references: [id])
-  updatedByUser User? @relation("PermissionUpdatedBy", fields: [updatedBy], references: [id])
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   @@map("permissions")
 }
 
+model RolePermission {
+  id           Int      @id @default(autoincrement())
+  roleId       Int      @map("role_id")
+  permissionId Int      @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-// API Key Management System
-model ApiKey {
-  id          Int      @id @default(autoincrement())
-  key         String   @unique // API key (e.g., "ak_live_abc123...")
-  name        String   // Human-readable name
-  description String?  // Optional description
-  userId      Int      @map("user_id") // Owner of the API key
-  scopes      String[] // Permissions/scopes for this key
-  isActive    Boolean  @default(true) @map("is_active")
-  lastUsedAt  DateTime? @map("last_used_at")
-  expiresAt   DateTime? @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("api_keys")
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
 }
 
-
-// Backup Codes for 2FA Recovery
-model BackupCode {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  code      String   // Hashed backup code
-  isUsed    Boolean  @default(false) @map("is_used")
-  usedAt    DateTime? @map("used_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("backup_codes")
-}
-
-// Login Activity Tracking for Security Alerts
-model LoginActivity {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @map("user_id")
-  ipAddress  String   @map("ip_address")
-  userAgent  String   @map("user_agent")
-  location   String?  // Country/city (optional, can use a geo-IP service)
-  success    Boolean  // Whether the login attempt was successful
-  createdAt  DateTime @default(now()) @map("created_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("login_activities")
-}
-
-// Team Management System
-model Team {
-  id          Int      @id @default(autoincrement())
-  name        String   // Team name
-  description String?  // Optional description
-  slug        String   @unique // URL-friendly identifier (e.g., "my-team")
-  avatar      String?  // Team avatar/logo URL
-  isDefault   Boolean  @default(false) @map("is_default") // Whether this is a default team
-  isPublic    Boolean  @default(false) @map("is_public") // Whether team is visible to all users
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  createdBy   Int      @map("created_by")
-  updatedBy   Int?     @map("updated_by")
-
-  // Relations
-  createdByUser User @relation("TeamCreatedBy", fields: [createdBy], references: [id])
-  updatedByUser User? @relation("TeamUpdatedBy", fields: [updatedBy], references: [id])
-  
-  // Team resources
-  teamApiKeys TeamApiKey[]
-
-  @@map("teams")
-}
-
-
-// Team-specific API Keys
-model TeamApiKey {
-  id          Int      @id @default(autoincrement())
-  teamId      Int      @map("team_id")
-  key         String   @unique
-  name        String
-  description String?
-  scopes      String[] // Team-specific permissions
-  isActive    Boolean  @default(true) @map("is_active")
-  lastUsedAt  DateTime? @map("last_used_at")
-  expiresAt   DateTime? @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  createdBy   Int      @map("created_by")
-
-  // Relations
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  createdByUser User   @relation("TeamApiKeyCreatedBy", fields: [createdBy], references: [id])
-
-  @@map("team_api_keys")
-}
-
-
-// ENUMS - All enums organized at the bottom for better readability
-
-// User Enums
 enum UserStatus {
   ACTIVE
-  PENDING
+  INACTIVE
   SUSPENDED
-  DELETED
-  
-  @@map("user_status")
+  BANNED
 }
 
 enum UserType {
-  USER
+  CUSTOMER
   ADMIN
   SUPER_ADMIN
-  
-  @@map("user_type")
 }
 
-enum MfaMethod {
-  EMAIL
-  TOTP
-  SMS
-  
-  @@map("mfa_method")
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+  LIFETIME
 }
 
-
-// Blacklist Management Enums
-enum BlacklistType {
-  IP_ADDRESS
-  EMAIL
-  PHONE
-  USER_AGENT
-  
-  @@map("blacklist_type")
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAUSED
 }
-
-enum BlacklistReason {
-  SUSPICIOUS_ACTIVITY
-  SPAM
-  ABUSE
-  SECURITY_VIOLATION
-  MANUAL_BAN
-  
-  @@map("blacklist_reason")
-}
-
-enum BlacklistDuration {
-  TEMPORARY
-  PERMANENT
-  CUSTOM
-  
-  @@map("blacklist_duration")
-}
-
-// Role and Permission Enums
-enum RoleName {
-  USER_MANAGER
-  SECURITY_ADMIN
-  CONTENT_MODERATOR
-  SUPPORT_AGENT
-  SYSTEM_ADMIN
-  FINANCE_ADMIN
-  AUDIT_ADMIN
-  
-  @@map("role_name")
-}
-
-enum PermissionName {
-  // User Management
-  VIEW_USERS
-  CREATE_USERS
-  UPDATE_USERS
-  DELETE_USERS
-  RESET_USER_MFA
-  UNLOCK_USER_ACCOUNT
-  DEACTIVATE_USER_ACCOUNT
-  VIEW_USER_SESSIONS
-  REVOKE_USER_SESSIONS
-  
-  // Security Management
-  VIEW_BLACKLIST
-  MANAGE_BLACKLIST
-  VIEW_AUDIT_LOGS
-  MANAGE_SECURITY_SETTINGS
-  VIEW_SECURITY_REPORTS
-  
-  // Content Management
-  MODERATE_CONTENT
-  APPROVE_CONTENT
-  DELETE_CONTENT
-  VIEW_CONTENT_REPORTS
-  
-  // System Management
-  MANAGE_SYSTEM_SETTINGS
-  VIEW_SYSTEM_LOGS
-  MANAGE_EMAIL_TEMPLATES
-  VIEW_SYSTEM_METRICS
-  
-  // Financial Management
-  VIEW_FINANCIAL_DATA
-  MANAGE_PAYMENTS
-  VIEW_TRANSACTION_LOGS
-  MANAGE_REFUNDS
-  
-  // Audit and Compliance
-  VIEW_AUDIT_TRAILS
-  EXPORT_AUDIT_DATA
-  MANAGE_COMPLIANCE_REPORTS
-  
-  @@map("permission_name")
-}
-

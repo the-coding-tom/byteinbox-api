@@ -14,23 +14,35 @@ export async function seedUsers(prisma: PrismaClient) {
     const existingSuperAdmin = await prisma.user.findFirst({
       where: {
         email: superAdminEmail,
-        userType: UserType.ADMIN,
+        type: UserType.SUPER_ADMIN,
       },
     });
 
     if (!existingSuperAdmin) {
       const hashedPassword = await hashPassword(superAdminPassword);
       
-      const superAdminUser = await prisma.user.create({
-        data: {
-          email: superAdminEmail,
-          password: hashedPassword,
-          firstName: superAdminFirstName,
-          lastName: superAdminLastName,
-          userType: UserType.ADMIN,
-          isEmailVerified: true,
-          status: 'ACTIVE',
-        },
+      // Create user and LocalAuthAccount in transaction
+      const superAdminUser = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            email: superAdminEmail,
+            firstName: superAdminFirstName,
+            lastName: superAdminLastName,
+            type: UserType.SUPER_ADMIN,
+            emailVerifiedAt: new Date(),
+            status: 'ACTIVE',
+          },
+        });
+
+        // Create LocalAuthAccount with password
+        await tx.localAuthAccount.create({
+          data: {
+            userId: user.id,
+            passwordHash: hashedPassword,
+          },
+        });
+
+        return user;
       });
 
       console.log(`✅ Created super admin user: ${superAdminUser.email}`);
@@ -53,16 +65,27 @@ export async function seedUsers(prisma: PrismaClient) {
     if (!existingDevAdmin) {
       const hashedPassword = await hashPassword('admin123');
       
-      const devAdminUser = await prisma.user.create({
-        data: {
-          email: 'admin@example.com',
-          password: hashedPassword,
-          firstName: 'Dev',
-          lastName: 'Admin',
-          userType: UserType.ADMIN,
-          isEmailVerified: true,
-          status: 'ACTIVE',
-        },
+      const devAdminUser = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            email: 'admin@example.com',
+            firstName: 'Dev',
+            lastName: 'Admin',
+            type: UserType.ADMIN,
+            emailVerifiedAt: new Date(),
+            status: 'ACTIVE',
+          },
+        });
+
+        // Create LocalAuthAccount with password
+        await tx.localAuthAccount.create({
+          data: {
+            userId: user.id,
+            passwordHash: hashedPassword,
+          },
+        });
+
+        return user;
       });
 
       console.log(`✅ Created development admin user: ${devAdminUser.email}`);
@@ -80,16 +103,27 @@ export async function seedUsers(prisma: PrismaClient) {
     if (!existingDevUser) {
       const hashedPassword = await hashPassword('user123');
       
-      const devUser = await prisma.user.create({
-        data: {
-          email: 'user@example.com',
-          password: hashedPassword,
-          firstName: 'Dev',
-          lastName: 'User',
-          userType: UserType.USER,
-          isEmailVerified: true,
-          status: 'ACTIVE',
-        },
+      const devUser = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            email: 'user@example.com',
+            firstName: 'Dev',
+            lastName: 'User',
+            type: UserType.CUSTOMER,
+            emailVerifiedAt: new Date(),
+            status: 'ACTIVE',
+          },
+        });
+
+        // Create LocalAuthAccount with password
+        await tx.localAuthAccount.create({
+          data: {
+            userId: user.id,
+            passwordHash: hashedPassword,
+          },
+        });
+
+        return user;
       });
 
       console.log(`✅ Created development user: ${devUser.email}`);

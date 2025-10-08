@@ -3,96 +3,113 @@ import prisma from '../common/prisma';
 
 @Injectable()
 export class EmailTemplateRepository {
-  async createEmailTemplate(data: { name: string; subject: string; htmlContent: string; isActive?: boolean; isDefault?: boolean; createdBy?: number; updatedBy?: number }): Promise<any> {
-    return prisma.emailTemplate.create({
+  async createEmailTemplate(data: {
+    name: string;
+    subject?: string;
+    html: string;
+    description?: string;
+    category?: string;
+    variables?: string[];
+    status?: string;
+    createdBy?: number;
+    teamId: number;
+  }): Promise<any> {
+    return prisma.template.create({
       data: {
         name: data.name,
         subject: data.subject,
-        htmlContent: data.htmlContent,
-        isActive: data.isActive ?? true,
-        isDefault: data.isDefault ?? false,
+        html: data.html,
+        description: data.description,
+        category: data.category,
+        variables: data.variables || [],
+        status: data.status || 'active',
         createdBy: data.createdBy,
-        updatedBy: data.updatedBy,
+        teamId: data.teamId,
       },
     });
   }
 
   async findEmailTemplateById(id: number): Promise<any | null> {
-    return prisma.emailTemplate.findUnique({
+    return prisma.template.findUnique({
       where: { id },
+      include: {
+        creator: true,
+        team: true,
+      },
     });
   }
 
   async findEmailTemplateByName(name: string): Promise<any | null> {
-    return prisma.emailTemplate.findUnique({
+    return prisma.template.findFirst({
       where: { name },
     });
   }
 
   async findActiveEmailTemplateByName(name: string): Promise<any | null> {
-    return prisma.emailTemplate.findFirst({
+    return prisma.template.findFirst({
       where: {
         name,
-        isActive: true,
+        status: 'active',
       },
     });
   }
 
   async findAllEmailTemplates(): Promise<any[]> {
-    return prisma.emailTemplate.findMany({
+    return prisma.template.findMany({
       orderBy: { name: 'asc' },
+      include: {
+        creator: true,
+        team: true,
+      },
     });
   }
 
   async findActiveEmailTemplates(): Promise<any[]> {
-    return prisma.emailTemplate.findMany({
-      where: { isActive: true },
+    return prisma.template.findMany({
+      where: { status: 'active' },
       orderBy: { name: 'asc' },
     });
   }
 
   async findDefaultEmailTemplates(): Promise<any[]> {
-    return prisma.emailTemplate.findMany({
-      where: { isDefault: true },
+    return prisma.template.findMany({
+      where: { category: 'default' },
       orderBy: { name: 'asc' },
     });
   }
 
   async updateEmailTemplate(id: number, data: any): Promise<any> {
-    return prisma.emailTemplate.update({
+    return prisma.template.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date(),
-        updatedBy: data.updatedBy,
+        lastModified: new Date(),
       },
     });
   }
 
   async deleteEmailTemplate(id: number): Promise<void> {
-    await prisma.emailTemplate.delete({
+    await prisma.template.delete({
       where: { id },
     });
   }
 
-  async deactivateEmailTemplate(id: number, updatedBy?: number): Promise<any> {
-    return prisma.emailTemplate.update({
+  async deactivateEmailTemplate(id: number): Promise<any> {
+    return prisma.template.update({
       where: { id },
       data: {
-        isActive: false,
-        updatedAt: new Date(),
-        updatedBy,
+        status: 'archived',
+        lastModified: new Date(),
       },
     });
   }
 
-  async activateEmailTemplate(id: number, updatedBy?: number): Promise<any> {
-    return prisma.emailTemplate.update({
+  async activateEmailTemplate(id: number): Promise<any> {
+    return prisma.template.update({
       where: { id },
       data: {
-        isActive: true,
-        updatedAt: new Date(),
-        updatedBy,
+        status: 'active',
+        lastModified: new Date(),
       },
     });
   }

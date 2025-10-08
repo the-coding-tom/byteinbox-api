@@ -36,7 +36,6 @@ export class AdminSecurityService {
         offset: validatedFilter.offset || 0,
         limit: validatedFilter.limit || 10,
         type: validatedFilter.type,
-        isActive: validatedFilter.isActive,
         keyword: validatedFilter.keyword,
       });
       

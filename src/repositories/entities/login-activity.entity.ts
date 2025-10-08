@@ -1,15 +1,22 @@
-import { LoginActivity } from '@prisma/client';
-
-export class LoginActivityEntity implements LoginActivity {
+// LoginActivity entity - based on Session model
+export class LoginActivityEntity {
   id: number;
   userId: number;
-  ipAddress: string;
-  userAgent: string;
-  location: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  location?: string | null;
   success: boolean;
   createdAt: Date;
 
-  constructor(data: LoginActivity) {
+  constructor(data: {
+    id: number;
+    userId: number;
+    ipAddress: string | null;
+    userAgent: string | null;
+    location?: string | null;
+    success: boolean;
+    createdAt: Date;
+  }) {
     this.id = data.id;
     this.userId = data.userId;
     this.ipAddress = data.ipAddress;
@@ -19,11 +26,27 @@ export class LoginActivityEntity implements LoginActivity {
     this.createdAt = data.createdAt;
   }
 
-  static createEntity(data: LoginActivity): LoginActivityEntity {
+  static createEntity(data: {
+    id: number;
+    userId: number;
+    ipAddress: string | null;
+    userAgent: string | null;
+    location?: string | null;
+    success: boolean;
+    createdAt: Date;
+  }): LoginActivityEntity {
     return new LoginActivityEntity(data);
   }
 
-  static createEntities(data: LoginActivity[]): LoginActivityEntity[] {
+  static createEntities(data: Array<{
+    id: number;
+    userId: number;
+    ipAddress: string | null;
+    userAgent: string | null;
+    location?: string | null;
+    success: boolean;
+    createdAt: Date;
+  }>): LoginActivityEntity[] {
     return data.map(item => LoginActivityEntity.createEntity(item));
   }
 } 

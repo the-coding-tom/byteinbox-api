@@ -30,10 +30,7 @@ export class TeamsService {
       // Create team
       const team = await this.teamRepository.create({
         name: validatedData.name,
-        description: validatedData.description,
         slug,
-        isPublic: validatedData.isPublic || false,
-        createdBy: userId,
       });
 
       // Add user as team owner
@@ -41,8 +38,6 @@ export class TeamsService {
         teamId: team.id,
         userId,
         role: 'OWNER',
-        status: 'ACTIVE',
-        joinedAt: new Date(),
       });
 
       // Log team creation
@@ -263,7 +258,7 @@ export class TeamsService {
         teamId: validatedTeamId,
         email: validatedData.email,
         role: validatedData.role,
-        createdBy: userId,
+        invitedBy: userId.toString(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       });
 

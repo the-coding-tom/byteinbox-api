@@ -2,7 +2,7 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import * as Joi from 'joi';
 import { throwError } from '../../../utils/util';
 import { validateJoiSchema } from '../../../utils/joi.validator';
-import { BlacklistType, BlacklistReason, BlacklistDuration } from '@prisma/client';
+import { BlacklistType } from '@prisma/client';
 import { BlacklistRepository } from '../../../repositories/blacklist.repository';
 import {
   GetSecurityActivityDto,
@@ -153,25 +153,8 @@ export class AdminSecurityValidator {
         'any.required': 'Value is required',
         'string.max': 'Value must not exceed 255 characters',
       }),
-      reason: Joi.string()
-        .valid(...Object.values(BlacklistReason))
-        .required()
-        .messages({
-          'any.required': 'Reason is required',
-          'any.only': `Reason must be one of: ${Object.values(BlacklistReason).join(', ')}`,
-        }),
-      duration: Joi.string()
-        .valid(...Object.values(BlacklistDuration))
-        .required()
-        .messages({
-          'any.required': 'Duration is required',
-          'any.only': `Duration must be one of: ${Object.values(BlacklistDuration).join(', ')}`,
-        }),
-      description: Joi.string().max(500).optional().messages({
-        'string.max': 'Description must not exceed 500 characters',
-      }),
-      metadata: Joi.object().optional().messages({
-        'object.base': 'Metadata must be an object',
+      reason: Joi.string().optional().max(500).messages({
+        'string.max': 'Reason must not exceed 500 characters',
       }),
     });
 
@@ -195,29 +178,8 @@ export class AdminSecurityValidator {
     data: UpdateBlacklistEntryDto,
   ): Promise<UpdateBlacklistEntryDto> {
     const schema = Joi.object({
-      type: Joi.string()
-        .valid(...Object.values(BlacklistType))
-        .optional()
-        .messages({
-          'any.only': 'Type must be a valid blacklist type',
-        }),
-      reason: Joi.string()
-        .valid(...Object.values(BlacklistReason))
-        .optional()
-        .messages({
-          'any.only': 'Reason must be a valid blacklist reason',
-        }),
-      duration: Joi.string()
-        .valid(...Object.values(BlacklistDuration))
-        .optional()
-        .messages({
-          'any.only': 'Duration must be a valid blacklist duration',
-        }),
-      isActive: Joi.boolean().optional().messages({
-        'boolean.base': 'isActive must be a boolean',
-      }),
-      expiresAt: Joi.date().greater('now').optional().messages({
-        'date.greater': 'Expiration date must be in the future',
+      reason: Joi.string().optional().max(500).messages({
+        'string.max': 'Reason must not exceed 500 characters',
       }),
     });
 

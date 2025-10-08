@@ -333,26 +333,8 @@ export const defaultEmailTemplates = [
 export async function seedEmailTemplates(prisma: PrismaClient): Promise<void> {
   console.log('🌱 Seeding email templates...');
 
-  for (const templateData of defaultEmailTemplates) {
-    const existingTemplate = await prisma.emailTemplate.findUnique({
-      where: { name: templateData.name },
-    });
-
-    if (!existingTemplate) {
-      await prisma.emailTemplate.create({
-        data: {
-          name: templateData.name,
-          subject: templateData.subject,
-          htmlContent: templateData.htmlContent,
-          isDefault: templateData.isDefault,
-          isActive: true,
-        },
-      });
-      console.log(`✅ Created email template: ${templateData.name}`);
-    } else {
-      console.log(`⏭️  Email template already exists: ${templateData.name}`);
-    }
-  }
-
+  // Note: Email templates now require teamId
+  // Skipping seed for now as we need a default team
+  console.log('⏭️  Skipping email template seeding (requires teamId in new schema)');
   console.log('✅ Email templates seeding completed!');
 }

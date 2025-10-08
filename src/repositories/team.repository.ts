@@ -4,22 +4,15 @@ import prisma from '../common/prisma';
 
 @Injectable()
 export class TeamRepository {
+  // Note: description, isDefault, isPublic, createdBy fields removed from Team model
   async create(data: {
     name: string;
-    description?: string;
     slug: string;
-    isDefault?: boolean;
-    isPublic?: boolean;
-    createdBy: number;
   }): Promise<any> {
     return prisma.team.create({
       data: {
         name: data.name,
-        description: data.description,
         slug: data.slug,
-        isDefault: data.isDefault || false,
-        isPublic: data.isPublic || false,
-        createdBy: data.createdBy,
       },
     });
   }
@@ -27,16 +20,6 @@ export class TeamRepository {
   async findById(id: number): Promise<any> {
     return prisma.team.findUnique({
       where: { id },
-      include: {
-        createdByUser: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
     });
   }
 
@@ -49,30 +32,24 @@ export class TeamRepository {
   async findUserTeams(userId: number): Promise<any[]> {
     return prisma.team.findMany({
       where: {
-        teamMembers: {
+        members: {
           some: {
             userId,
-            status: 'ACTIVE',
           },
         },
       },
       include: {
-        teamMembers: {
+        members: {
           where: { userId },
           select: {
             role: true,
-            status: true,
-            joinedAt: true,
+            createdAt: true,
           },
         },
         _count: {
           select: {
-            teamMembers: {
-              where: { status: 'ACTIVE' },
-            },
-            teamApiKeys: {
-              where: { isActive: true },
-            },
+            members: true,
+            apiKeys: true,
           },
         },
       },
@@ -80,22 +57,17 @@ export class TeamRepository {
     });
   }
 
+  // Note: status, joinedAt, invitedBy fields removed from TeamMember model
   async addMember(data: {
     teamId: number;
     userId: number;
     role: string;
-    status: string;
-    joinedAt: Date;
-    invitedBy?: number;
   }): Promise<any> {
     return prisma.teamMember.create({
       data: {
         teamId: data.teamId,
         userId: data.userId,
-        role: data.role as any,
-        status: data.status as any,
-        joinedAt: data.joinedAt,
-        invitedBy: data.invitedBy,
+        role: data.role,
       },
     });
   }
@@ -115,42 +87,31 @@ export class TeamRepository {
     return prisma.teamMember.findMany({
       where: {
         teamId,
-        status: 'ACTIVE',
       },
       include: {
         user: {
           select: {
             id: true,
             email: true,
+            name: true,
             firstName: true,
             lastName: true,
-            isEmailVerified: true,
-          },
-        },
-        invitedByUser: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+            emailVerifiedAt: true,
           },
         },
       },
-      orderBy: { joinedAt: 'asc' },
+      orderBy: { createdAt: 'asc' },
     });
   }
 
-  async removeMember(teamId: number, userId: number): Promise<any> {
-    return prisma.teamMember.update({
+  async removeMember(teamId: number, userId: number): Promise<void> {
+    // In new schema, we delete the member instead of marking as LEFT
+    await prisma.teamMember.delete({
       where: {
         teamId_userId: {
           teamId,
           userId,
         },
-      },
-      data: {
-        status: 'LEFT',
-        leftAt: new Date(),
       },
     });
   }
@@ -164,27 +125,28 @@ export class TeamRepository {
         },
       },
       data: {
-        role: role as any,
+        role,
       },
     });
   }
 
+  // Note: createdBy renamed to invitedBy in TeamInvitation
   async createInvitation(data: {
     teamId: number;
     email: string;
     role: string;
-    createdBy: number;
+    invitedBy: string;
     expiresAt: Date;
   }): Promise<any> {
     const token = this.generateInvitationToken();
-    
+
     return prisma.teamInvitation.create({
       data: {
         teamId: data.teamId,
         email: data.email,
-        role: data.role as any,
+        role: data.role,
         token,
-        createdBy: data.createdBy,
+        invitedBy: data.invitedBy,
         expiresAt: data.expiresAt,
       },
     });
@@ -201,25 +163,17 @@ export class TeamRepository {
             slug: true,
           },
         },
-        createdByUser: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
       },
     });
   }
 
-  async markInvitationAsUsed(invitationId: number, usedBy: number): Promise<any> {
+  // Note: isUsed, usedAt, usedBy fields removed - using status and acceptedAt instead
+  async markInvitationAsUsed(invitationId: number): Promise<any> {
     return prisma.teamInvitation.update({
       where: { id: invitationId },
       data: {
-        isUsed: true,
-        usedAt: new Date(),
-        usedBy,
+        status: 'accepted',
+        acceptedAt: new Date(),
       },
     });
   }
@@ -228,7 +182,7 @@ export class TeamRepository {
     return prisma.teamInvitation.findMany({
       where: {
         teamId,
-        isUsed: false,
+        status: 'pending',
         expiresAt: {
           gt: new Date(),
         },
@@ -237,39 +191,40 @@ export class TeamRepository {
     });
   }
 
+  // Note: teamApiKey model doesn't exist - use apiKey instead
   async createTeamApiKey(data: {
     teamId: number;
     key: string;
     name: string;
-    description?: string;
-    scopes: string[];
-    createdBy: number;
-    expiresAt?: Date;
+    permission: string;
+    domain?: string;
+    createdBy?: number;
   }): Promise<any> {
-    return prisma.teamApiKey.create({
+    return prisma.apiKey.create({
       data: {
         teamId: data.teamId,
         key: data.key,
         name: data.name,
-        description: data.description,
-        scopes: data.scopes,
+        permission: data.permission,
+        domain: data.domain,
         createdBy: data.createdBy,
-        expiresAt: data.expiresAt,
+        status: 'active',
       },
     });
   }
 
   async findTeamApiKeys(teamId: number): Promise<any[]> {
-    return prisma.teamApiKey.findMany({
+    return prisma.apiKey.findMany({
       where: {
         teamId,
-        isActive: true,
+        status: 'active',
       },
       include: {
-        createdByUser: {
+        creator: {
           select: {
             id: true,
             email: true,
+            name: true,
             firstName: true,
             lastName: true,
           },
@@ -280,7 +235,7 @@ export class TeamRepository {
   }
 
   async findTeamApiKeyById(id: number): Promise<any> {
-    return prisma.teamApiKey.findUnique({
+    return prisma.apiKey.findUnique({
       where: { id },
       include: {
         team: {
@@ -295,59 +250,38 @@ export class TeamRepository {
   }
 
   async updateTeamApiKey(id: number, data: any): Promise<any> {
-    return prisma.teamApiKey.update({
+    return prisma.apiKey.update({
       where: { id },
       data,
     });
   }
 
   async deleteTeamApiKey(id: number): Promise<any> {
-    return prisma.teamApiKey.update({
+    return prisma.apiKey.update({
       where: { id },
-      data: { isActive: false },
+      data: { status: 'revoked' },
     });
   }
 
+  // Note: teamActivity model doesn't exist in new schema
   async createTeamActivity(data: {
     teamId: number;
     userId: number;
     action: string;
     resourceType?: string;
-    resourceId?: number;
+    resourceId?: string;
     details?: string;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<any> {
-    return prisma.teamActivity.create({
-      data: {
-        teamId: data.teamId,
-        userId: data.userId,
-        action: data.action,
-        resourceType: data.resourceType,
-        resourceId: data.resourceId,
-        details: data.details,
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
-      },
-    });
+    // Team activity tracking not implemented in new schema
+    console.warn('createTeamActivity: Not implemented in new schema');
+    return null;
   }
 
   async findTeamActivities(teamId: number, limit: number = 50): Promise<any[]> {
-    return prisma.teamActivity.findMany({
-      where: { teamId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    });
+    // Team activity tracking not implemented in new schema
+    return [];
   }
 
   async update(id: number, data: any): Promise<any> {

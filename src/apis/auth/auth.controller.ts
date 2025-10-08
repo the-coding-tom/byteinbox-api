@@ -7,21 +7,18 @@ import { LoginDto, OAuthCallbackDto, LogoutDto, RefreshTokenDto, ResetPasswordRe
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // Email Registration Endpoints
-  @Post('register')
-  async register(@Body() registerDto: RegisterDto, @Req() request: any, @Res() response: Response) {
+  @Post('signup')
+  async signup(@Body() registerDto: RegisterDto, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.authService.register(registerDto, request);
     response.status(status).json(restOfResponse);
   }
 
-  // Email Login Endpoints
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.authService.login(loginDto, request);
     response.status(status).json(restOfResponse);
   }
 
-  // Session Management Endpoints
   @Post('logout')
   async logout(@Body() logoutDto: LogoutDto, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.authService.logout(logoutDto, request);
@@ -41,13 +38,13 @@ export class AuthController {
   }
 
   // Password Management Endpoints
-  @Post('reset-password/request')
+  @Post('reset-password')
   async requestPasswordReset(@Body() resetPasswordRequestDto: ResetPasswordRequestDto, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.authService.requestPasswordReset(resetPasswordRequestDto, request);
     response.status(status).json(restOfResponse);
   }
 
-  @Post('reset-password/confirm')
+  @Post('confirm-password-reset')
   async confirmPasswordReset(@Body() resetPasswordConfirmDto: ResetPasswordConfirmDto, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.authService.confirmPasswordReset(resetPasswordConfirmDto, request);
     response.status(status).json(restOfResponse);

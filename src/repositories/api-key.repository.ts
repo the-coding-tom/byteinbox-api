@@ -4,22 +4,25 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ApiKeyRepository {
+  // Note: description, userId, scopes, expiresAt removed from ApiKey model
+  // Added: teamId, permission, domain, status
   async create(data: {
     key: string;
     name: string;
-    description?: string;
-    userId: number;
-    scopes: string[];
-    expiresAt?: Date;
+    teamId: number;
+    permission: string;
+    domain?: string;
+    createdBy?: number;
   }): Promise<any> {
     return prisma.apiKey.create({
       data: {
         key: data.key,
         name: data.name,
-        description: data.description,
-        userId: data.userId,
-        scopes: data.scopes,
-        expiresAt: data.expiresAt,
+        teamId: data.teamId,
+        permission: data.permission,
+        domain: data.domain,
+        createdBy: data.createdBy,
+        status: 'active',
       },
     });
   }
@@ -36,9 +39,10 @@ export class ApiKeyRepository {
     });
   }
 
+  // Note: userId field doesn't exist - use teamId or createdBy instead
   async findByUserId(userId: number): Promise<any[]> {
     return prisma.apiKey.findMany({
-      where: { userId },
+      where: { createdBy: userId },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -46,29 +50,28 @@ export class ApiKeyRepository {
   async findByUserIdAndName(userId: number, name: string): Promise<any | null> {
     return prisma.apiKey.findFirst({
       where: {
-        userId,
+        createdBy: userId,
         name,
       },
     });
   }
 
   async findWithPagination(filter: {
-    userId?: number;
-    isActive?: boolean;
+    teamId?: string;
+    status?: string;
     keyword?: string;
     offset: number;
     limit: number;
   }): Promise<{ data: any[]; meta: any }> {
-    const { userId, isActive, keyword, offset, limit } = filter;
+    const { teamId, status, keyword, offset, limit } = filter;
 
     const whereClause = Prisma.sql`
       WHERE (
         AK.name::text ILIKE CONCAT('%', ${keyword}::text, '%') 
-        OR AK.description::text ILIKE CONCAT('%', ${keyword}::text, '%')
         OR COALESCE(${keyword}, NULL) IS NULL
       )
-      AND (AK.user_id = ${userId}::int OR COALESCE(${userId}, NULL) IS NULL)
-      AND (AK.is_active = ${isActive}::boolean OR COALESCE(${isActive}, NULL) IS NULL)
+      AND (AK.team_id = ${teamId}::text OR COALESCE(${teamId}, NULL) IS NULL)
+      AND (AK.status = ${status}::text OR COALESCE(${status}, NULL) IS NULL)
     `;
 
     const retrieveApiKeysQuery = Prisma.sql`
@@ -76,20 +79,14 @@ export class ApiKeyRepository {
         AK.id,
         AK.key,
         AK.name,
-        AK.description,
-        AK.user_id as "userId",
-        AK.scopes,
-        AK.is_active as "isActive",
-        AK.expires_at as "expiresAt",
-        AK.last_used_at as "lastUsedAt",
+        AK.team_id as "teamId",
+        AK.permission,
+        AK.domain,
+        AK.status,
+        AK.last_used as "lastUsed",
         AK.created_at as "createdAt",
-        AK.updated_at as "updatedAt",
-        U.id as "user.id",
-        U.email as "user.email",
-        U.first_name as "user.firstName",
-        U.last_name as "user.lastName"
+        AK.created_by as "createdBy"
       FROM api_keys AK
-      LEFT JOIN users U ON AK.user_id = U.id
       ${whereClause} 
       ORDER BY AK.created_at DESC 
       LIMIT ${limit} 
@@ -120,10 +117,9 @@ export class ApiKeyRepository {
     id: number,
     data: {
       name?: string;
-      description?: string;
-      scopes?: string[];
-      isActive?: boolean;
-      expiresAt?: Date;
+      permission?: string;
+      domain?: string;
+      status?: string;
       key?: string;
     },
   ): Promise<any> {
@@ -131,10 +127,9 @@ export class ApiKeyRepository {
       where: { id },
       data: {
         name: data.name,
-        description: data.description,
-        scopes: data.scopes,
-        isActive: data.isActive,
-        expiresAt: data.expiresAt,
+        permission: data.permission,
+        domain: data.domain,
+        status: data.status,
         key: data.key,
       },
     });
@@ -143,7 +138,7 @@ export class ApiKeyRepository {
   async updateLastUsed(id: number): Promise<void> {
     await prisma.apiKey.update({
       where: { id },
-      data: { lastUsedAt: new Date() },
+      data: { lastUsed: new Date() },
     });
   }
 
@@ -155,30 +150,32 @@ export class ApiKeyRepository {
 
   async createLog(data: {
     apiKeyId: number;
-    action: string;
-    endpoint?: string;
+    endpoint: string;
+    method: string;
+    status: string;
     ipAddress?: string;
     userAgent?: string;
-    requestBody?: string;
-    responseStatus?: number;
+    requestBody?: any;
+    responseBody?: any;
   }): Promise<void> {
-    await prisma.apiKeyLog.create({
+    // API key logs are tracked via Log model in new schema
+    await prisma.log.create({
       data: {
         apiKeyId: data.apiKeyId,
-        action: data.action,
         endpoint: data.endpoint,
-        ipAddress: data.ipAddress,
+        method: data.method,
+        status: data.status,
         userAgent: data.userAgent,
         requestBody: data.requestBody,
-        responseStatus: data.responseStatus,
+        responseBody: data.responseBody,
       },
     });
   }
 
   async getLogs(apiKeyId: number, limit: number = 100): Promise<any[]> {
-    return prisma.apiKeyLog.findMany({
+    return prisma.log.findMany({
       where: { apiKeyId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { timestamp: 'desc' },
       take: limit,
     });
   }
@@ -189,21 +186,22 @@ export class ApiKeyRepository {
     errorRate: number;
     avgResponseTime: number;
   }> {
+    // Note: Using logs table instead of api_key_logs
     const result = await prisma.$queryRaw<
       {
         total_requests: number;
-        last_used_at: Date | null;
+        last_used: Date | null;
         error_count: number;
       }[]
     >`
       SELECT 
-        COALESCE(COUNT(akl.id), 0) as total_requests,
-        ak.last_used_at,
-        COALESCE(COUNT(CASE WHEN akl.response_status >= 400 THEN 1 END), 0) as error_count
+        COALESCE(COUNT(l.id), 0) as total_requests,
+        ak.last_used,
+        COALESCE(COUNT(CASE WHEN l.level = 'ERROR' THEN 1 END), 0) as error_count
       FROM api_keys ak
-      LEFT JOIN api_key_logs akl ON ak.id = akl.api_key_id
+      LEFT JOIN logs l ON ak.id = l.api_key_id
       WHERE ak.id = ${apiKeyId}
-      GROUP BY ak.id, ak.last_used_at
+      GROUP BY ak.id, ak.last_used
     `;
 
     const stats = result[0];
@@ -213,7 +211,7 @@ export class ApiKeyRepository {
 
     return {
       totalRequests,
-      lastUsedAt: stats?.last_used_at || null,
+      lastUsedAt: stats?.last_used || null,
       errorRate,
       avgResponseTime: 0, // Not available in current schema
     };

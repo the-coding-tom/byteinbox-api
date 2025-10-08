@@ -3,90 +3,98 @@ import prisma from '../common/prisma';
 
 @Injectable()
 export class SessionRepository {
-  // Refresh token methods
+  // Session/Refresh token methods
+  // Note: refreshToken model no longer exists, using Session model instead
   async createRefreshToken(refreshTokenData: any): Promise<any> {
-    return prisma.refreshToken.create({
+    return prisma.session.create({
       data: {
         userId: refreshTokenData.userId,
-        token: refreshTokenData.token,
+        refreshToken: refreshTokenData.token, // Field is refreshToken in Session model
         expiresAt: refreshTokenData.expiresAt,
-        isRevoked: refreshTokenData.isRevoked,
+        userAgent: refreshTokenData.userAgent,
+        ipAddress: refreshTokenData.ipAddress,
       },
     });
   }
 
   async findRefreshToken(token: string): Promise<any | null> {
-    return prisma.refreshToken.findFirst({
+    return prisma.session.findFirst({
       where: {
-        token,
+        refreshToken: token,
         expiresAt: {
           gt: new Date(),
         },
-        isRevoked: false,
       },
     });
   }
 
   async revokeRefreshToken(token: string): Promise<void> {
-    await prisma.refreshToken.updateMany({
-      where: { token },
-      data: { isRevoked: true },
+    // In new schema, we delete the session to revoke it
+    await prisma.session.deleteMany({
+      where: { refreshToken: token },
     });
   }
 
   async revokeAllUserRefreshTokens(userId: number): Promise<void> {
-    await prisma.refreshToken.updateMany({
+    // Delete all sessions for the user
+    await prisma.session.deleteMany({
       where: { userId },
-      data: { isRevoked: true },
     });
   }
 
   async cleanupExpiredTokens(): Promise<void> {
     await prisma.$queryRaw`
-      DELETE FROM refresh_tokens 
-      WHERE expires_at < NOW() OR is_revoked = true
+      DELETE FROM sessions 
+      WHERE expires_at < NOW()
     `;
   }
 
   // Session management methods
   async getActiveSessions(userId: number): Promise<any[]> {
-    const sessions = await prisma.$queryRaw<any[]>`
-      SELECT 
-        rt.id,
-        rt.token,
-        rt.created_at as createdAt,
-        rt.expires_at as expiresAt,
-        rt.user_agent,
-        rt.ip_address as ipAddress
-      FROM refresh_tokens rt
-      WHERE rt.user_id = ${userId}
-      AND rt.expires_at > NOW()
-      AND rt.is_revoked = false
-      ORDER BY rt.created_at DESC
-    `;
-    return sessions;
+    const sessions = await prisma.session.findMany({
+      where: {
+        userId,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return sessions.map(session => ({
+      id: session.id,
+      token: session.refreshToken,
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      userAgent: session.userAgent,
+      ipAddress: session.ipAddress,
+    }));
   }
 
   async revokeAllSessions(userId: number): Promise<void> {
-    await prisma.refreshToken.updateMany({
+    await prisma.session.deleteMany({
       where: { userId },
-      data: { isRevoked: true },
     });
   }
 
   // Security activity methods
   async getSecurityActivity(userId: number): Promise<any[]> {
-    // This would typically query a security_activity table
-    // For now, returning a placeholder structure
-    return [
-      {
-        id: 1,
-        userId,
-        activity: 'login',
-        ipAddress: '192.168.1.1',
-        userAgent: 'Mozilla/5.0...',
-        createdAt: new Date(),
-      },
-    ];
+    // Get recent sessions as security activity
+    const sessions = await prisma.session.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    return sessions.map(session => ({
+      id: session.id,
+      userId: session.userId,
+      activity: 'login',
+      ipAddress: session.ipAddress,
+      userAgent: session.userAgent,
+      createdAt: session.createdAt,
+    }));
   }
 } 
