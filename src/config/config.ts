@@ -194,4 +194,14 @@ export const config = {
     logToFile: process.env.LOG_TO_FILE === 'true',
     logFilePath: process.env.LOG_FILE_PATH || './logs/app.log',
   },
+
+  // AWS Configuration
+  aws: {
+    region: process.env.AWS_REGION || 'us-east-1',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    ses: {
+      defaultRegion: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'us-east-1',
+    },
+  },
 };

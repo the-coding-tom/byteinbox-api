@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
+import { config } from '../../config/config';
 import { GetLogsResponseDto, GetLogDetailsResponseDto, LogFilterDto } from './dto/logs.dto';
 
 @Injectable()
@@ -10,8 +12,8 @@ export class LogsService {
   async getLogs(userId: number, filter: LogFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch API logs with pagination
       const response: GetLogsResponseDto = {
@@ -70,7 +72,7 @@ export class LogsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Logs retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -110,7 +112,7 @@ export class LogsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Log details retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {

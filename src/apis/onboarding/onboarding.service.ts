@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OnboardingValidator } from './onboarding.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
 import { 
   GetLanguagesResponseDto, 
   GetStepsResponseDto, 
@@ -39,7 +40,7 @@ export class OnboardingService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Languages retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -92,7 +93,7 @@ export class OnboardingService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Onboarding steps retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -119,7 +120,7 @@ export class OnboardingService {
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'API key generated successfully',
+        message: Constants.createdSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -145,7 +146,7 @@ export class OnboardingService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Step updated successfully',
+        message: Constants.updatedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -160,13 +161,13 @@ export class OnboardingService {
 
       // Dummy response - in real implementation, this would send an actual email
       const response: SendTestEmailResponseDto = {
-        message: 'Test email sent successfully',
+        message: Constants.successMessage,
         emailId: 'email_123',
       };
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Test email sent successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {

@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import prisma from '../common/prisma';
-import { BackupCodeEntity } from './entities/backup-code.entity';
 
 @Injectable()
 export class BackupCodeRepository {
-  async createBackupCodes(userId: number, hashedCodes: string[]): Promise<BackupCodeEntity[]> {
+  async createBackupCodes(userId: number, hashedCodes: string[]): Promise<any[]> {
     await prisma.mfaBackupCode.createMany({
       data: hashedCodes.map(code => ({
         userId,
@@ -16,20 +15,11 @@ export class BackupCodeRepository {
     return this.findByUserId(userId);
   }
 
-  async findByUserId(userId: number): Promise<BackupCodeEntity[]> {
-    const backupCodes = await prisma.mfaBackupCode.findMany({
+  async findByUserId(userId: number): Promise<any[]> {
+    return prisma.mfaBackupCode.findMany({
       where: { userId },
       orderBy: { createdAt: 'asc' },
     });
-
-    return backupCodes.map((backupCode: any) => ({
-      id: backupCode.id,
-      userId: backupCode.userId,
-      code: backupCode.code,
-      isUsed: backupCode.used,
-      usedAt: backupCode.usedAt,
-      createdAt: backupCode.createdAt,
-    }));
   }
 
   async markAsUsed(id: number): Promise<void> {

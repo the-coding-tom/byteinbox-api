@@ -3,6 +3,7 @@ import { UserRepository } from '../../repositories/user.repository';
 import { ProfileValidator } from './profile.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
 import { UpdateProfileDto } from './dto/profile.dto';
 
 @Injectable()
@@ -19,13 +20,13 @@ export class ProfileService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Profile retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: {
           id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          isEmailVerified: user.isEmailVerified,
+          isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -52,14 +53,14 @@ export class ProfileService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Profile updated successfully',
+        message: Constants.updatedSuccessfully,
         data: {
           id: user.id,
           email: user.email,
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
 
-          isEmailVerified: user.isEmailVerified,
+          isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
           updatedAt: new Date(),
         },

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import prisma from '../common/prisma';
 
 @Injectable()
-export class MfaRepository {
+export class MfaVerificationSessionRepository {
   async findMfaSessionByToken(sessionToken: string): Promise<any | null> {
     return prisma.mfaVerificationSession.findFirst({
       where: {
@@ -14,10 +14,13 @@ export class MfaRepository {
     });
   }
 
-  async cleanupExpiredMfaSessions(): Promise<void> {
+  async markExpiredSessionsAsExpired(): Promise<void> {
     await prisma.$queryRaw`
-      DELETE FROM mfa_verification_sessions
-      WHERE expires_at < NOW()
+      UPDATE mfa_verification_sessions
+      SET status = 'expired'::"MfaVerificationSessionStatus"
+      WHERE 
+        expires_at < NOW()
+        AND status::"MfaVerificationSessionStatus" != 'expired'::"MfaVerificationSessionStatus"
     `;
   }
 } 

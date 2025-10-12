@@ -2,7 +2,6 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import prisma from '../common/prisma';
 import { seedEmailTemplates } from './data/email-templates';
 import { seedUsers } from './data/users';
-import { seedRolesAndPermissions } from './data/roles-permissions';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -10,15 +9,11 @@ export class SeedService implements OnApplicationBootstrap {
     console.log('🚀 Starting database seeding...');
     
     try {
-      // Seed roles and permissions first (needed for user creation)
-      await seedRolesAndPermissions(prisma);
-      console.log('✅ Roles and permissions seeded');
-      
       // Seed users (admin and regular user)
       await seedUsers(prisma);
       console.log('✅ Users seeded');
       
-      // Seed email templates last
+      // Seed email templates
       await seedEmailTemplates(prisma);
       console.log('✅ Email templates seeded');
       

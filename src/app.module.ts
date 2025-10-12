@@ -18,10 +18,10 @@ import { MetricsModule } from './apis/metrics/metrics.module';
 import { LogsModule } from './apis/logs/logs.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthMiddleware } from './common/middlewares/auth.middleware';
+import { IsAuthenticatedMiddleware } from './common/middlewares/is-authenticated.middleware';
+import { IsUserScopeMiddleware } from './common/middlewares/is-user-scope.middleware';
 import { AdminMiddleware } from './common/middlewares/admin.middleware';
 import { AdminAuditMiddleware } from './common/middlewares/admin-audit.middleware';
-import { ApiKeyMiddleware } from './common/middlewares/api-key.middleware';
 import { config } from './config/config';
 import { CronsModule } from './crons/crons.module';
 import { QueueProcessorsModule } from './queues/queue-processors.module';
@@ -56,44 +56,56 @@ import { AdminModule } from './apis/admin/admin.module';
     DomainsModule,
     EmailsModule,
     TemplatesModule,
-        WebhooksModule,
-        ContactsModule,
-        BroadcastsModule,
-        AudiencesModule,
-        MetricsModule,
-        LogsModule,
+    WebhooksModule,
+    ContactsModule,
+    BroadcastsModule,
+    AudiencesModule,
+    MetricsModule,
+    LogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(ApiKeyMiddleware).forRoutes(
-      // Add routes that support API key authentication
-      // ......
-    );
 
     // Authentication middleware for all routes except public auth endpoints
     consumer
-      .apply(AuthMiddleware)
+      .apply(IsAuthenticatedMiddleware)
       .exclude(
+        { path: 'api/v1/auth/signup', method: RequestMethod.POST },
         { path: 'api/v1/auth/login', method: RequestMethod.POST },
-        { path: 'api/v1/auth/register', method: RequestMethod.POST },
-        { path: 'api/v1/auth/oauth/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/auth/callback', method: RequestMethod.GET },
         { path: 'api/v1/auth/refresh', method: RequestMethod.POST },
-        { path: 'api/v1/auth/password/forgot', method: RequestMethod.POST },
-        { path: 'api/v1/auth/password/reset', method: RequestMethod.POST },
-        { path: 'api/v1/auth/verify-email', method: RequestMethod.GET },
+        { path: 'api/v1/auth/reset-password', method: RequestMethod.POST },
+        { path: 'api/v1/auth/confirm-password-reset', method: RequestMethod.POST },
+        { path: 'api/v1/auth/verify-email', method: RequestMethod.POST },
         { path: 'api/v1/auth/resend-verification', method: RequestMethod.POST },
-        { path: 'api/v1/auth/2fa/verify', method: RequestMethod.POST },
-        { path: 'api/v1/auth/2fa/email/verify', method: RequestMethod.POST },
-        { path: 'api/v1/auth/2fa/email/send', method: RequestMethod.POST },
-        { path: 'api/v1/auth/2fa/recovery/initiate', method: RequestMethod.POST },
-        { path: 'api/v1/auth/2fa/recovery/verify', method: RequestMethod.POST },
-        { path: 'api/v1/api-keys/public/test', method: RequestMethod.GET },
+        { path: 'api/v1/auth/mfa/challenge', method: RequestMethod.POST },
+        { path: 'api/v1/auth/google', method: RequestMethod.GET },
+        { path: 'api/v1/auth/google/callback', method: RequestMethod.GET },
+        { path: 'api/v1/auth/github', method: RequestMethod.GET },
+        { path: 'api/v1/auth/github/callback', method: RequestMethod.GET },
       )
       .forRoutes('*path');
+
+    // User-scoped middleware (JWT only - no API keys)
+    consumer
+      .apply(IsUserScopeMiddleware)
+      .forRoutes(
+        { path: 'api/v1/profile', method: RequestMethod.ALL },
+        { path: 'api/v1/profile/*path', method: RequestMethod.ALL },
+        { path: 'api/v1/account', method: RequestMethod.ALL },
+        { path: 'api/v1/account/*path', method: RequestMethod.ALL },
+        { path: 'api/v1/auth/logout', method: RequestMethod.POST },
+        { path: 'api/v1/auth/logout-all-devices', method: RequestMethod.POST },
+        { path: 'api/v1/auth/change-password', method: RequestMethod.POST },
+        { path: 'api/v1/auth/mfa/setup', method: RequestMethod.POST },
+        { path: 'api/v1/auth/mfa/verify', method: RequestMethod.POST },
+        { path: 'api/v1/auth/mfa/disable', method: RequestMethod.POST },
+        { path: 'api/v1/auth/mfa/backup-codes', method: RequestMethod.GET },
+        { path: 'api/v1/auth/mfa/backup-codes/consume', method: RequestMethod.POST },
+        { path: 'api/v1/auth/mfa/backup-codes/regenerate', method: RequestMethod.POST },
+      );
 
     // Admin middleware for admin routes
     consumer

@@ -20,7 +20,7 @@ model User {
   name            String?
   firstName       String?    @map("first_name")
   lastName        String?    @map("last_name")
-  image           String? // Profile picture URL
+  photoUrl        String?    @map("photo_url")
   timezone        String     @default("UTC")
   language        String     @default("en")
   status          UserStatus @default(ACTIVE)
@@ -68,7 +68,7 @@ model OAuthAccount {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerUserId])
   @@map("oauth_accounts")
@@ -82,7 +82,7 @@ model LocalAuthAccount {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("local_auth_accounts")
 }
@@ -97,7 +97,7 @@ model Session {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
@@ -122,22 +122,22 @@ model MfaBackupCode {
   usedAt    DateTime? @map("used_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("mfa_backup_codes")
 }
 
 model MfaVerificationSession {
-  id           Int       @id @default(autoincrement())
-  sessionToken String    @unique @map("session_token")
-  userId       Int       @map("user_id")
+  id           Int                         @id @default(autoincrement())
+  sessionToken String                      @unique @map("session_token")
+  userId       Int                         @map("user_id")
   email        String
-  mfaMethod    MfaMethod @map("mfa_method")
-  isVerified   Boolean   @default(false) @map("is_verified")
-  expiresAt    DateTime  @map("expires_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  mfaMethod    MfaMethod                   @map("mfa_method")
+  status       MfaVerificationSessionStatus @default(pending)
+  expiresAt    DateTime                    @map("expires_at")
+  createdAt    DateTime                    @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("mfa_verification_sessions")
 }
@@ -163,7 +163,7 @@ model Blacklist {
   createdAt DateTime      @default(now()) @map("created_at")
   createdBy Int?          @map("created_by")
 
-  createdByUser User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  CreatedBy User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@unique([type, value])
   @@index([type, value]) // Fast lookups
@@ -194,20 +194,21 @@ model Team {
   contacts      Contact[]
   audiences     Audience[]
   subscriptions Subscription[]
+  logs          Log[]
 
   @@map("teams")
 }
 
 model TeamMember {
-  id        Int      @id @default(autoincrement())
-  teamId    Int      @map("team_id")
-  userId    Int      @map("user_id")
-  role      String   @default("member") // owner, admin, member, viewer
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        Int            @id @default(autoincrement())
+  teamId    Int            @map("team_id")
+  userId    Int            @map("user_id")
+  role      TeamMemberRole @default(member)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
 
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@map("team_members")
@@ -218,15 +219,15 @@ model TeamInvitation {
   teamId     Int       @map("team_id")
   email      String
   role       String    @default("member") // admin, member, viewer
-  token      String    @unique
-  invitedBy  String    @map("invited_by") // userId who sent the invitation
-  status     String    @default("pending") // pending, accepted, expired, cancelled
-  expiresAt  DateTime  @map("expires_at")
+  token      String                 @unique
+  invitedBy  String                 @map("invited_by") // userId who sent the invitation
+  status     TeamInvitationStatus   @default(pending)
+  expiresAt  DateTime               @map("expires_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
   acceptedAt DateTime? @map("accepted_at")
 
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, email])
   @@map("team_invitations")
@@ -304,8 +305,8 @@ model Subscription {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  plan Plan @relation(fields: [planId], references: [id])
+  Team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Plan Plan @relation(fields: [planId], references: [id])
 
   @@map("subscriptions")
 }
@@ -317,9 +318,9 @@ model Subscription {
 model Domain {
   id            Int      @id @default(autoincrement())
   name          String   @unique
-  createdBy     Int?     @map("created_by") // User who created this domain
-  teamId        Int      @map("team_id") // Team that owns this domain (personal or shared)
-  status        String   @default("pending") // pending, verified, failed
+  createdBy     Int?         @map("created_by") // User who created this domain
+  teamId        Int          @map("team_id") // Team that owns this domain (personal or shared)
+  status        DomainStatus @default(pending)
   region        String? // us-east-1, eu-west-1, etc.
   clickTracking Boolean  @default(true) @map("click_tracking")
   openTracking  Boolean  @default(true) @map("open_tracking")
@@ -331,8 +332,8 @@ model Domain {
   dnsRecords DnsRecord[]
 
   // Relations
-  creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   emails  Email[]
 
   @@map("domains")
@@ -343,13 +344,12 @@ model DnsRecord {
   domainId   Int     @map("domain_id")
   type       String // dkim, spf, dmarc, mx, tracking
   name       String
-  recordType String  @map("record_type") // TXT, MX, CNAME
+  recordType String       @map("record_type") // TXT, MX, CNAME
   value      String
-  verified   Boolean @default(false)
-  status     String  @default("pending") // pending, verified, failed
+  status     DomainStatus @default(pending)
   priority   Int? // for MX records
 
-  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  Domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
 
   @@map("dns_records")
 }
@@ -372,8 +372,8 @@ model Email {
   subject     String
   text        String?
   html        String?
-  status      String    @default("queued") // queued, sent, delivered, failed, bounced
-  opens       Int       @default(0)
+  status      EmailStatus @default(queued)
+  opens       Int         @default(0)
   clicks      Int       @default(0)
   lastOpened  DateTime? @map("last_opened")
   lastClicked DateTime? @map("last_clicked")
@@ -384,10 +384,10 @@ model Email {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  creator     User?        @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  domain      Domain?      @relation(fields: [domainId], references: [id], onDelete: SetNull)
-  apiKey      ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  Creator     User?        @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Domain      Domain?      @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  ApiKey      ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
   events      EmailEvent[]
   attachments Attachment[]
 
@@ -403,7 +403,7 @@ model Attachment {
   size      Int? // Size in bytes
   createdAt DateTime @default(now()) @map("created_at")
 
-  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  Email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
 
   @@map("attachments")
 }
@@ -418,7 +418,7 @@ model EmailEvent {
   location  String?
   metadata  Json? // Additional event data
 
-  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  Email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
 
   @@map("email_events")
 }
@@ -435,16 +435,16 @@ model Template {
   description  String?
   html         String
   subject      String?
-  category     String? // transactional, marketing, etc.
-  variables    String[] @default([]) // Template variable names
-  status       String   @default("active") // active, archived
-  opens        Int      @default(0)
+  category     String?        // transactional, marketing, etc.
+  variables    String[]       @default([]) // Template variable names
+  status       TemplateStatus @default(active)
+  opens        Int            @default(0)
   clicks       Int      @default(0)
   createdAt    DateTime @default(now()) @map("created_at")
   lastModified DateTime @updatedAt @map("last_modified")
 
-  creator    User?       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Creator    User?       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
   broadcasts Broadcast[]
 
   @@map("templates")
@@ -460,14 +460,14 @@ model Webhook {
   teamId        Int       @map("team_id") // Team that owns this webhook (personal or shared)
   url           String
   events        String[] // Array of event types
-  status        String    @default("enabled") // enabled, disabled
+  status        WebhookStatus @default(enabled)
   secret        String // Signing secret
   lastTriggered DateTime? @map("last_triggered")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  creator    User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Creator    User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
   deliveries WebhookDelivery[]
 
   @@map("webhooks")
@@ -476,16 +476,16 @@ model Webhook {
 model WebhookDelivery {
   id          Int       @id @default(autoincrement())
   webhookId   Int       @map("webhook_id")
-  eventType   String    @map("event_type")
-  messageId   String?   @map("message_id")
-  status      String // attempting, success, fail
+  eventType   String                 @map("event_type")
+  messageId   String?                @map("message_id")
+  status      WebhookDeliveryStatus
   request     Json // Request payload
   response    Json? // Response from webhook URL
   attempts    Int       @default(1)
   createdAt   DateTime  @default(now()) @map("created_at")
   completedAt DateTime? @map("completed_at")
 
-  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  Webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   @@map("webhook_deliveries")
 }
@@ -500,14 +500,14 @@ model ApiKey {
   teamId     Int       @map("team_id") // Team that owns this API key (personal or shared)
   name       String
   key        String    @unique // The actual API key (hashed)
-  permission String // Full access, Sending access, Read-only
-  domain     String? // Specific domain or "All domains"
-  status     String    @default("active") // active, revoked
-  lastUsed   DateTime? @map("last_used")
+  permission String       // Full access, Sending access, Read-only
+  domain     String?      // Specific domain or "All domains"
+  status     ApiKeyStatus @default(active)
+  lastUsed   DateTime?    @map("last_used")
   createdAt  DateTime  @default(now()) @map("created_at")
 
-  creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   logs    Log[]
   emails  Email[]
 
@@ -523,18 +523,18 @@ model Contact {
   createdBy    Int?      @map("created_by") // User who created this contact
   teamId       Int       @map("team_id") // Team that owns this contact (personal or shared)
   email        String
-  firstName    String?   @map("first_name")
-  lastName     String?   @map("last_name")
-  status       String    @default("subscribed") // subscribed, unsubscribed, bounced
-  subscribedAt DateTime? @map("subscribed_at")
+  firstName    String?       @map("first_name")
+  lastName     String?       @map("last_name")
+  status       ContactStatus @default(subscribed)
+  subscribedAt DateTime?     @map("subscribed_at")
   lastActivity DateTime? @map("last_activity")
   tags         String[]  @default([])
   metadata     Json? // Additional custom fields
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  creator             User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team                Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Creator             User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team                Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
   broadcastRecipients BroadcastRecipient[]
   audienceContacts    AudienceContact[]
 
@@ -552,8 +552,8 @@ model Audience {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  creator          User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Creator          User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
   audienceContacts AudienceContact[]
   broadcasts       Broadcast[]
 
@@ -566,8 +566,8 @@ model AudienceContact {
   contactId  Int      @map("contact_id")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  audience Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
-  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  Audience Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  Contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@unique([audienceId, contactId])
   @@map("audience_contacts")
@@ -586,8 +586,8 @@ model Broadcast {
   name        String
   subject     String
   content     String? // HTML content if not using template
-  status      String    @default("draft") // draft, scheduled, sending, sent, cancelled
-  totalSent   Int       @default(0) @map("total_sent")
+  status      BroadcastStatus @default(draft)
+  totalSent   Int             @default(0) @map("total_sent")
   opens       Int       @default(0)
   clicks      Int       @default(0)
   scheduledAt DateTime? @map("scheduled_at")
@@ -595,10 +595,10 @@ model Broadcast {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  creator    User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  team       Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  template   Template?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  audience   Audience?            @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  Creator    User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team       Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Template   Template?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  Audience   Audience?            @relation(fields: [audienceId], references: [id], onDelete: SetNull)
   recipients BroadcastRecipient[]
 
   @@map("broadcasts")
@@ -606,15 +606,15 @@ model Broadcast {
 
 model BroadcastRecipient {
   id          Int       @id @default(autoincrement())
-  broadcastId Int       @map("broadcast_id")
-  contactId   Int       @map("contact_id")
-  status      String    @default("pending") // pending, sent, failed, opened, clicked
-  sentAt      DateTime? @map("sent_at")
+  broadcastId Int                       @map("broadcast_id")
+  contactId   Int                       @map("contact_id")
+  status      BroadcastRecipientStatus  @default(pending)
+  sentAt      DateTime?                 @map("sent_at")
   openedAt    DateTime? @map("opened_at")
   clickedAt   DateTime? @map("clicked_at")
 
-  broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
-  contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  Broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  Contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@unique([broadcastId, contactId])
   @@map("broadcast_recipients")
@@ -626,23 +626,77 @@ model BroadcastRecipient {
 
 model Log {
   id           Int      @id @default(autoincrement())
+  teamId       Int      @map("team_id")
   apiKeyId     Int?     @map("api_key_id")
   endpoint     String
   method       String
-  status       String // HTTP status code
+  status       Int // HTTP status code
   userAgent    String?  @map("user_agent")
   requestBody  Json?    @map("request_body")
   responseBody Json?    @map("response_body")
   timestamp    DateTime @default(now())
 
-  apiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  Team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  ApiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
 
   @@map("logs")
 }
 
 // ============================================
+// ROLES & PERMISSIONS
+// ============================================
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        RoleName         @unique
+  description String?
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  name        PermissionName   @unique
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           Int      @id @default(autoincrement())
+  roleId       Int      @map("role_id")
+  permissionId Int      @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  Role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================
 // ENUMS
 // ============================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum UserType {
+  CUSTOMER
+  ADMIN
+  SUPER_ADMIN
+}
 
 enum VerificationRequestType {
   EMAIL_VERIFICATION
@@ -664,6 +718,23 @@ enum BlacklistType {
 enum OAuthProvider {
   GOOGLE
   GITHUB
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+  LIFETIME
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAUSED
 }
 
 enum RoleName {
@@ -765,71 +836,80 @@ enum PermissionName {
   TEAM_MEMBER_REMOVE
 }
 
-// ============================================
-// ROLES & PERMISSIONS
-// ============================================
-
-model Role {
-  id          Int              @id @default(autoincrement())
-  name        RoleName         @unique
-  description String?
-  permissions RolePermission[]
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
-
-  @@map("roles")
+enum TeamInvitationStatus {
+  pending
+  accepted
+  expired
+  cancelled
 }
 
-model Permission {
-  id          Int              @id @default(autoincrement())
-  name        PermissionName   @unique
-  description String?
-  roles       RolePermission[]
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
-
-  @@map("permissions")
+enum DomainStatus {
+  pending
+  verified
+  failed
 }
 
-model RolePermission {
-  id           Int      @id @default(autoincrement())
-  roleId       Int      @map("role_id")
-  permissionId Int      @map("permission_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([roleId, permissionId])
-  @@map("role_permissions")
+enum EmailStatus {
+  queued
+  sent
+  delivered
+  failed
+  bounced
 }
 
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-  BANNED
+enum TemplateStatus {
+  active
+  archived
 }
 
-enum UserType {
-  CUSTOMER
-  ADMIN
-  SUPER_ADMIN
+enum WebhookStatus {
+  enabled
+  disabled
 }
 
-enum BillingInterval {
-  MONTHLY
-  YEARLY
-  LIFETIME
+enum WebhookDeliveryStatus {
+  attempting
+  success
+  fail
 }
 
-enum SubscriptionStatus {
-  ACTIVE
-  TRIALING
-  PAST_DUE
-  CANCELED
-  UNPAID
-  INCOMPLETE
-  INCOMPLETE_EXPIRED
-  PAUSED
+enum ApiKeyStatus {
+  active
+  revoked
+}
+
+enum ContactStatus {
+  subscribed
+  unsubscribed
+  bounced
+}
+
+enum BroadcastStatus {
+  draft
+  scheduled
+  sending
+  sent
+  cancelled
+}
+
+enum BroadcastRecipientStatus {
+  pending
+  sent
+  failed
+  opened
+  clicked
+}
+
+enum MfaVerificationSessionStatus {
+  pending
+  verified
+  expired
+  failed
+}
+
+enum TeamMemberRole {
+  owner
+  admin
+  member
+  viewer
 }

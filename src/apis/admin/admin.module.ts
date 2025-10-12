@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdminUsersModule } from './users/users.module';
 import { AdminSecurityModule } from './security/security.module';
-import { AdminRolesModule } from './roles/roles.module';
 import { RepositoriesModule } from '../../repositories/repositories.module';
 import { QueueProducersModule } from '../../queues/queue-producers.module';
 
@@ -11,8 +10,7 @@ import { QueueProducersModule } from '../../queues/queue-producers.module';
     QueueProducersModule,
     AdminUsersModule,
     AdminSecurityModule,
-    AdminRolesModule,
   ],
-  exports: [AdminUsersModule, AdminSecurityModule, AdminRolesModule],
+  exports: [AdminUsersModule, AdminSecurityModule],
 })
 export class AdminModule {} 

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { EmailsValidator } from './emails.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
+import { config } from '../../config/config';
 import {
   SendEmailDto,
   EmailFilterDto,
@@ -35,7 +37,7 @@ export class EmailsService {
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Email sent successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
@@ -46,8 +48,8 @@ export class EmailsService {
   async getEmails(userId: number, filter: EmailFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch user's emails with pagination
       const response: GetEmailsResponseDto = {
@@ -82,7 +84,7 @@ export class EmailsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Emails retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -134,7 +136,7 @@ export class EmailsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Email details retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -166,7 +168,7 @@ export class EmailsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Email statistics retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -219,7 +221,7 @@ export class EmailsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Email statuses retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {

@@ -3,8 +3,9 @@ import { SessionRepository } from '../../../repositories/session.repository';
 import { BlacklistRepository } from '../../../repositories/blacklist.repository';
 import { AdminSecurityValidator } from './security.validator';
 import { Constants } from '../../../common/enums/generic.enum';
-import { generateSuccessResponse } from '../../../utils/util';
+import { generateSuccessResponse, transformToPaginationMeta } from '../../../utils/util';
 import { handleServiceError } from '../../../utils/error.util';
+import { config } from '../../../config/config';
 import {
   GetSecurityActivityDto,
   GetBlacklistStatsDto,
@@ -34,7 +35,7 @@ export class AdminSecurityService {
       
       const result = await this.blacklistRepository.findAll({
         offset: validatedFilter.offset || 0,
-        limit: validatedFilter.limit || 10,
+        limit: validatedFilter.limit || config.validation.pagination.defaultLimit,
         type: validatedFilter.type,
         keyword: validatedFilter.keyword,
       });
@@ -43,13 +44,8 @@ export class AdminSecurityService {
         statusCode: HttpStatus.OK,
         message: Constants.successMessage,
         data: {
-          data: result.blacklists,
-          meta: {
-            total: result.total,
-            page: Math.floor((validatedFilter.offset || 0) / (validatedFilter.limit || 10)) + 1,
-            limit: validatedFilter.limit || 10,
-            totalPages: Math.ceil(result.total / (validatedFilter.limit || 10)),
-          },
+          data: result.data,
+          meta: transformToPaginationMeta({ limit: result.limit, offset: result.offset, total: result.total }),
         },
       });
     } catch (error) {
@@ -112,7 +108,7 @@ export class AdminSecurityService {
       
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Blacklist entry deleted successfully',
+        message: Constants.deletedSuccessfully,
       });
     } catch (error) {
       return handleServiceError('Error deleting blacklist entry', error);
@@ -134,8 +130,8 @@ export class AdminSecurityService {
           data: securityActivity || [],
           meta: {
             total: 0,
-            page: 1,
-            limit: validatedFilter.limit || 10,
+            page: config.validation.pagination.defaultPage,
+            limit: validatedFilter.limit || config.validation.pagination.defaultLimit,
             totalPages: 0,
           },
         },

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
+import { config } from '../../config/config';
 import { 
   GetAudiencesResponseDto, 
   GetAudienceContactsResponseDto, 
@@ -15,8 +17,8 @@ export class AudiencesService {
   async getAudiences(userId: number, filter: AudienceFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch user's audiences with pagination
       const response: GetAudiencesResponseDto = {
@@ -56,7 +58,7 @@ export class AudiencesService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Audiences retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -67,8 +69,8 @@ export class AudiencesService {
   async getAudienceContacts(audienceId: string, userId: number, filter: AudienceFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch audience contacts with pagination
       const response: GetAudienceContactsResponseDto = {
@@ -108,7 +110,7 @@ export class AudiencesService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Audience contacts retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -141,7 +143,7 @@ export class AudiencesService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Audience statuses retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {

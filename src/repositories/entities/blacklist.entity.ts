@@ -1,15 +1,15 @@
 import { BlacklistType } from '@prisma/client';
 
-export interface BlacklistStats {
-  totalBlacklists: number;
-  byType: Record<string, number>;
+export class FindAllBlacklistsFilter {
+  offset: number;
+  limit: number;
+  type?: string;
+  keyword?: string;
 }
 
-export class BlacklistEntity {
-  id?: number;
+export class CreateBlacklistData {
   type: BlacklistType;
   value: string;
   reason?: string;
-  createdAt?: Date;
   createdBy?: number;
-} 
+}

@@ -1,7 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { UserRepository } from '../../repositories/user.repository';
 import { SessionRepository } from '../../repositories/session.repository';
-import { MfaRepository } from '../../repositories/mfa.repository';
+import { MfaVerificationSessionRepository } from '../../repositories/mfa-verification-session.repository';
 import { BackupCodeRepository } from '../../repositories/backup-code.repository';
 import { verifyTotpCode, hashBackupCode } from '../../helpers/mfa.helper';
 import { validateJoiSchema } from '../../utils/joi.validator';
@@ -16,7 +16,7 @@ export class AuthValidator {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly sessionRepository: SessionRepository,
-        private readonly mfaRepository: MfaRepository,
+        private readonly mfaVerificationSessionRepository: MfaVerificationSessionRepository,
         private readonly backupCodeRepository: BackupCodeRepository,
     ) { }
 
@@ -416,7 +416,7 @@ export class AuthValidator {
         }
 
         // Get and validate session
-        const session = await this.mfaRepository.findMfaSessionByToken(data.sessionToken);
+        const session = await this.mfaVerificationSessionRepository.findMfaSessionByToken(data.sessionToken);
         if (!session) {
             throwError('Invalid session', HttpStatus.BAD_REQUEST, 'invalidSession');
         }
@@ -516,7 +516,7 @@ export class AuthValidator {
         }
 
         // Get and validate session
-        const session = await this.mfaRepository.findMfaSessionByToken(data.sessionToken);
+        const session = await this.mfaVerificationSessionRepository.findMfaSessionByToken(data.sessionToken);
         if (!session) {
             throwError('Invalid session', HttpStatus.BAD_REQUEST, 'invalidSession');
         }
@@ -531,7 +531,7 @@ export class AuthValidator {
         const backupCodes = await this.backupCodeRepository.findByUserId(session.userId);
         const hashedCode = await hashBackupCode(data.code);
         const matchingCode = backupCodes.find(code => 
-            !code.isUsed && code.code === hashedCode
+            !code.used && code.code === hashedCode
         );
         if (!matchingCode) {
             throwError('Invalid backup code', HttpStatus.BAD_REQUEST, 'invalidBackupCode');
@@ -584,7 +584,7 @@ export class AuthValidator {
             const backupCodes = await this.backupCodeRepository.findByUserId(userId);
             const hashedCode = await hashBackupCode(data.code);
             const matchingCode = backupCodes.find(code => 
-                !code.isUsed && code.code === hashedCode
+                !code.used && code.code === hashedCode
             );
             if (!matchingCode) {
                 throwError('Invalid backup code', HttpStatus.BAD_REQUEST, 'invalidBackupCode');

@@ -1,22 +1,29 @@
-export class TeamEntity {
-  id: number;
+import { TeamMemberRole } from '../../common/enums/generic.enum';
+
+export class CreateTeamData {
   name: string;
-  description?: string;
   slug: string;
-  isDefault: boolean;
-  isPublic: boolean;
-  createdBy: number;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-export class TeamMemberEntity {
-  id: number;
+export class AddTeamMemberData {
   teamId: number;
   userId: number;
-  role: string;
-  status: string;
-  joinedAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
-} 
+  role: TeamMemberRole;
+}
+
+export class CreateTeamInvitationData {
+  teamId: number;
+  email: string;
+  role: TeamMemberRole;
+  invitedBy: string;
+  expiresAt: Date;
+}
+
+export class CreateTeamApiKeyData {
+  teamId: number;
+  key: string;
+  name: string;
+  permission: string;
+  domain?: string;
+  createdBy?: number;
+}

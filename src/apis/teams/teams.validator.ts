@@ -2,6 +2,7 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import * as Joi from 'joi';
 import { validateJoiSchema } from '../../utils/joi.validator';
 import { throwError } from '../../utils/util';
+import { TeamMemberRole } from '../../common/enums/generic.enum';
 import { CreateTeamDto, UpdateTeamDto, InviteTeamMemberDto, UpdateTeamMemberRoleDto } from './dto/teams.dto';
 
 @Injectable()
@@ -150,7 +151,7 @@ export class TeamsValidator {
     }
 
     // Check if user has permission to update team
-    if (!this.hasRolePermission(teamMember.role, 'ADMIN')) {
+    if (!this.hasRolePermission(teamMember.role, TeamMemberRole.admin)) {
       throwError('Insufficient permissions to update team', HttpStatus.FORBIDDEN, 'insufficientPermissions');
     }
 
@@ -186,7 +187,7 @@ export class TeamsValidator {
     }
 
     // Check if user has permission to delete team
-    if (!this.hasRolePermission(teamMember.role, 'OWNER')) {
+    if (!this.hasRolePermission(teamMember.role, TeamMemberRole.owner)) {
       throwError('Only team owner can delete the team', HttpStatus.FORBIDDEN, 'insufficientPermissions');
     }
 
@@ -249,8 +250,8 @@ export class TeamsValidator {
         'string.email': 'Please provide a valid email address',
         'any.required': 'Email is required',
       }),
-      role: Joi.string().valid('OWNER', 'ADMIN', 'EDITOR', 'MEMBER', 'GUEST').required().messages({
-        'any.only': 'Role must be one of: OWNER, ADMIN, EDITOR, MEMBER, GUEST',
+      role: Joi.string().valid(...Object.values(TeamMemberRole)).required().messages({
+        'any.only': `Role must be one of: ${Object.values(TeamMemberRole).join(', ')}`,
         'any.required': 'Role is required',
       }),
     });
@@ -270,7 +271,7 @@ export class TeamsValidator {
   }
 
     // Check if user has permission to invite members
-    if (!this.hasRolePermission(teamMember.role, 'ADMIN')) {
+    if (!this.hasRolePermission(teamMember.role, TeamMemberRole.admin)) {
       throwError('Insufficient permissions to invite team members', HttpStatus.FORBIDDEN, 'insufficientPermissions');
     }
 
@@ -315,7 +316,7 @@ export class TeamsValidator {
     }
 
     // Check if user has permission to remove members
-    if (!this.hasRolePermission(teamMember.role, 'ADMIN')) {
+    if (!this.hasRolePermission(teamMember.role, TeamMemberRole.admin)) {
       throwError('Insufficient permissions to remove team members', HttpStatus.FORBIDDEN, 'insufficientPermissions');
     }
 
@@ -356,8 +357,8 @@ export class TeamsValidator {
 
     // Validate role update data
     const roleSchema = Joi.object({
-      role: Joi.string().valid('OWNER', 'ADMIN', 'EDITOR', 'MEMBER', 'GUEST').required().messages({
-        'any.only': 'Role must be one of: OWNER, ADMIN, EDITOR, MEMBER, GUEST',
+      role: Joi.string().valid(...Object.values(TeamMemberRole)).required().messages({
+        'any.only': `Role must be one of: ${Object.values(TeamMemberRole).join(', ')}`,
         'any.required': 'Role is required',
       }),
     });
@@ -377,9 +378,9 @@ export class TeamsValidator {
     }
 
     // Check if user has permission to update member roles
-    if (!this.hasRolePermission(teamMember.role, 'ADMIN')) {
+    if (!this.hasRolePermission(teamMember.role, TeamMemberRole.admin)) {
       throwError('Insufficient permissions to update team member roles', HttpStatus.FORBIDDEN, 'insufficientPermissions');
-      }
+    }
 
     // Check if member exists
     const memberToUpdate = await teamRepository.findTeamMember(validatedTeamId, validatedMemberUserId);
@@ -392,17 +393,16 @@ export class TeamsValidator {
 
   // UTILITY METHODS
 
-  private hasRolePermission(userRole: string, requiredRole: string): boolean {
-    const roleHierarchy = {
-      'OWNER': 4,
-      'ADMIN': 3,
-      'EDITOR': 2,
-      'MEMBER': 1,
-      'GUEST': 0,
+  private hasRolePermission(userRole: string, requiredRole: TeamMemberRole): boolean {
+    const roleHierarchy: Record<TeamMemberRole, number> = {
+      [TeamMemberRole.owner]: 4,
+      [TeamMemberRole.admin]: 3,
+      [TeamMemberRole.member]: 2,
+      [TeamMemberRole.viewer]: 1,
     };
 
-    const userRoleLevel = (roleHierarchy as any)[userRole] || 0;
-    const requiredRoleLevel = (roleHierarchy as any)[requiredRole] || 0;
+    const userRoleLevel = roleHierarchy[userRole as TeamMemberRole] || 0;
+    const requiredRoleLevel = roleHierarchy[requiredRole] || 0;
 
     return userRoleLevel >= requiredRoleLevel;
   }

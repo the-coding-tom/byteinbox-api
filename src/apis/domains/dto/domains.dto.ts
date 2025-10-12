@@ -45,7 +45,6 @@ export class GetDomainDetailsResponseDto {
       name: string;
       recordType: string;
       value: string;
-      verified: boolean;
       status: string;
       priority?: number;
     }>;

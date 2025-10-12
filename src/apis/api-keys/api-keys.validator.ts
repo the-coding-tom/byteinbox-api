@@ -1,19 +1,16 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import * as Joi from 'joi';
 import { CreateApiKeyDto, UpdateApiKeyDto, GetApiKeysDto } from './dto/api-keys.dto';
-import { TeamApiKeyRepository } from '../../repositories/team-api-key.repository';
+import { ApiKeyRepository } from '../../repositories/api-key.repository';
 import { throwError } from '../../utils/util';
 import { validateJoiSchema } from '../../utils/joi.validator';
-import prisma from '../../common/prisma';
 
 @Injectable()
 export class ApiKeysValidator {
-  constructor(private readonly teamApiKeyRepository: TeamApiKeyRepository) {}
+  constructor(private readonly apiKeyRepository: ApiKeyRepository) { }
 
-  // API KEY QUERY VALIDATION
-
-  async validateGetApiKeys(query: GetApiKeysDto, teamId: number, userId: number): Promise<{ validatedData: GetApiKeysDto; teamId: number }> {
-    // Validate query parameters
+  async validateGetApiKeysRequest(query: GetApiKeysDto): Promise<GetApiKeysDto> {
+    // Validate query schema
     const schema = Joi.object({
       page: Joi.number().integer().min(1).optional(),
       limit: Joi.number().integer().min(1).max(100).optional(),
@@ -24,31 +21,11 @@ export class ApiKeysValidator {
     const error = validateJoiSchema(schema, query);
     if (error) throwError(error, HttpStatus.BAD_REQUEST, 'validationError');
 
-    // Validate team access
-    const team = await prisma.team.findUnique({
-      where: { id: teamId }
-    });
-    if (!team) {
-      throwError('Team not found', HttpStatus.NOT_FOUND, 'teamNotFound');
-    }
-
-    const member = await prisma.teamMember.findFirst({
-      where: {
-        teamId: teamId,
-        userId: userId,
-      }
-    });
-    if (!member) {
-      throwError('You do not have access to this team', HttpStatus.FORBIDDEN, 'teamAccessDenied');
-    }
-
-    return { validatedData: query, teamId };
+    return query;
   }
 
-  // API KEY CRUD VALIDATION
-
-  async validateCreateApiKey(createApiKeyDto: CreateApiKeyDto, teamId: number, userId: number): Promise<{ validatedData: CreateApiKeyDto; teamId: number }> {
-    // Validate DTO
+  async validateCreateApiKeyRequest(createApiKeyDto: CreateApiKeyDto, teamId: number): Promise<CreateApiKeyDto> {
+    // 1. Validate DTO schema
     const schema = Joi.object({
       name: Joi.string().required().min(1).max(100).messages({
         'string.min': 'Name must be at least 1 character long',
@@ -70,54 +47,24 @@ export class ApiKeysValidator {
     const error = validateJoiSchema(schema, createApiKeyDto);
     if (error) throwError(error, HttpStatus.BAD_REQUEST, 'validationError');
 
-    // Validate team access
-    const team = await prisma.team.findUnique({
-      where: { id: teamId }
-    });
-    if (!team) {
-      throwError('Team not found', HttpStatus.NOT_FOUND, 'teamNotFound');
-    }
-
-    const member = await prisma.teamMember.findFirst({
-      where: {
-        teamId: teamId,
-        userId: userId,
-      }
-    });
-    if (!member) {
-      throwError('You do not have access to this team', HttpStatus.FORBIDDEN, 'teamAccessDenied');
-    }
-
-    // Check if API key name is unique within the team
-    const existingKey = await this.teamApiKeyRepository.findByTeamIdAndName(teamId, createApiKeyDto.name);
+    // 2. Business logic validation - Check if API key name is unique within the team
+    const existingKey = await this.apiKeyRepository.findByTeamIdAndName(teamId, createApiKeyDto.name);
     if (existingKey) {
       throwError('API key name already exists in this team', HttpStatus.CONFLICT, 'apiKeyNameExists');
     }
 
-    return { validatedData: createApiKeyDto, teamId };
+    return createApiKeyDto;
   }
 
-  async validateGetApiKey(apiKeyId: number, teamId: number, userId: number): Promise<{ apiKeyId: number; teamId: number; apiKey: any }> {
-    // Validate team access
-    const team = await prisma.team.findUnique({
-      where: { id: teamId }
-    });
-    if (!team) {
-      throwError('Team not found', HttpStatus.NOT_FOUND, 'teamNotFound');
+  async validateGetApiKeyRequest(id: string, teamId: number): Promise<{ apiKeyId: number; apiKey: any }> {
+    // 1. Parse and validate ID parameter
+    const apiKeyId = parseInt(id);
+    if (isNaN(apiKeyId) || apiKeyId <= 0) {
+      throwError('Invalid ID', HttpStatus.BAD_REQUEST, 'invalidId');
     }
 
-    const member = await prisma.teamMember.findFirst({
-      where: {
-        teamId: teamId,
-        userId: userId,
-      }
-    });
-    if (!member) {
-      throwError('You do not have access to this team', HttpStatus.FORBIDDEN, 'teamAccessDenied');
-    }
-
-    // Validate API key exists and belongs to team
-    const apiKey = await this.teamApiKeyRepository.findById(apiKeyId);
+    // 2. Validate API key exists and belongs to team
+    const apiKey = await this.apiKeyRepository.findById(apiKeyId);
     if (!apiKey) {
       throwError('API key not found', HttpStatus.NOT_FOUND, 'apiKeyNotFound');
     }
@@ -126,11 +73,11 @@ export class ApiKeysValidator {
       throwError('API key does not belong to this team', HttpStatus.FORBIDDEN, 'apiKeyAccessDenied');
     }
 
-    return { apiKeyId, teamId, apiKey };
+    return { apiKeyId, apiKey };
   }
 
-  async validateUpdateApiKey(apiKeyId: number, updateApiKeyDto: UpdateApiKeyDto, teamId: number, userId: number): Promise<{ apiKeyId: number; validatedData: UpdateApiKeyDto; teamId: number; apiKey: any }> {
-    // Validate DTO
+  async validateUpdateApiKeyRequest(id: string, updateApiKeyDto: UpdateApiKeyDto, teamId: number): Promise<{ apiKeyId: number; validatedData: UpdateApiKeyDto; apiKey: any }> {
+    // 1. Validate DTO schema
     const schema = Joi.object({
       name: Joi.string().optional().min(1).max(100).messages({
         'string.min': 'Name must be at least 1 character long',
@@ -151,26 +98,14 @@ export class ApiKeysValidator {
     const error = validateJoiSchema(schema, updateApiKeyDto);
     if (error) throwError(error, HttpStatus.BAD_REQUEST, 'validationError');
 
-    // Validate team access
-    const team = await prisma.team.findUnique({
-      where: { id: teamId }
-    });
-    if (!team) {
-      throwError('Team not found', HttpStatus.NOT_FOUND, 'teamNotFound');
+    // 2. Parse and validate ID parameter
+    const apiKeyId = parseInt(id);
+    if (isNaN(apiKeyId) || apiKeyId <= 0) {
+      throwError('Invalid ID', HttpStatus.BAD_REQUEST, 'invalidId');
     }
 
-    const member = await prisma.teamMember.findFirst({
-      where: {
-        teamId: teamId,
-        userId: userId,
-      }
-    });
-    if (!member) {
-      throwError('You do not have access to this team', HttpStatus.FORBIDDEN, 'teamAccessDenied');
-    }
-
-    // Validate API key exists and belongs to team
-    const apiKey = await this.teamApiKeyRepository.findById(apiKeyId);
+    // 3. Validate API key exists and belongs to team
+    const apiKey = await this.apiKeyRepository.findById(apiKeyId);
     if (!apiKey) {
       throwError('API key not found', HttpStatus.NOT_FOUND, 'apiKeyNotFound');
     }
@@ -179,38 +114,26 @@ export class ApiKeysValidator {
       throwError('API key does not belong to this team', HttpStatus.FORBIDDEN, 'apiKeyAccessDenied');
     }
 
-    // Check if API key name is unique within the team (if name is being updated)
+    // 4. Business logic validation - Check if API key name is unique within the team (if name is being updated)
     if (updateApiKeyDto.name && updateApiKeyDto.name !== apiKey.name) {
-      const existingKey = await this.teamApiKeyRepository.findByTeamIdAndName(teamId, updateApiKeyDto.name);
+      const existingKey = await this.apiKeyRepository.findByTeamIdAndName(teamId, updateApiKeyDto.name);
       if (existingKey && existingKey.id !== apiKeyId) {
         throwError('API key name already exists in this team', HttpStatus.CONFLICT, 'apiKeyNameExists');
       }
     }
 
-    return { apiKeyId, validatedData: updateApiKeyDto, teamId, apiKey };
+    return { apiKeyId, validatedData: updateApiKeyDto, apiKey };
   }
 
-  async validateDeleteApiKey(apiKeyId: number, teamId: number, userId: number): Promise<{ apiKeyId: number; teamId: number; apiKey: any }> {
-    // Validate team access
-    const team = await prisma.team.findUnique({
-      where: { id: teamId }
-    });
-    if (!team) {
-      throwError('Team not found', HttpStatus.NOT_FOUND, 'teamNotFound');
+  async validateDeleteApiKeyRequest(id: string, teamId: number): Promise<{ apiKeyId: number; apiKey: any }> {
+    // 1. Parse and validate ID parameter
+    const apiKeyId = parseInt(id);
+    if (isNaN(apiKeyId) || apiKeyId <= 0) {
+      throwError('Invalid ID', HttpStatus.BAD_REQUEST, 'invalidId');
     }
 
-    const member = await prisma.teamMember.findFirst({
-      where: {
-        teamId: teamId,
-        userId: userId,
-      }
-    });
-    if (!member) {
-      throwError('You do not have access to this team', HttpStatus.FORBIDDEN, 'teamAccessDenied');
-    }
-
-    // Validate API key exists and belongs to team
-    const apiKey = await this.teamApiKeyRepository.findById(apiKeyId);
+    // 2. Validate API key exists and belongs to team
+    const apiKey = await this.apiKeyRepository.findById(apiKeyId);
     if (!apiKey) {
       throwError('API key not found', HttpStatus.NOT_FOUND, 'apiKeyNotFound');
     }
@@ -219,33 +142,6 @@ export class ApiKeysValidator {
       throwError('API key does not belong to this team', HttpStatus.FORBIDDEN, 'apiKeyAccessDenied');
     }
 
-    return { apiKeyId, teamId, apiKey };
-  }
-
-  // API KEY TESTING VALIDATION
-
-  async validateTestApiKey(apiKey: string): Promise<{ apiKey: string; apiKeyData: any }> {
-    // Validate API key format
-    if (!apiKey || !apiKey.startsWith('ak_')) {
-      throwError('Invalid API key format', HttpStatus.UNAUTHORIZED, 'invalidApiKeyFormat');
-    }
-
-    // Find API key in database
-    const apiKeyData = await this.teamApiKeyRepository.findByKey(apiKey);
-    if (!apiKeyData) {
-      throwError('Invalid API key', HttpStatus.UNAUTHORIZED, 'invalidApiKey');
-    }
-
-    // Check if API key is active
-    if (!apiKeyData.isActive) {
-      throwError('API key is inactive', HttpStatus.UNAUTHORIZED, 'inactiveApiKey');
-    }
-
-    // Check if API key has expired
-    if (apiKeyData.expiresAt && apiKeyData.expiresAt < new Date()) {
-      throwError('API key has expired', HttpStatus.UNAUTHORIZED, 'expiredApiKey');
-    }
-
-    return { apiKey, apiKeyData };
+    return { apiKeyId, apiKey };
   }
 } 

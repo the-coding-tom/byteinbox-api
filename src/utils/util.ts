@@ -46,3 +46,26 @@ export function throwError(
   error.errorCode = errorCode;
   throw error;
 }
+
+/**
+ * Transform raw pagination data from repository into formatted meta structure
+ * @param paginationData - Raw pagination data from repository
+ * @returns Formatted meta object with page and totalPages calculated
+ */
+export function transformToPaginationMeta(paginationData: {
+  total: number;
+  offset: number;
+  limit: number;
+}): {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+} {
+  return {
+    total: paginationData.total,
+    page: Math.floor(paginationData.offset / paginationData.limit) + 1,
+    limit: paginationData.limit,
+    totalPages: Math.ceil(paginationData.total / paginationData.limit),
+  };
+}

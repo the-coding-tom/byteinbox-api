@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { TemplatesValidator } from './templates.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
+import { config } from '../../config/config';
 import { 
   CreateTemplateDto, 
   TemplateFilterDto,
@@ -45,7 +47,7 @@ export class TemplatesService {
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Template created successfully',
+        message: Constants.createdSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -56,8 +58,8 @@ export class TemplatesService {
   async getTemplates(userId: number, filter: TemplateFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch user's templates with pagination
       const response: GetTemplatesResponseDto = {
@@ -97,7 +99,7 @@ export class TemplatesService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Templates retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -127,7 +129,7 @@ export class TemplatesService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Template details retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -160,7 +162,7 @@ export class TemplatesService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Template updated successfully',
+        message: Constants.updatedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -172,12 +174,12 @@ export class TemplatesService {
     try {
       // Dummy response - in real implementation, this would delete the template
       const response: DeleteTemplateResponseDto = {
-        message: 'Template deleted successfully',
+        message: Constants.deletedSuccessfully,
       };
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Template deleted successfully',
+        message: Constants.deletedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -207,7 +209,7 @@ export class TemplatesService {
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Template duplicated successfully',
+        message: Constants.createdSuccessfully,
         data: response,
       });
     } catch (error) {

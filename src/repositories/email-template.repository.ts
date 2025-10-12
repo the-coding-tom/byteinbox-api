@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { TemplateStatus } from '@prisma/client';
 import prisma from '../common/prisma';
 
 @Injectable()
@@ -7,7 +8,7 @@ export class EmailTemplateRepository {
     return prisma.template.findFirst({
       where: {
         name,
-        status: 'active',
+        status: TemplateStatus.active,
       },
     });
   }

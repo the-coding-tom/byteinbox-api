@@ -2,20 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { BlacklistType } from '@prisma/client';
 import prisma from '../common/prisma';
 import { Prisma } from '@prisma/client';
+import { FindAllBlacklistsFilter, CreateBlacklistData } from './entities/blacklist.entity';
 
 @Injectable()
 export class BlacklistRepository {
-  // Standard CRUD methods for admin operations
-  async findAll(filter: any = {}): Promise<{ blacklists: any[]; total: number }> {
-    const { offset, limit, type, keyword } = filter;
+  async findAll(filter: FindAllBlacklistsFilter): Promise<{ data: any[]; total: number; offset: number; limit: number }> {
+    const { offset, limit } = filter;
 
     const whereClause = Prisma.sql`
       WHERE (
-        B.value::text ILIKE CONCAT('%', ${keyword}::text, '%') 
-        OR B.reason::text ILIKE CONCAT('%', ${keyword}::text, '%')
-        OR COALESCE(${keyword}, NULL) IS NULL
+        B.value::text ILIKE CONCAT('%', ${filter.keyword}::text, '%') 
+        OR B.reason::text ILIKE CONCAT('%', ${filter.keyword}::text, '%')
+        OR COALESCE(${filter.keyword}, NULL) IS NULL
       )
-      AND (B.type::text = ${type}::text OR COALESCE(${type}, NULL) IS NULL)
+      AND (B.type::text = ${filter.type}::text OR COALESCE(${filter.type}, NULL) IS NULL)
     `;
 
     const retrieveBlacklistsQuery = Prisma.sql`
@@ -43,8 +43,10 @@ export class BlacklistRepository {
     const [{ count }]: { count: number }[] = await prisma.$queryRaw(countBlacklistsQuery);
 
     return {
-      blacklists,
+      data: blacklists,
       total: count,
+      offset,
+      limit,
     };
   }
 
@@ -52,12 +54,12 @@ export class BlacklistRepository {
     return prisma.blacklist.findUnique({
       where: { id },
       include: {
-        createdByUser: true,
+        CreatedBy: true,
       },
     });
   }
 
-  async create(data: { type: BlacklistType; value: string; reason?: string; createdBy?: number }): Promise<any> {
+  async create(data: CreateBlacklistData): Promise<any> {
     return prisma.blacklist.create({
       data: {
         type: data.type,

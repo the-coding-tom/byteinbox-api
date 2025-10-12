@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { GetMetricsResponseDto } from './dto/metrics.dto';
+import { Constants } from 'src/common/enums/generic.enum';
 
 @Injectable()
 export class MetricsService {
@@ -59,7 +60,7 @@ export class MetricsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Metrics retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {

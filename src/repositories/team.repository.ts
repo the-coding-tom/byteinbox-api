@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { TeamInvitationStatus, ApiKeyStatus } from '@prisma/client';
 import prisma from '../common/prisma';
-
+import { TeamMemberRole } from '../common/enums/generic.enum';
+import {
+  CreateTeamData,
+  AddTeamMemberData,
+  CreateTeamInvitationData,
+  CreateTeamApiKeyData,
+} from './entities/team.entity';
 
 @Injectable()
 export class TeamRepository {
   // Note: description, isDefault, isPublic, createdBy fields removed from Team model
-  async create(data: {
-    name: string;
-    slug: string;
-  }): Promise<any> {
+  async create(data: CreateTeamData): Promise<any> {
     return prisma.team.create({
       data: {
         name: data.name,
@@ -58,11 +62,7 @@ export class TeamRepository {
   }
 
   // Note: status, joinedAt, invitedBy fields removed from TeamMember model
-  async addMember(data: {
-    teamId: number;
-    userId: number;
-    role: string;
-  }): Promise<any> {
+  async addMember(data: AddTeamMemberData): Promise<any> {
     return prisma.teamMember.create({
       data: {
         teamId: data.teamId,
@@ -89,7 +89,7 @@ export class TeamRepository {
         teamId,
       },
       include: {
-        user: {
+        User: {
           select: {
             id: true,
             email: true,
@@ -116,7 +116,7 @@ export class TeamRepository {
     });
   }
 
-  async updateMemberRole(teamId: number, userId: number, role: string): Promise<any> {
+  async updateMemberRole(teamId: number, userId: number, role: TeamMemberRole): Promise<any> {
     return prisma.teamMember.update({
       where: {
         teamId_userId: {
@@ -131,13 +131,7 @@ export class TeamRepository {
   }
 
   // Note: createdBy renamed to invitedBy in TeamInvitation
-  async createInvitation(data: {
-    teamId: number;
-    email: string;
-    role: string;
-    invitedBy: string;
-    expiresAt: Date;
-  }): Promise<any> {
+  async createInvitation(data: CreateTeamInvitationData): Promise<any> {
     const token = this.generateInvitationToken();
 
     return prisma.teamInvitation.create({
@@ -156,7 +150,7 @@ export class TeamRepository {
     return prisma.teamInvitation.findUnique({
       where: { token },
       include: {
-        team: {
+        Team: {
           select: {
             id: true,
             name: true,
@@ -172,20 +166,13 @@ export class TeamRepository {
     return prisma.teamInvitation.update({
       where: { id: invitationId },
       data: {
-        status: 'accepted',
+        status: TeamInvitationStatus.accepted,
         acceptedAt: new Date(),
       },
     });
   }
 
-  async createTeamApiKey(data: {
-    teamId: number;
-    key: string;
-    name: string;
-    permission: string;
-    domain?: string;
-    createdBy?: number;
-  }): Promise<any> {
+  async createTeamApiKey(data: CreateTeamApiKeyData): Promise<any> {
     return prisma.apiKey.create({
       data: {
         teamId: data.teamId,
@@ -194,7 +181,7 @@ export class TeamRepository {
         permission: data.permission,
         domain: data.domain,
         createdBy: data.createdBy,
-        status: 'active',
+        status: ApiKeyStatus.active,
       },
     });
   }
@@ -203,10 +190,10 @@ export class TeamRepository {
     return prisma.apiKey.findMany({
       where: {
         teamId,
-        status: 'active',
+        status: ApiKeyStatus.active,
       },
       include: {
-        creator: {
+        Creator: {
           select: {
             id: true,
             email: true,

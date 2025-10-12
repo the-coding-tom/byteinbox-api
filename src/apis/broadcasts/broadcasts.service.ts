@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { BroadcastsValidator } from './broadcasts.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
+import { config } from '../../config/config';
 import { 
   CreateBroadcastDto, 
   BroadcastFilterDto,
@@ -52,7 +54,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Broadcast created successfully',
+        message: Constants.createdSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -63,8 +65,8 @@ export class BroadcastsService {
   async getBroadcasts(userId: number, filter: BroadcastFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch user's broadcasts with pagination
       const response: GetBroadcastsResponseDto = {
@@ -104,7 +106,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Broadcasts retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -152,7 +154,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Broadcast details retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -186,7 +188,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Broadcast updated successfully',
+        message: Constants.updatedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -198,12 +200,12 @@ export class BroadcastsService {
     try {
       // Dummy response - in real implementation, this would delete the broadcast
       const response: DeleteBroadcastResponseDto = {
-        message: 'Broadcast deleted successfully',
+        message: Constants.deletedSuccessfully,
       };
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Broadcast deleted successfully',
+        message: Constants.deletedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -215,7 +217,7 @@ export class BroadcastsService {
     try {
       // Dummy response - in real implementation, this would send the broadcast
       const response: SendBroadcastResponseDto = {
-        message: 'Broadcast sent successfully',
+        message: Constants.successMessage,
         broadcast: {
           id: broadcastId,
           status: 'sent',
@@ -226,7 +228,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Broadcast sent successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
@@ -253,7 +255,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Broadcast statistics retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -294,7 +296,7 @@ export class BroadcastsService {
 
       // Dummy response - in real implementation, this would send test emails
       const response: SendTestBroadcastResponseDto = {
-        message: 'Test broadcast sent successfully',
+        message: Constants.successMessage,
         testResults: sendTestBroadcastDto.testEmails.map(email => ({
           email,
           status: 'sent',
@@ -304,7 +306,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Test broadcast sent successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
@@ -315,8 +317,8 @@ export class BroadcastsService {
   async getDraftBroadcasts(userId: number, filter: BroadcastFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch draft broadcasts with pagination
       const response: GetDraftBroadcastsResponseDto = {
@@ -348,7 +350,7 @@ export class BroadcastsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Draft broadcasts retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {

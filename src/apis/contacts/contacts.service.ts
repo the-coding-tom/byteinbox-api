@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ContactsValidator } from './contacts.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
+import { config } from '../../config/config';
 import { 
   CreateContactDto, 
   ContactFilterDto,
@@ -44,7 +46,7 @@ export class ContactsService {
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Contact created successfully',
+        message: Constants.createdSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -55,8 +57,8 @@ export class ContactsService {
   async getContacts(userId: number, filter: ContactFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch user's contacts with pagination
       const response: GetContactsResponseDto = {
@@ -96,7 +98,7 @@ export class ContactsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Contacts retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -161,7 +163,7 @@ export class ContactsService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Contact updated successfully',
+        message: Constants.updatedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -173,12 +175,12 @@ export class ContactsService {
     try {
       // Dummy response - in real implementation, this would delete the contact
       const response: DeleteContactResponseDto = {
-        message: 'Contact deleted successfully',
+        message: Constants.deletedSuccessfully,
       };
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Contact deleted successfully',
+        message: Constants.deletedSuccessfully,
         data: response,
       });
     } catch (error) {

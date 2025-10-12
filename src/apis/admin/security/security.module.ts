@@ -4,7 +4,7 @@ import { AdminSecurityService } from './security.service';
 import { AdminSecurityValidator } from './security.validator';
 import { BlacklistRepository } from '../../../repositories/blacklist.repository';
 import { SessionRepository } from '../../../repositories/session.repository';
-import { MfaRepository } from '../../../repositories/mfa.repository';
+import { MfaVerificationSessionRepository } from '../../../repositories/mfa-verification-session.repository';
 import { QueueProducersModule } from '../../../queues/queue-producers.module';
 
 @Module({
@@ -15,7 +15,7 @@ import { QueueProducersModule } from '../../../queues/queue-producers.module';
     AdminSecurityValidator,
     BlacklistRepository,
     SessionRepository,
-    MfaRepository,
+    MfaVerificationSessionRepository,
   ],
   exports: [AdminSecurityService],
 })

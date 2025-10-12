@@ -1,6 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { generateSuccessResponse, throwError } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants, TeamMemberRole } from '../../common/enums/generic.enum';
 import { TeamRepository } from '../../repositories/team.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { TeamsValidator } from './teams.validator';
@@ -37,7 +38,7 @@ export class TeamsService {
       await this.teamRepository.addMember({
         teamId: team.id,
         userId,
-        role: 'OWNER',
+        role: TeamMemberRole.owner,
       });
 
       // Log team creation
@@ -45,7 +46,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.CREATED,
-        message: 'Team created successfully',
+        message: Constants.createdSuccessfully,
         data: {
           id: team.id,
           name: team.name,
@@ -90,7 +91,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Teams retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: formattedTeams,
       });
     } catch (error) {
@@ -108,7 +109,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Team API keys retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: apiKeys,
       });
     } catch (error) {
@@ -142,7 +143,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Team details retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: formattedTeam,
       });
     } catch (error) {
@@ -163,7 +164,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Team updated successfully',
+        message: Constants.updatedSuccessfully,
         data: {
           id: updatedTeam.id,
           name: updatedTeam.name,
@@ -191,7 +192,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Team deleted successfully',
+        message: Constants.deletedSuccessfully,
         data: { teamId: team.id },
       });
     } catch (error) {
@@ -211,7 +212,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Team members retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: members,
       });
     } catch (error) {
@@ -239,7 +240,7 @@ export class TeamsService {
       const invitation = await this.teamRepository.createInvitation({
         teamId: validatedTeamId,
         email: validatedData.email,
-        role: validatedData.role,
+        role: validatedData.role as TeamMemberRole,
         invitedBy: userId.toString(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       });
@@ -249,7 +250,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.CREATED,
-        message: 'Team invitation sent successfully',
+        message: Constants.successMessage,
         data: {
           id: invitation.id,
           email: invitation.email,
@@ -281,7 +282,7 @@ export class TeamsService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Team member removed successfully',
+        message: Constants.deletedSuccessfully,
         data: {
           teamId: team.id,
           memberUserId,
@@ -299,19 +300,19 @@ export class TeamsService {
       
       // Check if trying to change the team owner's role
       const member = await this.teamRepository.findMember(validatedTeamId, validatedMemberUserId);
-      if (member?.role === 'OWNER') {
+      if (member?.role === TeamMemberRole.owner) {
         throwError('Cannot change the team owner\'s role', HttpStatus.BAD_REQUEST, 'cannotChangeOwnerRole');
       }
 
       // Update role
-      await this.teamRepository.updateMemberRole(validatedTeamId, validatedMemberUserId, validatedData.role);
+      await this.teamRepository.updateMemberRole(validatedTeamId, validatedMemberUserId, validatedData.role as TeamMemberRole);
 
       // Log role update
       logInfoMessage(`Team member role updated: user ${validatedMemberUserId} to ${validatedData.role} in team ${validatedTeamId} by user ${userId}`);
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Team member role updated successfully',
+        message: Constants.updatedSuccessfully,
         data: {
           teamId: team.id,
           memberUserId,

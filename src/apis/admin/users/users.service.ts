@@ -1,9 +1,11 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { UserRepository } from '../../../repositories/user.repository';
 import { AdminUsersValidator } from './users.validator';
-import { generateSuccessResponse } from '../../../utils/util';
+import { generateSuccessResponse, transformToPaginationMeta } from '../../../utils/util';
 import { handleServiceError } from '../../../utils/error.util';
 import { CreateUserByAdminDto, UpdateUserByAdminDto, AdminUserFilterDto } from './dto/users.dto';
+import { Constants } from '../../../common/enums/generic.enum';
+import { config } from '../../../config/config';
 
 @Injectable()
 export class AdminUsersService {
@@ -35,7 +37,10 @@ export class AdminUsersService {
         // userData.emailVerificationExpiresAt = new Date(Date.now() + MILLISECONDS_IN_DAY);
       }
 
-      const result = await this.userRepository.createUserAndPersonalTeam(userData);
+      // Generate unique team slug
+      const teamData = await import('../../../utils/team.util').then(m => m.generateUniqueTeamSlug(userData.email));
+      
+      const result = await this.userRepository.createUserAndPersonalTeam(userData, teamData);
 
       const { user } = result;
 
@@ -44,7 +49,7 @@ export class AdminUsersService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.CREATED,
-        message: 'User created successfully',
+        message: Constants.createdSuccessfully,
         data: {
           id: user.id,
           email: user.email,
@@ -70,14 +75,14 @@ export class AdminUsersService {
       // Use the repository's findWithPagination method
       const result = await this.userRepository.findWithPagination({
         offset: validatedFilter.offset || 0,
-        limit: validatedFilter.limit || 10,
+        limit: validatedFilter.limit || config.validation.pagination.defaultLimit,
         keyword: validatedFilter.keyword,
         status: validatedFilter.status,
       });
       
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Users retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: {
           data: result.data.map((user: any) => ({
             id: user.id,
@@ -91,7 +96,7 @@ export class AdminUsersService {
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
           })),
-          meta: result.meta,
+          meta: transformToPaginationMeta({ limit: result.limit, offset: result.offset, total: result.total }),
         },
       });
     } catch (error) {
@@ -106,7 +111,7 @@ export class AdminUsersService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'User retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: {
           id: user.id,
           email: user.email,
@@ -134,7 +139,7 @@ export class AdminUsersService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'User updated successfully',
+        message: Constants.updatedSuccessfully,
         data: {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -162,7 +167,7 @@ export class AdminUsersService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'User deleted successfully',
+        message: Constants.deletedSuccessfully,
       });
     } catch (error) {
       return handleServiceError('Error deleting user', error);
@@ -174,7 +179,7 @@ export class AdminUsersService {
       const { user } = await this.adminUsersValidator.validateDeactivateUserAccount(deactivateDto);
 
       const updatedUser = { ...user, status: 'SUSPENDED' }; // Assuming 'SUSPENDED' is the status for deactivated account
-      await this.userRepository.updateUser(updatedUser.id, updatedUser);
+      await this.userRepository.update(updatedUser.id, updatedUser);
       
       // await this.notificationQueue.add('account-deactivated', {
       //   userId: user.id,
@@ -183,7 +188,7 @@ export class AdminUsersService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'User account deactivated successfully',
+        message: Constants.updatedSuccessfully,
       });
     } catch (error) {
       return handleServiceError('Error deactivating user account', error);
@@ -202,7 +207,7 @@ export class AdminUsersService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'User account deleted successfully',
+        message: Constants.deletedSuccessfully,
       });
     } catch (error) {
       return handleServiceError('Error deleting user account', error);

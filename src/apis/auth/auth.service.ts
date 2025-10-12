@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from '../../repositories/user.repository';
 import { SessionRepository } from '../../repositories/session.repository';
 import { BackupCodeRepository } from '../../repositories/backup-code.repository';
-import { MfaRepository } from '../../repositories/mfa.repository';
+import { OAuthAccountRepository } from '../../repositories/oauth-account.repository';
 import { AuthValidator } from './auth.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
@@ -14,7 +14,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { config } from '../../config/config';
 import * as moment from 'moment';
 import { verifyGoogleToken, verifyGitHubToken } from '../../helpers/oauth.helper';
-import { OAuthProvider } from '../../common/enums/generic.enum';
+import { OAuthProvider, Constants } from '../../common/enums/generic.enum';
 import { LoginDto, LoginResponseDto, OAuthCallbackDto, OAuthLoginResponseDto, LogoutDto, RefreshTokenDto, ResetPasswordRequestDto, ResetPasswordConfirmDto, ChangePasswordDto, RegisterDto, VerifyEmailDto, ResendVerificationDto, MfaVerifyDto, MfaChallengeDto, MfaBackupCodeConsumeDto, MfaDisableDto, MfaRegenerateBackupCodesDto, TotpSetupResponseDto, TotpVerifySetupResponseDto, BackupCodesResponseDto, RegenerateBackupCodesResponseDto } from './dto/auth.dto';
 
 @Injectable()
@@ -23,10 +23,10 @@ export class AuthService {
     private readonly userRepository: UserRepository,
     private readonly sessionRepository: SessionRepository,
     private readonly backupCodeRepository: BackupCodeRepository,
-    private readonly mfaRepository: MfaRepository,
+    private readonly oauthAccountRepository: OAuthAccountRepository,
     private readonly authValidator: AuthValidator,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   async login(loginDto: LoginDto, request: any): Promise<any> {
     try {
@@ -71,7 +71,7 @@ export class AuthService {
       });
 
       // Update user login time
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         lastLoginAt: moment().toDate(),
       });
 
@@ -83,7 +83,7 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
-          isEmailVerified: user.isEmailVerified,
+          isEmailVerified: !!user.emailVerifiedAt,
           status: user.status,
         },
       };
@@ -117,7 +117,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Google OAuth URL generated successfully',
+        message: Constants.successMessage,
         data: {
           provider: OAuthProvider.google,
           url: oauthUrl,
@@ -154,7 +154,8 @@ export class AuthService {
       const oauthUserInfo = await verifyGoogleToken(tokens.access_token);
 
       // Find or create user
-      let user = await this.userRepository.findUserByOAuthId(OAuthProvider.google, oauthUserInfo.id);
+      const oauthAccount = await this.oauthAccountRepository.findByProviderAndUserId(OAuthProvider.google, oauthUserInfo.id);
+      let user = oauthAccount?.User || null;
       let isNewUser = false;
 
       if (!user) {
@@ -163,22 +164,30 @@ export class AuthService {
 
         if (user) {
           // Link existing user to OAuth provider
-          await this.userRepository.linkOAuthAccount(user.id, OAuthProvider.google, oauthUserInfo.id, tokens.access_token);
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.google, oauthUserInfo.id, tokens.access_token);
         } else {
-          // Create new user
-          user = await this.userRepository.createOAuthUser({
-            email: oauthUserInfo.email,
-            firstName: oauthUserInfo.firstName,
-            lastName: oauthUserInfo.lastName,
-            isEmailVerified: true, // OAuth users are pre-verified
-            oauthProvider: OAuthProvider.google,
-            oauthId: oauthUserInfo.id,
-          });
+          // Create new user with personal team
+          const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(oauthUserInfo.email));
+          
+          user = await this.userRepository.createUserAndPersonalTeam(
+            {
+              email: oauthUserInfo.email,
+              firstName: oauthUserInfo.firstName,
+              lastName: oauthUserInfo.lastName,
+              emailVerifiedAt: new Date(), // OAuth users are pre-verified
+              status: 'ACTIVE',
+            },
+            teamData
+          );
+
+          // Link OAuth account
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.google, oauthUserInfo.id, tokens.access_token);
+          
           isNewUser = true;
         }
       } else {
         // Update OAuth access token
-        await this.userRepository.updateUser(user.id, { oauthProvider: OAuthProvider.google, accessToken: tokens.access_token });
+        await this.userRepository.update(user.id, { oauthProvider: OAuthProvider.google, accessToken: tokens.access_token });
       }
 
       // Generate tokens
@@ -195,7 +204,7 @@ export class AuthService {
       });
 
       // Update user login time
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         lastLoginAt: moment().toDate(),
       });
 
@@ -207,7 +216,7 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
-          isEmailVerified: user.isEmailVerified,
+          isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
         },
         isNewUser,
@@ -234,7 +243,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'GitHub OAuth URL generated successfully',
+        message: Constants.successMessage,
         data: {
           provider: OAuthProvider.github,
           url: githubOAuthUrl.toString(),
@@ -275,7 +284,8 @@ export class AuthService {
       const oauthUserInfo = await verifyGitHubToken(tokenData.access_token);
 
       // Find or create user
-      let user = await this.userRepository.findUserByOAuthId(OAuthProvider.github, oauthUserInfo.id);
+      const githubAccount = await this.oauthAccountRepository.findByProviderAndUserId(OAuthProvider.github, oauthUserInfo.id);
+      let user = githubAccount?.User || null;
       let isNewUser = false;
 
       if (!user) {
@@ -284,22 +294,30 @@ export class AuthService {
 
         if (user) {
           // Link existing user to OAuth provider
-          await this.userRepository.linkOAuthAccount(user.id, OAuthProvider.github, oauthUserInfo.id, tokenData.access_token);
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.github, oauthUserInfo.id, tokenData.access_token);
         } else {
-          // Create new user
-          user = await this.userRepository.createOAuthUser({
-            email: oauthUserInfo.email,
-            firstName: oauthUserInfo.firstName,
-            lastName: oauthUserInfo.lastName,
-            isEmailVerified: true, // OAuth users are pre-verified
-            oauthProvider: OAuthProvider.github,
-            oauthId: oauthUserInfo.id,
-          });
+          // Create new user with personal team
+          const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(oauthUserInfo.email));
+          
+          user = await this.userRepository.createUserAndPersonalTeam(
+            {
+              email: oauthUserInfo.email,
+              firstName: oauthUserInfo.firstName,
+              lastName: oauthUserInfo.lastName,
+              emailVerifiedAt: new Date(), // OAuth users are pre-verified
+              status: 'ACTIVE',
+            },
+            teamData
+          );
+
+          // Link OAuth account
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.github, oauthUserInfo.id, tokenData.access_token);
+          
           isNewUser = true;
         }
       } else {
         // Update OAuth access token
-        await this.userRepository.updateUser(user.id, { oauthProvider: OAuthProvider.github, accessToken: tokenData.access_token });
+        await this.userRepository.update(user.id, { oauthProvider: OAuthProvider.github, accessToken: tokenData.access_token });
       }
 
       // Generate tokens
@@ -316,7 +334,7 @@ export class AuthService {
       });
 
       // Update user login time
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         lastLoginAt: moment().toDate(),
       });
 
@@ -328,7 +346,7 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
-          isEmailVerified: user.isEmailVerified,
+          isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
         },
         isNewUser,
@@ -392,7 +410,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Token refreshed successfully',
+        message: Constants.successMessage,
         data: {
           accessToken,
           refreshToken,
@@ -410,7 +428,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Logged out from all devices successfully'
+        message: Constants.successMessage
       });
     } catch (error) {
       return handleServiceError(error, 'Logout from all devices failed');
@@ -461,7 +479,7 @@ export class AuthService {
       const hashedPassword = await hashPassword(resetPasswordConfirmDto.newPassword);
 
       // Update user password
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         password: hashedPassword,
       });
 
@@ -490,13 +508,13 @@ export class AuthService {
       const hashedPassword = await hashPassword(changePasswordDto.newPassword);
 
       // Update user password
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         password: hashedPassword,
       });
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Password changed successfully',
+        message: Constants.updatedSuccessfully,
         data: {},
       });
     } catch (error) {
@@ -512,14 +530,20 @@ export class AuthService {
       // Hash the password
       const hashedPassword = await hashPassword(validatedData.password);
 
+      // Generate unique team slug
+      const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(validatedData.email));
+
       // Create new user
-      const user = await this.userRepository.createUserAndPersonalTeam({
-        email: validatedData.email,
-        password: hashedPassword,
-        name: validatedData.name,
-        isEmailVerified: false, // Email verification required
-        status: 'ACTIVE',
-      });
+      const user = await this.userRepository.createUserAndPersonalTeam(
+        {
+          email: validatedData.email,
+          password: hashedPassword,
+          name: validatedData.name,
+          isEmailVerified: false, // Email verification required
+          status: 'ACTIVE',
+        },
+        teamData
+      );
 
       // TODO: Send email verification email
       console.log(`Email verification needed for ${user.email}`);
@@ -543,13 +567,13 @@ export class AuthService {
       const { user } = await this.authValidator.validateVerifyEmail(verifyEmailDto);
 
       // Update user email verification status
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         isEmailVerified: true,
       });
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Email verified successfully',
+        message: Constants.successMessage,
         data: {
           email: user.email,
           isEmailVerified: true,
@@ -570,7 +594,7 @@ export class AuthService {
       const verificationExpiresAt = moment().add(1, 'day').toDate();
 
       // Update user with new verification token
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         emailVerificationToken: verificationToken,
         emailVerificationExpiresAt: verificationExpiresAt,
       });
@@ -581,7 +605,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Verification email sent successfully',
+        message: Constants.successMessage,
         data: {
           email: user.email,
         },
@@ -622,7 +646,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'TOTP setup initiated successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
@@ -652,7 +676,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'TOTP setup completed successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
@@ -679,12 +703,10 @@ export class AuthService {
       });
 
       // Update user login time
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         lastLoginAt: moment().toDate(),
       });
 
-      // Clean up MFA session
-      await this.mfaRepository.cleanupExpiredMfaSessions();
 
       const response: LoginResponseDto = {
         accessToken,
@@ -694,7 +716,7 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
-          isEmailVerified: user.isEmailVerified,
+          isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
         },
       };
@@ -716,7 +738,7 @@ export class AuthService {
 
       // Get and filter backup codes
       const backupCodes = await this.backupCodeRepository.findByUserId(userId);
-      const unusedCodes = backupCodes.filter(code => !code.isUsed);
+      const unusedCodes = backupCodes.filter(code => !code.used);
 
       // Build response
       const response: BackupCodesResponseDto = {
@@ -726,7 +748,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Backup codes retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -756,12 +778,10 @@ export class AuthService {
       });
 
       // Update user login time
-      await this.userRepository.updateUser(user.id, {
+      await this.userRepository.update(user.id, {
         lastLoginAt: moment().toDate(),
       });
 
-      // Clean up MFA session
-      await this.mfaRepository.cleanupExpiredMfaSessions();
 
       const response: LoginResponseDto = {
         accessToken,
@@ -771,7 +791,7 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
-          isEmailVerified: user.isEmailVerified,
+          isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
         },
       };
@@ -802,7 +822,7 @@ export class AuthService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'MFA disabled successfully',
+        message: Constants.successMessage,
         data: {},
       });
     } catch (error) {
@@ -826,12 +846,12 @@ export class AuthService {
       // Build response
       const response: RegenerateBackupCodesResponseDto = {
         backup_codes: backupCodes.map(code => maskBackupCode(code)),
-        message: 'Backup codes regenerated successfully',
+        message: Constants.successMessage,
       };
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Backup codes regenerated successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {

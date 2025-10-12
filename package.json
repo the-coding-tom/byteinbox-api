@@ -23,6 +23,8 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.906.0",
+    "@aws-sdk/credential-provider-env": "^3.906.0",
     "@nestjs/bull": "^11.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",

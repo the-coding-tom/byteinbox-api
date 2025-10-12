@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { WebhooksValidator } from './webhooks.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
+import { config } from '../../config/config';
 import { 
   CreateWebhookDto, 
   WebhookFilterDto,
@@ -44,7 +46,7 @@ export class WebhooksService {
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Webhook created successfully',
+        message: Constants.createdSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -55,8 +57,8 @@ export class WebhooksService {
   async getWebhooks(userId: number, filter: WebhookFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch user's webhooks with pagination
       const response: GetWebhooksResponseDto = {
@@ -90,7 +92,7 @@ export class WebhooksService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Webhooks retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -136,7 +138,7 @@ export class WebhooksService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Webhook details retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -165,7 +167,7 @@ export class WebhooksService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Webhook updated successfully',
+        message: Constants.updatedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -177,12 +179,12 @@ export class WebhooksService {
     try {
       // Dummy response - in real implementation, this would delete the webhook
       const response: DeleteWebhookResponseDto = {
-        message: 'Webhook deleted successfully',
+        message: Constants.deletedSuccessfully,
       };
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Webhook deleted successfully',
+        message: Constants.deletedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -194,7 +196,7 @@ export class WebhooksService {
     try {
       // Dummy response - in real implementation, this would send a test webhook
       const response: TestWebhookResponseDto = {
-        message: 'Test webhook sent successfully',
+        message: Constants.successMessage,
         delivery: {
           id: 'delivery_test_123',
           status: 'success',
@@ -208,7 +210,7 @@ export class WebhooksService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Test webhook sent successfully',
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
@@ -219,8 +221,8 @@ export class WebhooksService {
   async getWebhookDeliveries(webhookId: string, userId: number, filter: WebhookFilterDto): Promise<any> {
     try {
       // Set defaults from config
-      const page = filter.page || 1;
-      const limit = filter.limit || 20;
+      const page = filter.page || config.validation.pagination.defaultPage;
+      const limit = filter.limit || config.validation.pagination.defaultLimit;
       
       // Dummy response - in real implementation, this would fetch webhook deliveries with pagination
       const response: GetWebhookDeliveriesResponseDto = {
@@ -264,7 +266,7 @@ export class WebhooksService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Webhook deliveries retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {
@@ -361,7 +363,7 @@ export class WebhooksService {
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: 'Webhook events retrieved successfully',
+        message: Constants.retrievedSuccessfully,
         data: response,
       });
     } catch (error) {

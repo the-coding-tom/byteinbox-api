@@ -1,38 +1,27 @@
 export class CreateApiKeyData {
+  key: string;
   name: string;
-  description?: string;
-  userId: number;
-  scopes: string[];
-  expiresAt?: Date;
+  teamId: number;
+  permission: string;
+  domain?: string;
+  createdBy?: number;
 }
+
+import { ApiKeyStatus } from '@prisma/client';
 
 export class UpdateApiKeyData {
   name?: string;
-  description?: string;
-  scopes?: string[];
-  isActive?: boolean;
-  expiresAt?: Date;
-  key?: string; // For key regeneration
+  permission?: string;
+  domain?: string;
+  status?: ApiKeyStatus;
+  key?: string;
 }
 
-export class ApiKeyFilter {
-  userId?: number;
-  isActive?: boolean;
+export class FindByTeamIdWithPaginationFilter {
+  teamId: number;
+  status?: string;
+  keyword?: string;
   offset: number;
   limit: number;
-  keyword?: string;
 }
 
-export class ApiKeyEntity {
-  id: number;
-  key: string;
-  name: string;
-  description: string | null;
-  userId: number;
-  scopes: string[];
-  isActive: boolean;
-  lastUsedAt: Date | null;
-  expiresAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-} 

@@ -4,6 +4,7 @@ import { SessionRepository } from '../../repositories/session.repository';
 import { AccountValidator } from './account.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
+import { Constants } from '../../common/enums/generic.enum';
 
 @Injectable()
 export class AccountService {
@@ -24,11 +25,11 @@ export class AccountService {
       });
 
       // Revoke all user sessions
-      await this.sessionRepository.revokeAllUserRefreshTokens(userId);
+      await this.sessionRepository.deleteAllUserSessionsByuserId(userId);
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Account deactivated successfully',
+        message: Constants.updatedSuccessfully,
       });
     } catch (error) {
       return handleServiceError('Error deactivating account', error);
@@ -44,11 +45,11 @@ export class AccountService {
       await this.userRepository.delete(userId);
 
       // Revoke all user sessions
-      await this.sessionRepository.revokeAllUserRefreshTokens(userId);
+      await this.sessionRepository.deleteAllUserSessionsByuserId(userId);
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: 'Account deleted successfully',
+        message: Constants.deletedSuccessfully,
       });
     } catch (error) {
       return handleServiceError('Error deleting account', error);

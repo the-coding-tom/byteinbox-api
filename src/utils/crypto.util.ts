@@ -67,7 +67,7 @@ export function generateSessionToken(): string {
 
 export function generateApiKey(): string {
   const randomPart = crypto.randomBytes(32).toString('hex');
-  return `ak_live_${randomPart}`;
+  return `byt_${randomPart}`;
 }
 
 export function generateRandomString(length: number): string {
@@ -76,5 +76,5 @@ export function generateRandomString(length: number): string {
 
 // Validation Functions (Pure utility functions)
 export function isValidApiKeyFormat(key: string): boolean {
-  return key.startsWith('ak_live_') && key.length >= 40;
+  return key.startsWith('byt_') && key.length >= 68; // byt_ (4) + 64 hex chars
 } 
