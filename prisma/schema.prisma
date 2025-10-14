@@ -128,14 +128,14 @@ model MfaBackupCode {
 }
 
 model MfaVerificationSession {
-  id           Int                         @id @default(autoincrement())
-  sessionToken String                      @unique @map("session_token")
-  userId       Int                         @map("user_id")
+  id           Int                          @id @default(autoincrement())
+  sessionToken String                       @unique @map("session_token")
+  userId       Int                          @map("user_id")
   email        String
-  mfaMethod    MfaMethod                   @map("mfa_method")
+  mfaMethod    MfaMethod                    @map("mfa_method")
   status       MfaVerificationSessionStatus @default(pending)
-  expiresAt    DateTime                    @map("expires_at")
-  createdAt    DateTime                    @default(now()) @map("created_at")
+  expiresAt    DateTime                     @map("expires_at")
+  createdAt    DateTime                     @default(now()) @map("created_at")
 
   User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -183,18 +183,19 @@ model Team {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  members       TeamMember[]
-  invitations   TeamInvitation[]
-  domains       Domain[]
-  emails        Email[]
-  templates     Template[]
-  webhooks      Webhook[]
-  apiKeys       ApiKey[]
-  broadcasts    Broadcast[]
-  contacts      Contact[]
-  audiences     Audience[]
-  subscriptions Subscription[]
-  logs          Log[]
+  members         TeamMember[]
+  invitations     TeamInvitation[]
+  domains         Domain[]
+  emails          Email[]
+  templates       Template[]
+  webhooks        Webhook[]
+  apiKeys         ApiKey[]
+  broadcasts      Broadcast[]
+  contacts        Contact[]
+  audiences       Audience[]
+  subscriptions   Subscription[]
+  apiRequestLogs  ApiRequestLog[]
+  apiUsageMetrics ApiUsageMetric[]
 
   @@map("teams")
 }
@@ -215,17 +216,17 @@ model TeamMember {
 }
 
 model TeamInvitation {
-  id         Int       @id @default(autoincrement())
-  teamId     Int       @map("team_id")
+  id         Int                  @id @default(autoincrement())
+  teamId     Int                  @map("team_id")
   email      String
-  role       String    @default("member") // admin, member, viewer
-  token      String                 @unique
-  invitedBy  String                 @map("invited_by") // userId who sent the invitation
-  status     TeamInvitationStatus   @default(pending)
-  expiresAt  DateTime               @map("expires_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  acceptedAt DateTime? @map("accepted_at")
+  role       String               @default("member") // admin, member, viewer
+  token      String               @unique
+  invitedBy  String               @map("invited_by") // userId who sent the invitation
+  status     TeamInvitationStatus @default(pending)
+  expiresAt  DateTime             @map("expires_at")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+  acceptedAt DateTime?            @map("accepted_at")
 
   Team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
@@ -316,17 +317,17 @@ model Subscription {
 // ============================================
 
 model Domain {
-  id            Int      @id @default(autoincrement())
-  name          String   @unique
+  id            Int          @id @default(autoincrement())
+  name          String       @unique
   createdBy     Int?         @map("created_by") // User who created this domain
   teamId        Int          @map("team_id") // Team that owns this domain (personal or shared)
   status        DomainStatus @default(pending)
   region        String? // us-east-1, eu-west-1, etc.
-  clickTracking Boolean  @default(true) @map("click_tracking")
-  openTracking  Boolean  @default(true) @map("open_tracking")
-  tlsMode       String   @default("enforced") @map("tls_mode") // enforced, opportunistic, disabled
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  clickTracking Boolean      @default(true) @map("click_tracking")
+  openTracking  Boolean      @default(true) @map("open_tracking")
+  tlsMode       String       @default("enforced") @map("tls_mode") // enforced, opportunistic, disabled
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
   // DNS Records
   dnsRecords DnsRecord[]
@@ -340,8 +341,8 @@ model Domain {
 }
 
 model DnsRecord {
-  id         Int     @id @default(autoincrement())
-  domainId   Int     @map("domain_id")
+  id         Int          @id @default(autoincrement())
+  domainId   Int          @map("domain_id")
   type       String // dkim, spf, dmarc, mx, tracking
   name       String
   recordType String       @map("record_type") // TXT, MX, CNAME
@@ -359,29 +360,29 @@ model DnsRecord {
 // ============================================
 
 model Email {
-  id          Int       @id @default(autoincrement())
-  createdBy   Int?      @map("created_by") // User who created/sent this email
-  teamId      Int       @map("team_id") // Team that owns this email (personal or shared)
-  domainId    Int?      @map("domain_id")
-  apiKeyId    Int?      @map("api_key_id") // API key used to send the email
+  id          Int         @id @default(autoincrement())
+  createdBy   Int?        @map("created_by") // User who created/sent this email
+  teamId      Int         @map("team_id") // Team that owns this email (personal or shared)
+  domainId    Int?        @map("domain_id")
+  apiKeyId    Int?        @map("api_key_id") // API key used to send the email
   from        String
   to          String[] // Array of email addresses
-  cc          String[]  @default([])
-  bcc         String[]  @default([])
-  replyTo     String[]  @default([]) @map("reply_to")
+  cc          String[]    @default([])
+  bcc         String[]    @default([])
+  replyTo     String[]    @default([]) @map("reply_to")
   subject     String
   text        String?
   html        String?
   status      EmailStatus @default(queued)
   opens       Int         @default(0)
-  clicks      Int       @default(0)
-  lastOpened  DateTime? @map("last_opened")
-  lastClicked DateTime? @map("last_clicked")
-  openedAt    DateTime? @map("opened_at") // First open timestamp
-  sentAt      DateTime? @map("sent_at")
-  deliveredAt DateTime? @map("delivered_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  clicks      Int         @default(0)
+  lastOpened  DateTime?   @map("last_opened")
+  lastClicked DateTime?   @map("last_clicked")
+  openedAt    DateTime?   @map("opened_at") // First open timestamp
+  sentAt      DateTime?   @map("sent_at")
+  deliveredAt DateTime?   @map("delivered_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
 
   // Relations
   Creator     User?        @relation(fields: [createdBy], references: [id], onDelete: Cascade)
@@ -428,20 +429,20 @@ model EmailEvent {
 // ============================================
 
 model Template {
-  id           Int      @id @default(autoincrement())
-  createdBy    Int?     @map("created_by") // User who created this template
-  teamId       Int      @map("team_id") // Team that owns this template (personal or shared)
+  id           Int            @id @default(autoincrement())
+  createdBy    Int?           @map("created_by") // User who created this template
+  teamId       Int            @map("team_id") // Team that owns this template (personal or shared)
   name         String
   description  String?
   html         String
   subject      String?
-  category     String?        // transactional, marketing, etc.
+  category     String? // transactional, marketing, etc.
   variables    String[]       @default([]) // Template variable names
   status       TemplateStatus @default(active)
   opens        Int            @default(0)
-  clicks       Int      @default(0)
-  createdAt    DateTime @default(now()) @map("created_at")
-  lastModified DateTime @updatedAt @map("last_modified")
+  clicks       Int            @default(0)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  lastModified DateTime       @updatedAt @map("last_modified")
 
   Creator    User?       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   Team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -455,16 +456,16 @@ model Template {
 // ============================================
 
 model Webhook {
-  id            Int       @id @default(autoincrement())
-  createdBy     Int?      @map("created_by") // User who created this webhook
-  teamId        Int       @map("team_id") // Team that owns this webhook (personal or shared)
+  id            Int           @id @default(autoincrement())
+  createdBy     Int?          @map("created_by") // User who created this webhook
+  teamId        Int           @map("team_id") // Team that owns this webhook (personal or shared)
   url           String
   events        String[] // Array of event types
   status        WebhookStatus @default(enabled)
   secret        String // Signing secret
-  lastTriggered DateTime? @map("last_triggered")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastTriggered DateTime?     @map("last_triggered")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   Creator    User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   Team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -474,16 +475,16 @@ model Webhook {
 }
 
 model WebhookDelivery {
-  id          Int       @id @default(autoincrement())
-  webhookId   Int       @map("webhook_id")
-  eventType   String                 @map("event_type")
-  messageId   String?                @map("message_id")
+  id          Int                   @id @default(autoincrement())
+  webhookId   Int                   @map("webhook_id")
+  eventType   String                @map("event_type")
+  messageId   String?               @map("message_id")
   status      WebhookDeliveryStatus
   request     Json // Request payload
   response    Json? // Response from webhook URL
-  attempts    Int       @default(1)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  completedAt DateTime? @map("completed_at")
+  attempts    Int                   @default(1)
+  createdAt   DateTime              @default(now()) @map("created_at")
+  completedAt DateTime?             @map("completed_at")
 
   Webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
@@ -495,21 +496,22 @@ model WebhookDelivery {
 // ============================================
 
 model ApiKey {
-  id         Int       @id @default(autoincrement())
-  createdBy  Int?      @map("created_by") // User who created this API key
-  teamId     Int       @map("team_id") // Team that owns this API key (personal or shared)
+  id         Int          @id @default(autoincrement())
+  createdBy  Int?         @map("created_by") // User who created this API key
+  teamId     Int          @map("team_id") // Team that owns this API key (personal or shared)
   name       String
-  key        String    @unique // The actual API key (hashed)
-  permission String       // Full access, Sending access, Read-only
-  domain     String?      // Specific domain or "All domains"
+  key        String       @unique // The actual API key (hashed)
+  permission String // Full access, Sending access, Read-only
+  domain     String? // Specific domain or "All domains"
   status     ApiKeyStatus @default(active)
   lastUsed   DateTime?    @map("last_used")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
 
-  Creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  Team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  logs    Log[]
-  emails  Email[]
+  Creator         User?            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team            Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  apiRequestLogs  ApiRequestLog[]
+  apiUsageMetrics ApiUsageMetric[]
+  emails          Email[]
 
   @@map("api_keys")
 }
@@ -519,19 +521,19 @@ model ApiKey {
 // ============================================
 
 model Contact {
-  id           Int       @id @default(autoincrement())
-  createdBy    Int?      @map("created_by") // User who created this contact
-  teamId       Int       @map("team_id") // Team that owns this contact (personal or shared)
+  id           Int           @id @default(autoincrement())
+  createdBy    Int?          @map("created_by") // User who created this contact
+  teamId       Int           @map("team_id") // Team that owns this contact (personal or shared)
   email        String
   firstName    String?       @map("first_name")
   lastName     String?       @map("last_name")
   status       ContactStatus @default(subscribed)
   subscribedAt DateTime?     @map("subscribed_at")
-  lastActivity DateTime? @map("last_activity")
-  tags         String[]  @default([])
+  lastActivity DateTime?     @map("last_activity")
+  tags         String[]      @default([])
   metadata     Json? // Additional custom fields
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
 
   Creator             User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   Team                Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -578,22 +580,22 @@ model AudienceContact {
 // ============================================
 
 model Broadcast {
-  id          Int       @id @default(autoincrement())
-  createdBy   Int?      @map("created_by") // User who created this broadcast
-  teamId      Int       @map("team_id") // Team that owns this broadcast (personal or shared)
-  templateId  Int?      @map("template_id")
-  audienceId  Int?      @map("audience_id") // Audience to send broadcast to
+  id          Int             @id @default(autoincrement())
+  createdBy   Int?            @map("created_by") // User who created this broadcast
+  teamId      Int             @map("team_id") // Team that owns this broadcast (personal or shared)
+  templateId  Int?            @map("template_id")
+  audienceId  Int?            @map("audience_id") // Audience to send broadcast to
   name        String
   subject     String
   content     String? // HTML content if not using template
   status      BroadcastStatus @default(draft)
   totalSent   Int             @default(0) @map("total_sent")
-  opens       Int       @default(0)
-  clicks      Int       @default(0)
-  scheduledAt DateTime? @map("scheduled_at")
-  sentAt      DateTime? @map("sent_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  opens       Int             @default(0)
+  clicks      Int             @default(0)
+  scheduledAt DateTime?       @map("scheduled_at")
+  sentAt      DateTime?       @map("sent_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
 
   Creator    User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   Team       Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -605,13 +607,13 @@ model Broadcast {
 }
 
 model BroadcastRecipient {
-  id          Int       @id @default(autoincrement())
-  broadcastId Int                       @map("broadcast_id")
-  contactId   Int                       @map("contact_id")
-  status      BroadcastRecipientStatus  @default(pending)
-  sentAt      DateTime?                 @map("sent_at")
-  openedAt    DateTime? @map("opened_at")
-  clickedAt   DateTime? @map("clicked_at")
+  id          Int                      @id @default(autoincrement())
+  broadcastId Int                      @map("broadcast_id")
+  contactId   Int                      @map("contact_id")
+  status      BroadcastRecipientStatus @default(pending)
+  sentAt      DateTime?                @map("sent_at")
+  openedAt    DateTime?                @map("opened_at")
+  clickedAt   DateTime?                @map("clicked_at")
 
   Broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
   Contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
@@ -621,25 +623,90 @@ model BroadcastRecipient {
 }
 
 // ============================================
-// LOGS (API Request Logs)
+// API REQUEST LOGS
 // ============================================
 
-model Log {
-  id           Int      @id @default(autoincrement())
-  teamId       Int      @map("team_id")
-  apiKeyId     Int?     @map("api_key_id")
-  endpoint     String
-  method       String
-  status       Int // HTTP status code
-  userAgent    String?  @map("user_agent")
-  requestBody  Json?    @map("request_body")
-  responseBody Json?    @map("response_body")
-  timestamp    DateTime @default(now())
+model ApiRequestLog {
+  id       String @id @default(cuid())
+  teamId   Int    @map("team_id")
+  apiKeyId Int?   @map("api_key_id")
 
+  // Request details
+  endpoint   String
+  httpMethod String @map("http_method") // GET, POST, PUT, DELETE
+  statusCode Int    @map("status_code") // HTTP response status
+
+  // Performance metrics
+  responseTime Int @map("response_time") // milliseconds
+
+  // Request metadata
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  // Optional: Store request/response (can be expensive)
+  requestBody  Json? @map("request_body")
+  responseBody Json? @map("response_body")
+
+  // Error tracking
+  errorMessage String? @map("error_message") // Store error if request failed
+  errorCode    String? @map("error_code") // Custom error code (e.g., RATE_LIMIT_EXCEEDED)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
   Team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   ApiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
 
-  @@map("logs")
+  // Indexes for common queries
+  @@index([teamId, createdAt]) // Team dashboard analytics
+  @@index([apiKeyId, createdAt]) // Per API key analytics
+  @@index([createdAt]) // Time-based queries, cleanup
+  @@index([statusCode]) // Error tracking
+  @@map("api_request_logs")
+}
+
+// ============================================
+// AGGREGATED ANALYTICS (OPTIONAL - RECOMMENDED)
+// Store daily/hourly summaries to reduce log table size
+// ============================================
+
+model ApiUsageMetric {
+  id       String @id @default(cuid())
+  teamId   Int    @map("team_id")
+  apiKeyId Int?   @map("api_key_id")
+
+  // Time period
+  date DateTime @db.Date
+  hour Int? // 0-23, null for daily metrics
+
+  // Aggregated metrics
+  totalRequests      Int @default(0) @map("total_requests")
+  successfulRequests Int @default(0) @map("successful_requests")
+  failedRequests     Int @default(0) @map("failed_requests")
+
+  // Status code breakdown
+  status2xx Int @default(0) // 200-299
+  status4xx Int @default(0) // 400-499
+  status5xx Int @default(0) // 500-599
+
+  // Performance
+  avgResponseTime Int @default(0) @map("avg_response_time") // milliseconds
+
+  // Endpoint breakdown (optional)
+  endpointStats Json? @map("endpoint_stats") // { "/broadcasts": 100, "/emails": 50 }
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  Team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  ApiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  // Unique constraint: one record per team/key per hour
+  @@unique([teamId, apiKeyId, date, hour])
+  @@index([teamId, date])
+  @@index([apiKeyId, date])
+  @@map("api_usage_metrics")
 }
 
 // ============================================

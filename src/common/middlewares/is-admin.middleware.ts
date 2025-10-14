@@ -5,7 +5,7 @@ import { throwError } from '../../utils/util';
 import { logError } from '../../utils/logger';
 
 @Injectable()
-export class AdminMiddleware implements NestMiddleware {
+export class IsAdminMiddleware implements NestMiddleware {
   use(req: any, res: Response, next: NextFunction) {
     try {
       // Validate user exists in request

@@ -9,6 +9,7 @@ import { BackupCodeRepository } from './backup-code.repository';
 import { DomainRepository } from './domain.repository';
 import { TeamRepository } from './team.repository';
 import { OAuthAccountRepository } from './oauth-account.repository';
+import { ApiRequestLogRepository } from './api-request-log.repository';
 
 @Module({
   providers: [
@@ -22,6 +23,7 @@ import { OAuthAccountRepository } from './oauth-account.repository';
     DomainRepository,
     TeamRepository,
     OAuthAccountRepository,
+    ApiRequestLogRepository,
   ],
   exports: [
     UserRepository,
@@ -34,6 +36,7 @@ import { OAuthAccountRepository } from './oauth-account.repository';
     DomainRepository,
     TeamRepository,
     OAuthAccountRepository,
+    ApiRequestLogRepository,
   ],
 })
 export class RepositoriesModule {}

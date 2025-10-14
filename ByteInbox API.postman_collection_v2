@@ -215,7 +215,7 @@
 					]
 				},
 				{
-					"name": "Forgot Password",
+					"name": "Request Password Reset",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -229,13 +229,15 @@
 							"raw": "{\n  \"email\": \"user@example.com\"\n}"
 						},
 						"url": {
-							"raw": "{{auth_url}}/auth/forgot-password",
+							"raw": "{{base_url}}/api/v1/auth/reset-password",
 							"host": [
-								"{{auth_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"auth",
-								"forgot-password"
+								"reset-password"
 							]
 						}
 					},
@@ -275,7 +277,7 @@
 					]
 				},
 				{
-					"name": "Reset Password",
+					"name": "Confirm Password Reset",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -289,13 +291,15 @@
 							"raw": "{\n  \"token\": \"reset_token_here\",\n  \"newPassword\": \"newpassword123\"\n}"
 						},
 						"url": {
-							"raw": "{{auth_url}}/auth/reset-password",
+							"raw": "{{base_url}}/api/v1/auth/confirm-password-reset",
 							"host": [
-								"{{auth_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"auth",
-								"reset-password"
+								"confirm-password-reset"
 							]
 						}
 					},
@@ -338,13 +342,28 @@
 					"name": "Logout",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
 						"url": {
-							"raw": "{{auth_url}}/auth/logout",
+							"raw": "{{base_url}}/api/v1/auth/logout",
 							"host": [
-								"{{auth_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"auth",
 								"logout"
 							]
@@ -355,13 +374,28 @@
 							"name": "Success Response",
 							"originalRequest": {
 								"method": "POST",
-								"header": [],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+								},
 								"url": {
-									"raw": "{{auth_url}}/auth/logout",
+									"raw": "{{base_url}}/api/v1/auth/logout",
 									"host": [
-										"{{auth_url}}"
+										"{{base_url}}"
 									],
 									"path": [
+										"api",
+										"v1",
 										"auth",
 										"logout"
 									]
@@ -375,6 +409,444 @@
 							"body": "{\n  \"message\": \"Logged out successfully\"\n}"
 						}
 					]
+				},
+				{
+					"name": "Logout All Devices",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout-all-devices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout-all-devices"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"oldpassword123\",\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"change-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"verification_token_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/verify-email",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"verify-email"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Resend Verification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/resend-verification",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"resend-verification"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MFA - Setup",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/mfa/setup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"mfa",
+								"setup"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MFA - Verify",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/mfa/verify",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"mfa",
+								"verify"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MFA - Challenge",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"123456\",\n  \"sessionToken\": \"session_token_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/mfa/challenge",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"mfa",
+								"challenge"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MFA - Get Backup Codes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/mfa/backup-codes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"mfa",
+								"backup-codes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MFA - Consume Backup Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"backup_code_here\",\n  \"sessionToken\": \"session_token_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/mfa/backup-codes/consume",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"mfa",
+								"backup-codes",
+								"consume"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MFA - Disable",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/mfa/disable",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"mfa",
+								"disable"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MFA - Regenerate Backup Codes",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/mfa/backup-codes/regenerate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"mfa",
+								"backup-codes",
+								"regenerate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "OAuth - Get Google URL",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/google",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"google"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "OAuth - Google Callback",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/google/callback?code=auth_code_here&state=state_here",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"google",
+								"callback"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "auth_code_here"
+								},
+								{
+									"key": "state",
+									"value": "state_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "OAuth - Get GitHub URL",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/github",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"github"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "OAuth - GitHub Callback",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/github/callback?code=auth_code_here&state=state_here",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"github",
+								"callback"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "auth_code_here"
+								},
+								{
+									"key": "state",
+									"value": "state_here"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -640,13 +1112,20 @@
 					"name": "Get Profile",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/profile",
+							"raw": "{{base_url}}/api/v1/profile",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"profile"
 							]
 						}
@@ -679,23 +1158,29 @@
 				{
 					"name": "Update Profile",
 					"request": {
-						"method": "PATCH",
+						"method": "PUT",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"user@example.com\",\n  \"phone\": \"+1234567890\",\n  \"avatar\": \"https://example.com/avatar.jpg\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/profile",
+							"raw": "{{base_url}}/api/v1/profile",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"profile"
 							]
 						}
@@ -733,342 +1218,69 @@
 							"body": "{\n  \"id\": \"123\",\n  \"email\": \"user@example.com\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"timezone\": \"UTC\",\n  \"language\": \"en\",\n  \"updatedAt\": \"2024-01-15T16:45:00Z\",\n  \"message\": \"Profile updated successfully\"\n}"
 						}
 					]
-				},
+				}
+			]
+		},
+		{
+			"name": "Account",
+			"item": [
 				{
-					"name": "Update Email",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"new@example.com\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/profile/email",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"profile",
-								"email"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "PATCH",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"email\": \"new@example.com\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/profile/email",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"profile",
-										"email"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"message\": \"Email update verification sent\",\n  \"newEmail\": \"new@example.com\",\n  \"verificationRequired\": true\n}"
-						}
-					]
-				},
-				{
-					"name": "Get Auth Providers",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/auth-providers",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth-providers"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/auth-providers",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"auth-providers"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"providers\": [\n    {\n      \"id\": \"google_123\",\n      \"provider\": \"google\",\n      \"email\": \"user@gmail.com\",\n      \"isPrimary\": true,\n      \"connectedAt\": \"2024-01-01T00:00:00Z\"\n    },\n    {\n      \"id\": \"github_456\",\n      \"provider\": \"github\",\n      \"email\": \"user@github.com\",\n      \"isPrimary\": false,\n      \"connectedAt\": \"2024-01-05T09:30:00Z\"\n    }\n  ]\n}"
-						}
-					]
-				},
-				{
-					"name": "Link Provider",
+					"name": "Deactivate Account",
 					"request": {
 						"method": "POST",
 						"header": [
 							{
-								"key": "Content-Type",
-								"value": "application/json"
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"provider\": \"google\"\n}"
-						},
 						"url": {
-							"raw": "{{base_url}}/auth-providers",
+							"raw": "{{base_url}}/api/v1/account/deactivate",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"auth-providers"
+								"api",
+								"v1",
+								"account",
+								"deactivate"
 							]
 						}
 					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"provider\": \"google\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/auth-providers",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"auth-providers"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"message\": \"Provider linked successfully\",\n  \"provider\": \"google\",\n  \"authUrl\": \"https://accounts.google.com/oauth/authorize?...\"\n}"
-						}
-					]
-				},
-				{
-					"name": "Get MFA",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/mfa",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"mfa"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/mfa",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"mfa"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"enabled\": false,\n  \"method\": null,\n  \"backupCodes\": null\n}"
-						}
-					]
-				},
-				{
-					"name": "Enable MFA",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"method\": \"totp\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/mfa",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"mfa"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"method\": \"totp\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/mfa",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"mfa"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"message\": \"MFA setup initiated\",\n  \"qrCode\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...\",\n  \"secret\": \"JBSWY3DPEHPK3PXP\",\n  \"backupCodes\": [\n    \"12345678\",\n    \"87654321\",\n    \"11223344\"\n  ]\n}"
-						}
-					]
-				},
-				{
-					"name": "Get Teams",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/teams",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"teams"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/teams",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"teams"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"teams\": [\n    {\n      \"id\": \"team_123\",\n      \"name\": \"My Company\",\n      \"role\": \"owner\",\n      \"memberCount\": 5,\n      \"createdAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}"
-						}
-					]
+					"response": []
 				},
 				{
 					"name": "Delete Account",
 					"request": {
 						"method": "DELETE",
-						"header": [],
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"current_password\"\n}"
+						},
 						"url": {
-							"raw": "{{base_url}}/account",
+							"raw": "{{base_url}}/api/v1/account/delete",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"account"
+								"api",
+								"v1",
+								"account",
+								"delete"
 							]
 						}
 					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/account",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"account"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"message\": \"Account deletion initiated. You will receive a confirmation email.\"\n}"
-						}
-					]
+					"response": []
 				}
 			]
 		},
@@ -3961,6 +4173,652 @@
 							"body": "{\n  \"message\": \"Team member removed successfully\"\n}"
 						}
 					]
+				}
+			]
+		},
+		{
+			"name": "Admin - Users",
+			"item": [
+				{
+					"name": "Create User (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phoneNumber\": \"+1234567890\",\n  \"userType\": \"USER\",\n  \"status\": \"ACTIVE\",\n  \"isEmailVerified\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users?offset=0&limit=10&keyword=&status=&userType=&isEmailVerified=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users"
+							],
+							"query": [
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "keyword",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": ""
+								},
+								{
+									"key": "userType",
+									"value": ""
+								},
+								{
+									"key": "isEmailVerified",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"updated@example.com\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phoneNumber\": \"+1987654321\",\n  \"userType\": \"ADMIN\",\n  \"status\": \"ACTIVE\",\n  \"isEmailVerified\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate User Account (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/deactivate-account",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users",
+								"deactivate-account"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User Account (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/delete-account",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users",
+								"delete-account"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin - Security",
+			"item": [
+				{
+					"name": "Get Security Activity (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/activity?userId=&startDate=&endDate=&limit=10&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"activity"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": ""
+								},
+								{
+									"key": "startDate",
+									"value": ""
+								},
+								{
+									"key": "endDate",
+									"value": ""
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Blacklist Stats (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/blacklist/stats?startDate=&endDate=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"blacklist",
+								"stats"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": ""
+								},
+								{
+									"key": "endDate",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Rate Limit Stats (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/rate-limits/stats?userId=&startDate=&endDate=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"rate-limits",
+								"stats"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": ""
+								},
+								{
+									"key": "startDate",
+									"value": ""
+								},
+								{
+									"key": "endDate",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clear User Rate Limits (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/rate-limits/clear",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"rate-limits",
+								"clear"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Blacklist Entry (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/blacklist/:id/clear",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"blacklist",
+								":id",
+								"clear"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Blacklist Entries (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/blacklist?offset=0&limit=10&type=&keyword=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"blacklist"
+							],
+							"query": [
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "type",
+									"value": ""
+								},
+								{
+									"key": "keyword",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Blacklist Entry (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"IP\",\n  \"value\": \"192.168.1.1\",\n  \"reason\": \"Suspicious activity detected\",\n  \"createdBy\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/blacklist",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"blacklist"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Blacklist Entry (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/blacklist/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"blacklist",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Blacklist Entry (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Updated reason for blacklist\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/blacklist/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"blacklist",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Blacklist Entry (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security/blacklist/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security",
+								"blacklist",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}

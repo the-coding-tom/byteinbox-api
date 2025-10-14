@@ -1,5 +1,6 @@
 import { BullModule } from '@nestjs/bull';
 import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from './apis/auth/auth.module';
 import { ProfileModule } from './apis/profile/profile.module';
@@ -20,8 +21,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { IsAuthenticatedMiddleware } from './common/middlewares/is-authenticated.middleware';
 import { IsUserScopeMiddleware } from './common/middlewares/is-user-scope.middleware';
-import { AdminMiddleware } from './common/middlewares/admin.middleware';
+import { IsAdminMiddleware } from './common/middlewares/is-admin.middleware';
 import { AdminAuditMiddleware } from './common/middlewares/admin-audit.middleware';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { config } from './config/config';
 import { CronsModule } from './crons/crons.module';
 import { QueueProcessorsModule } from './queues/queue-processors.module';
@@ -64,7 +66,13 @@ import { AdminModule } from './apis/admin/admin.module';
     LogsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
@@ -109,7 +117,7 @@ export class AppModule implements NestModule {
 
     // Admin middleware for admin routes
     consumer
-      .apply(AdminMiddleware)
+      .apply(IsAdminMiddleware)
       .forRoutes({ path: 'api/v1/admin/*path', method: RequestMethod.ALL });
 
     // Admin audit middleware for admin routes
