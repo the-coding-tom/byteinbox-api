@@ -12,7 +12,6 @@ import { DomainsModule } from './apis/domains/domains.module';
 import { EmailsModule } from './apis/emails/emails.module';
 import { TemplatesModule } from './apis/templates/templates.module';
 import { WebhooksModule } from './apis/webhooks/webhooks.module';
-import { ContactsModule } from './apis/contacts/contacts.module';
 import { BroadcastsModule } from './apis/broadcasts/broadcasts.module';
 import { AudiencesModule } from './apis/audiences/audiences.module';
 import { MetricsModule } from './apis/metrics/metrics.module';
@@ -59,7 +58,6 @@ import { AdminModule } from './apis/admin/admin.module';
     EmailsModule,
     TemplatesModule,
     WebhooksModule,
-    ContactsModule,
     BroadcastsModule,
     AudiencesModule,
     MetricsModule,

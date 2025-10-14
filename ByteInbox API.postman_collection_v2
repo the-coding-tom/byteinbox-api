@@ -1291,23 +1291,38 @@
 					"name": "Get API Keys",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/api-keys?permission=all&status=all",
+							"raw": "{{base_url}}/api/v1/api-keys?page=1&limit=10&search=&status=ACTIVE",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"api-keys"
 							],
 							"query": [
 								{
-									"key": "permission",
-									"value": "all"
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": ""
 								},
 								{
 									"key": "status",
-									"value": "all"
+									"value": "ACTIVE"
 								}
 							]
 						}
@@ -1355,6 +1370,10 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
 							}
 						],
 						"body": {
@@ -1362,11 +1381,13 @@
 							"raw": "{\n  \"name\": \"Production Key\",\n  \"permission\": \"Full access\",\n  \"domain\": \"example.com\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api-keys",
+							"raw": "{{base_url}}/api/v1/api-keys",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"api-keys"
 							]
 						}
@@ -1406,16 +1427,23 @@
 					]
 				},
 				{
-					"name": "Revoke API Key",
+					"name": "Get API Key by ID",
 					"request": {
-						"method": "DELETE",
-						"header": [],
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/api-keys/:id",
+							"raw": "{{base_url}}/api/v1/api-keys/:id",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"api-keys",
 								":id"
 							],
@@ -1427,37 +1455,77 @@
 							]
 						}
 					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/api-keys/:id",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api-keys",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "1"
-										}
-									]
-								}
+					"response": []
+				},
+				{
+					"name": "Update API Key",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
 							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"message\": \"API key revoked successfully\",\n  \"id\": \"1\"\n}"
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Key Name\",\n  \"description\": \"Updated description\",\n  \"scopes\": [\"read\", \"write\"],\n  \"isActive\": true,\n  \"expiresAt\": \"2025-12-31T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/api-keys/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"api-keys",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
 						}
-					]
+					},
+					"response": []
+				},
+				{
+					"name": "Delete API Key",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/api-keys/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"api-keys",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1468,13 +1536,21 @@
 					"name": "Get Domains",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{domains_url}}/domains",
+							"raw": "{{base_url}}/api/v1/domains",
 							"host": [
-								"{{domains_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"domains"
 							]
 						}
@@ -1505,23 +1581,31 @@
 					]
 				},
 				{
-					"name": "Get Domain",
+					"name": "Get Domain Details",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{domains_url}}/domains/:id",
+							"raw": "{{base_url}}/api/v1/domains/:id",
 							"host": [
-								"{{domains_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"domains",
 								":id"
 							],
 							"variable": [
 								{
 									"key": "id",
-									"value": "example.com"
+									"value": "domain_id"
 								}
 							]
 						}
@@ -1559,10 +1643,15 @@
 					]
 				},
 				{
-					"name": "Add Domain",
+					"name": "Create Domain",
 					"request": {
 						"method": "POST",
 						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -1573,11 +1662,13 @@
 							"raw": "{\n  \"name\": \"example.com\",\n  \"region\": \"us-east-1\"\n}"
 						},
 						"url": {
-							"raw": "{{domains_url}}/domains",
+							"raw": "{{base_url}}/api/v1/domains",
 							"host": [
-								"{{domains_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"domains"
 							]
 						}
@@ -1617,16 +1708,130 @@
 					]
 				},
 				{
+					"name": "Update Domain",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"updated-domain.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/domains/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"domains",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "domain_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Domain",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/domains/:id/verify",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"domains",
+								":id",
+								"verify"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "domain_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Domain",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/domains/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"domains",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "domain_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Get Regions",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{domains_url}}/regions",
+							"raw": "{{base_url}}/api/v1/domains/regions",
 							"host": [
-								"{{domains_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
+								"domains",
 								"regions"
 							]
 						}
@@ -1657,10 +1862,15 @@
 					]
 				},
 				{
-					"name": "Update Config",
+					"name": "Update Domain Configuration",
 					"request": {
-						"method": "PATCH",
+						"method": "PUT",
 						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -1671,11 +1881,13 @@
 							"raw": "{\n  \"clickTracking\": true,\n  \"openTracking\": true,\n  \"tlsMode\": \"enforced\"\n}"
 						},
 						"url": {
-							"raw": "{{domains_url}}/domains/:id/configuration",
+							"raw": "{{base_url}}/api/v1/domains/:id/configuration",
 							"host": [
-								"{{domains_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"domains",
 								":id",
 								"configuration"
@@ -1683,7 +1895,7 @@
 							"variable": [
 								{
 									"key": "id",
-									"value": "example.com"
+									"value": "domain_id"
 								}
 							]
 						}
@@ -1734,13 +1946,21 @@
 					"name": "Restart Domain",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{domains_url}}/domains/:id/restart",
+							"raw": "{{base_url}}/api/v1/domains/:id/restart",
 							"host": [
-								"{{domains_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"domains",
 								":id",
 								"restart"
@@ -1748,7 +1968,7 @@
 							"variable": [
 								{
 									"key": "id",
-									"value": "example.com"
+									"value": "domain_id"
 								}
 							]
 						}
@@ -1795,23 +2015,41 @@
 					"name": "Get Emails",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{emails_url}}/emails?timeRange=3d&status=all",
+							"raw": "{{base_url}}/api/v1/emails?page=1&limit=10",
 							"host": [
-								"{{emails_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"emails"
 							],
 							"query": [
 								{
-									"key": "timeRange",
-									"value": "3d"
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
 								},
 								{
 									"key": "status",
-									"value": "all"
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
 								}
 							]
 						}
@@ -1852,16 +2090,24 @@
 					]
 				},
 				{
-					"name": "Get Email",
+					"name": "Get Email Details",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{emails_url}}/emails/:id",
+							"raw": "{{base_url}}/api/v1/emails/:id",
 							"host": [
-								"{{emails_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"emails",
 								":id"
 							],
@@ -1911,6 +2157,11 @@
 						"method": "POST",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
@@ -1920,13 +2171,14 @@
 							"raw": "{\n  \"from\": \"sender@example.com\",\n  \"to\": \"recipient@example.com\",\n  \"subject\": \"Hello\",\n  \"html\": \"<p>Email content</p>\"\n}"
 						},
 						"url": {
-							"raw": "{{emails_url}}/v1/email",
+							"raw": "{{base_url}}/api/v1/emails",
 							"host": [
-								"{{emails_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
 								"v1",
-								"email"
+								"emails"
 							]
 						}
 					},
@@ -1966,17 +2218,26 @@
 					]
 				},
 				{
-					"name": "Get Statuses",
+					"name": "Get Email Statuses",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{emails_url}}/email-statuses",
+							"raw": "{{base_url}}/api/v1/emails/statuses",
 							"host": [
-								"{{emails_url}}"
+								"{{base_url}}"
 							],
 							"path": [
-								"email-statuses"
+								"api",
+								"v1",
+								"emails",
+								"statuses"
 							]
 						}
 					},
@@ -2004,6 +2265,33 @@
 							"body": "{\n  \"statuses\": [\n    {\n      \"id\": \"queued\",\n      \"name\": \"Queued\",\n      \"description\": \"Email is queued for sending\"\n    },\n    {\n      \"id\": \"sent\",\n      \"name\": \"Sent\",\n      \"description\": \"Email has been sent\"\n    },\n    {\n      \"id\": \"delivered\",\n      \"name\": \"Delivered\",\n      \"description\": \"Email has been delivered\"\n    },\n    {\n      \"id\": \"opened\",\n      \"name\": \"Opened\",\n      \"description\": \"Email has been opened\"\n    },\n    {\n      \"id\": \"clicked\",\n      \"name\": \"Clicked\",\n      \"description\": \"Email link has been clicked\"\n    },\n    {\n      \"id\": \"bounced\",\n      \"name\": \"Bounced\",\n      \"description\": \"Email bounced\"\n    },\n    {\n      \"id\": \"complained\",\n      \"name\": \"Complained\",\n      \"description\": \"Email marked as spam\"\n    }\n  ]\n}"
 						}
 					]
+				},
+				{
+					"name": "Get Email Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/emails/stats/overview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"emails",
+								"stats",
+								"overview"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -2014,23 +2302,41 @@
 					"name": "Get Broadcasts",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts?status=all&audience=all",
+							"raw": "{{base_url}}/api/v1/broadcasts?page=1&limit=10",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts"
 							],
 							"query": [
 								{
-									"key": "status",
-									"value": "all"
+									"key": "page",
+									"value": "1"
 								},
 								{
-									"key": "audience",
-									"value": "all"
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
 								}
 							]
 						}
@@ -2071,16 +2377,24 @@
 					]
 				},
 				{
-					"name": "Get Broadcast",
+					"name": "Get Broadcast Details",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts/:id",
+							"raw": "{{base_url}}/api/v1/broadcasts/:id",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts",
 								":id"
 							],
@@ -2125,10 +2439,15 @@
 					]
 				},
 				{
-					"name": "Create",
+					"name": "Create Broadcast",
 					"request": {
 						"method": "POST",
 						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -2139,11 +2458,13 @@
 							"raw": "{\n  \"name\": \"Newsletter\",\n  \"subject\": \"Monthly Update\",\n  \"htmlContent\": \"<p>Content</p>\"\n}"
 						},
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts",
+							"raw": "{{base_url}}/api/v1/broadcasts",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts"
 							]
 						}
@@ -2183,10 +2504,15 @@
 					]
 				},
 				{
-					"name": "Update",
+					"name": "Update Broadcast",
 					"request": {
 						"method": "PUT",
 						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -2197,11 +2523,13 @@
 							"raw": "{\n  \"name\": \"Updated\",\n  \"subject\": \"Updated Subject\"\n}"
 						},
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts/:id",
+							"raw": "{{base_url}}/api/v1/broadcasts/:id",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts",
 								":id"
 							],
@@ -2255,10 +2583,15 @@
 					]
 				},
 				{
-					"name": "Auto-save",
+					"name": "Auto-save Broadcast",
 					"request": {
 						"method": "POST",
 						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -2266,16 +2599,25 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"id\": \"broadcast_id\",\n  \"content\": \"<p>Draft</p>\"\n}"
+							"raw": "{\n  \"content\": \"<p>Draft</p>\"\n}"
 						},
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts/autosave",
+							"raw": "{{base_url}}/api/v1/broadcasts/:id/auto-save",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts",
-								"autosave"
+								":id",
+								"auto-save"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "broadcast_id"
+								}
 							]
 						}
 					},
@@ -2315,10 +2657,15 @@
 					]
 				},
 				{
-					"name": "Send Test",
+					"name": "Send Test Broadcast",
 					"request": {
 						"method": "POST",
 						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -2326,16 +2673,25 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"broadcastId\": \"broadcast_id\",\n  \"testEmail\": \"test@example.com\"\n}"
+							"raw": "{\n  \"testEmail\": \"test@example.com\"\n}"
 						},
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts/test-send",
+							"raw": "{{base_url}}/api/v1/broadcasts/:id/send-test",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts",
-								"test-send"
+								":id",
+								"send-test"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "broadcast_id"
+								}
 							]
 						}
 					},
@@ -2375,16 +2731,24 @@
 					]
 				},
 				{
-					"name": "Send",
+					"name": "Send Broadcast",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts/:id/send",
+							"raw": "{{base_url}}/api/v1/broadcasts/:id/send",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts",
 								":id",
 								"send"
@@ -2431,18 +2795,36 @@
 					]
 				},
 				{
-					"name": "Get Drafts",
+					"name": "Get Draft Broadcasts",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts/drafts",
+							"raw": "{{base_url}}/api/v1/broadcasts/drafts?page=1&limit=10",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts",
 								"drafts"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
 							]
 						}
 					},
@@ -2473,16 +2855,51 @@
 					]
 				},
 				{
+					"name": "Get Broadcast Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/broadcasts/stats/overview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"broadcasts",
+								"stats",
+								"overview"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Delete Broadcast",
 					"request": {
 						"method": "DELETE",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{broadcasts_url}}/broadcasts/:id",
+							"raw": "{{base_url}}/api/v1/broadcasts/:id",
 							"host": [
-								"{{broadcasts_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"broadcasts",
 								":id"
 							],
@@ -2525,6 +2942,229 @@
 							"body": "{\n  \"message\": \"Broadcast deleted successfully\",\n  \"id\": \"broadcast_126\",\n  \"deletedAt\": \"2024-01-15T17:00:00Z\"\n}"
 						}
 					]
+				}
+			]
+		},
+		{
+			"name": "Templates",
+			"item": [
+				{
+					"name": "Get Templates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{templates_url}}/templates?category=all&search=",
+							"host": [
+								"{{templates_url}}"
+							],
+							"path": [
+								"templates"
+							],
+							"query": [
+								{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/contacts?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"contacts"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contact Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/contacts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"contacts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "contact_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Contact",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/contacts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"contacts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "contact_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Contact",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/contacts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"contacts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "contact_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unsubscribe Contact",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/contacts/:id/unsubscribe",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"contacts",
+								":id",
+								"unsubscribe"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "contact_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contact Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/contacts/stats/overview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"contacts",
+								"stats",
+								"overview"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -3126,82 +3766,81 @@
 			"name": "Audiences",
 			"item": [
 				{
-					"name": "Get Audience",
+					"name": "Get Audiences",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{audiences_url}}/audiences/:id",
+							"raw": "{{base_url}}/api/v1/audiences?page=1&limit=10",
 							"host": [
-								"{{audiences_url}}"
+								"{{base_url}}"
 							],
 							"path": [
-								"audiences",
-								":id"
+								"api",
+								"v1",
+								"audiences"
 							],
-							"variable": [
+							"query": [
 								{
-									"key": "id",
-									"value": "audience_id"
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "type",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
 								}
 							]
 						}
 					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{audiences_url}}/audiences/:id",
-									"host": [
-										"{{audiences_url}}"
-									],
-									"path": [
-										"audiences",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "audience_id"
-										}
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"id\": \"audience_123\",\n  \"name\": \"All Subscribers\",\n  \"description\": \"All email subscribers\",\n  \"contactCount\": 1250,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-15T10:00:00Z\"\n}"
-						}
-					]
+					"response": []
 				},
 				{
-					"name": "Get Contacts",
+					"name": "Get Audience Contacts",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{audiences_url}}/audiences/:id/contacts?status=all&search=",
+							"raw": "{{base_url}}/api/v1/audiences/:id/contacts?page=1&limit=10",
 							"host": [
-								"{{audiences_url}}"
+								"{{base_url}}"
 							],
 							"path": [
+								"api",
+								"v1",
 								"audiences",
 								":id",
 								"contacts"
 							],
 							"query": [
 								{
-									"key": "status",
-									"value": "all"
+									"key": "page",
+									"value": "1"
 								},
 								{
-									"key": "search",
-									"value": ""
+									"key": "limit",
+									"value": "10"
 								}
 							],
 							"variable": [
@@ -3212,88 +3851,33 @@
 							]
 						}
 					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{audiences_url}}/audiences/:id/contacts?status=all&search=",
-									"host": [
-										"{{audiences_url}}"
-									],
-									"path": [
-										"audiences",
-										":id",
-										"contacts"
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": "all"
-										},
-										{
-											"key": "search",
-											"value": ""
-										}
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "audience_id"
-										}
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"contacts\": [\n    {\n      \"id\": \"contact_123\",\n      \"email\": \"user1@example.com\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"status\": \"subscribed\",\n      \"subscribedAt\": \"2024-01-01T00:00:00Z\",\n      \"lastActivity\": \"2024-01-15T14:30:00Z\"\n    },\n    {\n      \"id\": \"contact_124\",\n      \"email\": \"user2@example.com\",\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Smith\",\n      \"status\": \"subscribed\",\n      \"subscribedAt\": \"2024-01-05T09:15:00Z\",\n      \"lastActivity\": \"2024-01-14T16:45:00Z\"\n    }\n  ],\n  \"total\": 2,\n  \"audienceId\": \"audience_123\"\n}"
-						}
-					]
+					"response": []
 				},
 				{
-					"name": "Get Statuses",
+					"name": "Get Audience Statuses",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{audiences_url}}/audience-statuses",
+							"raw": "{{base_url}}/api/v1/audiences/statuses",
 							"host": [
-								"{{audiences_url}}"
+								"{{base_url}}"
 							],
 							"path": [
-								"audience-statuses"
+								"api",
+								"v1",
+								"audiences",
+								"statuses"
 							]
 						}
 					},
-					"response": [
-						{
-							"name": "Success Response",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{audiences_url}}/audience-statuses",
-									"host": [
-										"{{audiences_url}}"
-									],
-									"path": [
-										"audience-statuses"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [],
-							"cookie": [],
-							"body": "{\n  \"statuses\": [\n    {\n      \"id\": \"subscribed\",\n      \"name\": \"Subscribed\",\n      \"description\": \"Active subscriber\"\n    },\n    {\n      \"id\": \"unsubscribed\",\n      \"name\": \"Unsubscribed\",\n      \"description\": \"Unsubscribed from emails\"\n    },\n    {\n      \"id\": \"bounced\",\n      \"name\": \"Bounced\",\n      \"description\": \"Email address bounced\"\n    },\n    {\n      \"id\": \"complained\",\n      \"name\": \"Complained\",\n      \"description\": \"Marked emails as spam\"\n    }\n  ]\n}"
-						}
-					]
+					"response": []
 				}
 			]
 		},

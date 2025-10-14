@@ -3,16 +3,26 @@ import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { Constants } from '../../common/enums/generic.enum';
 import { config } from '../../config/config';
-import { 
-  GetAudiencesResponseDto, 
-  GetAudienceContactsResponseDto, 
+import { AudiencesValidator } from './audiences.validator';
+import {
+  GetAudiencesResponseDto,
+  GetAudienceContactsResponseDto,
   GetAudienceStatusesResponseDto,
-  AudienceFilterDto
+  AudienceFilterDto,
+  ContactFilterDto,
+  CreateContactDto,
+  UpdateContactDto,
+  CreateContactResponseDto,
+  GetContactDetailsResponseDto,
+  UpdateContactResponseDto,
+  DeleteContactResponseDto,
+  UnsubscribeContactResponseDto,
+  GetContactStatsResponseDto
 } from './dto/audiences.dto';
 
 @Injectable()
 export class AudiencesService {
-  constructor() {}
+  constructor(private readonly audiencesValidator: AudiencesValidator) {}
 
   async getAudiences(userId: number, filter: AudienceFilterDto): Promise<any> {
     try {
@@ -66,7 +76,7 @@ export class AudiencesService {
     }
   }
 
-  async getAudienceContacts(audienceId: string, userId: number, filter: AudienceFilterDto): Promise<any> {
+  async getAudienceContacts(audienceId: string, userId: number, filter: ContactFilterDto): Promise<any> {
     try {
       // Set defaults from config
       const page = filter.page || config.validation.pagination.defaultPage;
@@ -148,6 +158,158 @@ export class AudiencesService {
       });
     } catch (error) {
       return handleServiceError(error, 'Error retrieving audience statuses');
+    }
+  }
+
+  async createContactInAudience(audienceId: string, userId: number, createContactDto: CreateContactDto, request: any): Promise<any> {
+    try {
+      await this.audiencesValidator.validateCreateContact(createContactDto);
+
+      const response: CreateContactResponseDto = {
+        contact: {
+          id: 'contact_123',
+          email: createContactDto.email,
+          firstName: createContactDto.firstName,
+          lastName: createContactDto.lastName,
+          status: 'subscribed',
+          subscribedAt: new Date().toISOString(),
+          tags: createContactDto.tags || [],
+          metadata: createContactDto.metadata,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
+      return generateSuccessResponse({
+        statusCode: 201,
+        message: Constants.createdSuccessfully,
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error creating contact');
+    }
+  }
+
+  async getContactStatsByAudience(audienceId: string, userId: number): Promise<any> {
+    try {
+      const response: GetContactStatsResponseDto = {
+        stats: {
+          total: 1000,
+          subscribed: 850,
+          unsubscribed: 100,
+          bounced: 50,
+          newThisMonth: 50,
+          activeThisMonth: 200,
+        },
+      };
+
+      return generateSuccessResponse({
+        statusCode: 200,
+        message: 'Contact statistics retrieved successfully',
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error retrieving contact statistics');
+    }
+  }
+
+  async getContactDetails(contactId: string, userId: number, audienceId: string): Promise<any> {
+    try {
+      const response: GetContactDetailsResponseDto = {
+        contact: {
+          id: contactId,
+          email: 'user@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          status: 'subscribed',
+          subscribedAt: '2024-01-01T00:00:00Z',
+          lastActivity: '2024-01-15T10:00:00Z',
+          tags: ['vip', 'newsletter'],
+          metadata: {
+            company: 'Example Corp',
+            position: 'Developer',
+            source: 'website',
+          },
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-15T10:00:00Z',
+        },
+      };
+
+      return generateSuccessResponse({
+        statusCode: 200,
+        message: 'Contact details retrieved successfully',
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error retrieving contact details');
+    }
+  }
+
+  async updateContact(contactId: string, userId: number, updateContactDto: UpdateContactDto, request: any, audienceId: string): Promise<any> {
+    try {
+      await this.audiencesValidator.validateUpdateContact(updateContactDto);
+
+      const response: UpdateContactResponseDto = {
+        contact: {
+          id: contactId,
+          email: 'user@example.com',
+          firstName: updateContactDto.firstName || 'John',
+          lastName: updateContactDto.lastName || 'Doe',
+          status: 'subscribed',
+          subscribedAt: '2024-01-01T00:00:00Z',
+          lastActivity: '2024-01-15T10:00:00Z',
+          tags: updateContactDto.tags || ['vip', 'newsletter'],
+          metadata: updateContactDto.metadata,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
+      return generateSuccessResponse({
+        statusCode: 200,
+        message: Constants.updatedSuccessfully,
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error updating contact');
+    }
+  }
+
+  async deleteContact(contactId: string, userId: number, request: any, audienceId: string): Promise<any> {
+    try {
+      const response: DeleteContactResponseDto = {
+        message: Constants.deletedSuccessfully,
+      };
+
+      return generateSuccessResponse({
+        statusCode: 200,
+        message: Constants.deletedSuccessfully,
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error deleting contact');
+    }
+  }
+
+  async unsubscribeContact(contactId: string, userId: number, request: any, audienceId: string): Promise<any> {
+    try {
+      const response: UnsubscribeContactResponseDto = {
+        message: 'Contact unsubscribed successfully',
+        contact: {
+          id: contactId,
+          email: 'user@example.com',
+          status: 'unsubscribed',
+          unsubscribedAt: new Date().toISOString(),
+        },
+      };
+
+      return generateSuccessResponse({
+        statusCode: 200,
+        message: 'Contact unsubscribed successfully',
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error unsubscribing contact');
     }
   }
 }
