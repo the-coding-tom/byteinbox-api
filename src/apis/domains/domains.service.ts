@@ -16,8 +16,8 @@ import {
   isValidDomainName,
 } from '../../helpers/aws-ses.helper';
 import { 
-  CreateDomainDto, 
-  CreateDomainResponseDto, 
+  AddDomainDto, 
+  AddDomainResponseDto, 
   GetDomainsResponseDto, 
   GetDomainDetailsResponseDto, 
   UpdateDomainDto, 
@@ -38,73 +38,63 @@ export class DomainsService {
     private readonly teamRepository: TeamRepository,
   ) {}
 
-  async createDomain(userId: number, createDomainDto: CreateDomainDto, request: any): Promise<any> {
+  async createDomain(userId: number, addDomainDto: AddDomainDto, request: any): Promise<any> {
     try {
       // Validate input data
-      await this.domainsValidator.validateCreateDomain(createDomainDto);
+      await this.domainsValidator.validateCreateDomain(addDomainDto);
 
       // Validate domain name format
-      if (!isValidDomainName(createDomainDto.name)) {
+      if (!isValidDomainName(addDomainDto.domainName)) {
         throw new Error('Invalid domain name format');
       }
 
       // Check if domain already exists
-      const existingDomain = await this.domainRepository.findByName(createDomainDto.name);
+      const existingDomain = await this.domainRepository.findByName(addDomainDto.domainName);
       if (existingDomain) {
         throw new Error('Domain already exists');
       }
 
       // Get user's team (use provided teamId or get user's personal team)
       let teamId: number;
-      if (createDomainDto.teamId) {
-        teamId = parseInt(createDomainDto.teamId);
-        // Verify user has access to this team
-        const team = await this.teamRepository.findById(teamId);
-        if (!team) {
-          throw new Error('Team not found');
-        }
-        // TODO: Verify user is a member of this team
-      } else {
-        // Get user's personal team
-        const userTeams = await this.teamRepository.findUserTeams(userId);
-        if (!userTeams || userTeams.length === 0) {
-          throw new Error('No team found for user');
-        }
-        teamId = userTeams[0].id; // Use first team (personal team)
+      // Note: teamId is now handled by middleware, no need to check createDomainDto.teamId
+      // Get user's personal team
+      const userTeams = await this.teamRepository.findUserTeams(userId);
+      if (!userTeams || userTeams.length === 0) {
+        throw new Error('No team found for user');
       }
+      teamId = userTeams[0].id; // Use first team (personal team)
 
       // Generate DKIM key pair
       const dkimKeys = await generateDkimKeyPair();
       
       // Generate unique DKIM selector
-      const selector = generateDkimSelector(createDomainDto.name);
+      const selector = generateDkimSelector(addDomainDto.domainName);
 
-      // Default region (can be made configurable)
-      const region = process.env.AWS_REGION || 'us-east-1';
+      // Region is now provided in the DTO
 
       // Register domain with AWS SES
       await registerDomainWithSES(
-        createDomainDto.name,
+        addDomainDto.domainName,
         selector,
         dkimKeys.privateKeyBase64,
-        region
+        addDomainDto.region
       );
 
       // Generate DNS records
       const dnsRecords = generateDnsRecords(
-        createDomainDto.name,
+        addDomainDto.domainName,
         selector,
         dkimKeys.publicKeyBase64,
-        region
+        addDomainDto.region
       );
 
       // Create domain in database
       const domain = await this.domainRepository.createDomain({
-        name: createDomainDto.name,
+        name: addDomainDto.domainName,
         createdBy: userId,
         teamId,
         status: DomainStatus.pending,
-        region,
+        region: addDomainDto.region,
         clickTracking: true,
         openTracking: true,
         tlsMode: 'enforced',
@@ -119,10 +109,11 @@ export class DomainsService {
       // TODO: Store DKIM keys securely (encrypted in database or secure storage)
       // For now, we're not storing them in the response for security
 
-      const response: CreateDomainResponseDto = {
+      const response: AddDomainResponseDto = {
         domain: {
           id: domain.id.toString(),
-          name: domain.name,
+          domainName: domain.name,
+          region: domain.region,
           status: domain.status,
           createdAt: domain.createdAt.toISOString(),
           dnsRecords: createdDnsRecords.map(record => ({
@@ -145,7 +136,7 @@ export class DomainsService {
     }
   }
 
-  async getDomains(userId: number): Promise<any> {
+  async getDomains(userId: number, filter?: any): Promise<any> {
     try {
       // Get user's teams
       const userTeams = await this.teamRepository.findUserTeams(userId);
