@@ -47,7 +47,7 @@ export class GetBroadcastsResponseDto {
     createdAt: string;
     updatedAt: string;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;
@@ -156,7 +156,7 @@ export class GetDraftBroadcastsResponseDto {
     createdAt: string;
     updatedAt: string;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;

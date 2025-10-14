@@ -20,7 +20,7 @@ export class GetLogsResponseDto {
     responseBody?: any;
     timestamp: string;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;

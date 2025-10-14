@@ -34,31 +34,40 @@ export class AudiencesService {
       const response: GetAudiencesResponseDto = {
         audiences: [
           {
-            id: 'audience_123',
+            id: 1,
+            reference: 'aud_01h8x9k2m4n5p6q7r8s9t0u1v2',
             name: 'All Subscribers',
             type: 'all',
             contactCount: 1000,
+            subscriberCount: 850,
+            unsubscriberCount: 150,
             createdAt: '2024-01-01T00:00:00Z',
             updatedAt: '2024-01-15T10:00:00Z',
           },
           {
-            id: 'audience_456',
+            id: 2,
+            reference: 'aud_01h8x9k2m4n5p6q7r8s9t0u1v3',
             name: 'VIP Customers',
             type: 'custom',
             contactCount: 150,
+            subscriberCount: 140,
+            unsubscriberCount: 10,
             createdAt: '2024-01-05T00:00:00Z',
             updatedAt: '2024-01-20T15:30:00Z',
           },
           {
-            id: 'audience_789',
+            id: 3,
+            reference: 'aud_01h8x9k2m4n5p6q7r8s9t0u1v4',
             name: 'Newsletter Subscribers',
             type: 'custom',
             contactCount: 500,
+            subscriberCount: 420,
+            unsubscriberCount: 80,
             createdAt: '2024-01-10T00:00:00Z',
             updatedAt: '2024-01-25T09:15:00Z',
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 3,
@@ -110,7 +119,7 @@ export class AudiencesService {
             updatedAt: '2024-01-14T15:30:00Z',
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 2,

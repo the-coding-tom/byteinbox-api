@@ -62,7 +62,7 @@ export class LogsService {
             timestamp: '2024-01-15T09:00:00Z',
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 3,

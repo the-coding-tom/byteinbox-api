@@ -34,7 +34,7 @@ export class GetWebhooksResponseDto {
     createdAt: string;
     updatedAt: string;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;
@@ -109,7 +109,7 @@ export class GetWebhookDeliveriesResponseDto {
     request: any;
     response?: any;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;

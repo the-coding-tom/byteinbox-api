@@ -45,7 +45,7 @@ export class GetTemplatesResponseDto {
     createdAt: string;
     lastModified: string;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;

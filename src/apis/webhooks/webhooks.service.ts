@@ -82,7 +82,7 @@ export class WebhooksService {
             updatedAt: '2024-01-14T15:30:00Z',
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 2,
@@ -256,7 +256,7 @@ export class WebhooksService {
             },
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 1,

@@ -75,7 +75,7 @@ export class EmailsService {
             clicks: 0,
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 2,

@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { MetricsService } from './metrics.service';
+import { MetricsFilterDto } from './dto/metrics.dto';
 
 @Controller('api/v1/metrics')
 export class MetricsController {
@@ -10,10 +11,9 @@ export class MetricsController {
   async getMetrics(
     @Req() request: any,
     @Res() response: Response,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string
+    @Query() filter: MetricsFilterDto
   ) {
-    const { status, ...restOfResponse } = await this.metricsService.getMetrics(request.user.id, startDate, endDate);
+    const { status, ...restOfResponse } = await this.metricsService.getMetrics(request.teamId, filter);
     response.status(status).json(restOfResponse);
   }
 }

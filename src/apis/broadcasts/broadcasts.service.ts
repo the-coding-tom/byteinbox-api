@@ -96,7 +96,7 @@ export class BroadcastsService {
             updatedAt: '2024-01-20T00:00:00Z',
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 2,
@@ -340,7 +340,7 @@ export class BroadcastsService {
             updatedAt: '2024-01-14T14:20:00Z',
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 2,

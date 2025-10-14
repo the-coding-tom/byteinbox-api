@@ -7,14 +7,17 @@ export class AudienceFilterDto {
 
 export class GetAudiencesResponseDto {
   audiences: Array<{
-    id: string;
+    id: number;
+    reference: string;
     name: string;
     type: string;
     contactCount: number;
+    subscriberCount: number;
+    unsubscriberCount: number;
     createdAt: string;
     updatedAt: string;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;
@@ -35,7 +38,7 @@ export class GetAudienceContactsResponseDto {
     createdAt: string;
     updatedAt: string;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;

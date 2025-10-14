@@ -89,7 +89,7 @@ export class TemplatesService {
             lastModified: '2024-01-20T15:30:00Z',
           },
         ],
-        pagination: {
+        meta: {
           page,
           limit,
           total: 2,

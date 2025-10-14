@@ -1,12 +1,19 @@
-export class CreateDomainDto {
-  name: string;
-  teamId?: string;
+export class AddDomainDto {
+  domainName: string;
+  region: string;
 }
 
-export class CreateDomainResponseDto {
+export class GetDomainsFilterDto {
+  keyword?: string; // Search by domain name
+  status?: string;  // Filter by status (pending, verified, failed)
+  region?: string;  // Filter by AWS region
+}
+
+export class AddDomainResponseDto {
   domain: {
     id: string;
-    name: string;
+    domainName: string;
+    region: string;
     status: string;
     createdAt: string;
     dnsRecords: Array<{

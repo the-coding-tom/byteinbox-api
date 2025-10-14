@@ -4,9 +4,7 @@ export class EmailFilterDto {
   status?: string;
   startDate?: string;
   endDate?: string;
-  recipient?: string;
   keyword?: string;
-  timeRange?: string;
 }
 
 export class SendEmailDto {
@@ -48,7 +46,7 @@ export class GetEmailsResponseDto {
     opens: number;
     clicks: number;
   }>;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;

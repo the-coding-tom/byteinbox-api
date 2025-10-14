@@ -1,21 +1,21 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { DomainsService } from './domains.service';
-import { CreateDomainDto, UpdateDomainDto, UpdateDomainConfigurationDto } from './dto/domains.dto';
+import { AddDomainDto, GetDomainsFilterDto, UpdateDomainDto, UpdateDomainConfigurationDto } from './dto/domains.dto';
 
 @Controller('api/v1/domains')
 export class DomainsController {
     constructor(private readonly domainsService: DomainsService) { }
 
     @Post()
-    async createDomain(@Body() createDomainDto: CreateDomainDto, @Req() request: any, @Res() response: Response) {
-        const { status, ...restOfResponse } = await this.domainsService.createDomain(request.user.id, createDomainDto, request);
+    async addDomain(@Body() addDomainDto: AddDomainDto, @Req() request: any, @Res() response: Response) {
+        const { status, ...restOfResponse } = await this.domainsService.createDomain(request.user.id, addDomainDto, request);
         response.status(status).json(restOfResponse);
     }
 
     @Get()
-    async getDomains(@Req() request: any, @Res() response: Response) {
-        const { status, ...restOfResponse } = await this.domainsService.getDomains(request.user.id);
+    async getDomains(@Query() filter: GetDomainsFilterDto, @Req() request: any, @Res() response: Response) {
+        const { status, ...restOfResponse } = await this.domainsService.getDomains(request.user.id, filter);
         response.status(status).json(restOfResponse);
     }
 
