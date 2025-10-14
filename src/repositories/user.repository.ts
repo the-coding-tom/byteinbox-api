@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import prisma from '../common/prisma';
 import { FindUsersWithPaginationFilter } from './entities/user.entity';
 import { TeamMemberRole } from '../common/enums/generic.enum';
@@ -7,7 +7,7 @@ import { TeamMemberRole } from '../common/enums/generic.enum';
 @Injectable()
 export class UserRepository {
   async createUserAndPersonalTeam(userData: any, teamData: { name: string; slug: string }): Promise<any> {
-    return prisma.$transaction(async (prismaClient: PrismaClient) => {
+    return prisma.$transaction(async (prismaClient) => {
       const user = await prismaClient.user.create({
         data: userData,
       });

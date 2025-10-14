@@ -13,10 +13,15 @@
     "incremental": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": true,
+    // Strict type-checking options (matching production environment)
     "strictNullChecks": true,
     "noImplicitAny": true,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    // Disabled for entity classes and middleware signatures
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false
   }
 }

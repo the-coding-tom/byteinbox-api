@@ -53,12 +53,12 @@ export async function generateTokens(
 
   const accessToken = jwtService.sign(accessPayload, {
     secret: config.authJWTSecret,
-    expiresIn: config.tokenExpiration as string,
+    expiresIn: config.tokenExpirationInSeconds,
   });
 
   const refreshToken = jwtService.sign(refreshPayload, {
     secret: config.authRefreshJWTSecret,
-    expiresIn: config.refreshTokenExpiration as string,
+    expiresIn: config.refreshTokenExpirationInSeconds,
   });
 
   return { accessToken, refreshToken };
