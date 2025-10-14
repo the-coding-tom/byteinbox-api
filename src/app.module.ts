@@ -41,7 +41,7 @@ import { AdminModule } from './apis/admin/admin.module';
       global: true,
       secret: config.authJWTSecret,
       signOptions: {
-        expiresIn: config.tokenExpiration,
+        expiresIn: config.tokenExpiration as string,
       },
     }),
     RepositoriesModule,
