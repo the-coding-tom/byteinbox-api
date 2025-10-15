@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { RepositoriesModule } from '../repositories/repositories.module';
 
 import { NotificationQueueProcessor } from './processors/notification.processor';
+import { DomainVerificationQueueProcessor } from './processors/domain-verification.processor';
 // Import other processors as they are created
 // import { FeatureQueueProcessor } from './processors/feature.processor';
 // import { EmailQueueProcessor } from './processors/email.processor';
@@ -16,11 +17,13 @@ import { QueueProducersModule } from './queue-producers.module';
   providers: [
     // Queue processors
     NotificationQueueProcessor,
+    DomainVerificationQueueProcessor,
     // FeatureQueueProcessor,
     // EmailQueueProcessor,
   ],
   exports: [
     NotificationQueueProcessor,
+    DomainVerificationQueueProcessor,
     // FeatureQueueProcessor,
     // EmailQueueProcessor,
   ],

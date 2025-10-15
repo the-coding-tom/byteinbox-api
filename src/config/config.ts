@@ -202,6 +202,9 @@ export const config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     ses: {
       defaultRegion: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'us-east-1',
+      dkimSelector: 'byteinbox', // Fixed selector for all domains
+      dkimPublicKey: process.env.AWS_DKIM_PUBLIC_KEY!, // Base64 encoded public key (required)
+      dkimPrivateKey: process.env.AWS_DKIM_PRIVATE_KEY!, // Base64 encoded private key (required)
     },
   },
 };

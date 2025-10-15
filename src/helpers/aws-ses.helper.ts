@@ -6,20 +6,10 @@ import {
   DeleteEmailIdentityCommand,
 } from '@aws-sdk/client-sesv2';
 import { fromEnv } from '@aws-sdk/credential-provider-env';
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
 
 /**
  * AWS SES Helper for managing email domains with BYODKIM
  */
-
-interface DkimKeys {
-  publicKey: string;
-  privateKey: string;
-  publicKeyBase64: string;
-  privateKeyBase64: string;
-}
 
 interface DnsRecord {
   type: string;
@@ -27,76 +17,6 @@ interface DnsRecord {
   recordType: string;
   value: string;
   priority?: number;
-}
-
-/**
- * Generate RSA key pair for DKIM
- */
-export async function generateDkimKeyPair(): Promise<DkimKeys> {
-  return new Promise((resolve, reject) => {
-    crypto.generateKeyPair(
-      'rsa',
-      {
-        modulusLength: 2048,
-        publicKeyEncoding: {
-          type: 'spki',
-          format: 'pem',
-        },
-        privateKeyEncoding: {
-          type: 'pkcs8',
-          format: 'pem',
-        },
-      },
-      (err, publicKey, privateKey) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-
-        // Convert to base64 (remove headers and newlines)
-        const publicKeyBase64 = publicKey
-          .replace(/-----BEGIN PUBLIC KEY-----/, '')
-          .replace(/-----END PUBLIC KEY-----/, '')
-          .replace(/\r?\n|\r/g, '');
-
-        const privateKeyBase64 = privateKey
-          .replace(/-----BEGIN PRIVATE KEY-----/, '')
-          .replace(/-----END PRIVATE KEY-----/, '')
-          .replace(/\r?\n|\r/g, '');
-
-        resolve({
-          publicKey,
-          privateKey,
-          publicKeyBase64,
-          privateKeyBase64,
-        });
-      }
-    );
-  });
-}
-
-/**
- * Load and base64-encode a private key from file
- */
-export function loadBase64PrivateKey(privateKeyPath: string): string {
-  const privateKeyPem = fs.readFileSync(privateKeyPath, 'utf8');
-  const privateKeyBase64 = privateKeyPem
-    .replace(/-----BEGIN PRIVATE KEY-----/, '')
-    .replace(/-----END PRIVATE KEY-----/, '')
-    .replace(/\r?\n|\r/g, '');
-  return privateKeyBase64;
-}
-
-/**
- * Load and base64-encode a public key from file
- */
-export function loadBase64PublicKey(publicKeyPath: string): string {
-  const publicKeyPem = fs.readFileSync(publicKeyPath, 'utf8');
-  const publicKeyBase64 = publicKeyPem
-    .replace(/-----BEGIN PUBLIC KEY-----/, '')
-    .replace(/-----END PUBLIC KEY-----/, '')
-    .replace(/\r?\n|\r/g, '');
-  return publicKeyBase64;
 }
 
 /**
@@ -176,7 +96,7 @@ export function generateDnsRecords(
       type: 'dmarc',
       name: `_dmarc.${domain}`,
       recordType: 'TXT',
-      value: `v=DMARC1; p=none; rua=mailto:dmarc@${domain}`,
+      value: 'v=DMARC1; p=none',
     },
   ];
 }
@@ -198,10 +118,14 @@ export async function getDomainVerificationStatus(
     );
 
     return {
-      verified: response.VerifiedForSendingStatus || false,
+      identityType: response.IdentityType,
+      verifiedForSendingStatus: response.VerifiedForSendingStatus || false,
+      verificationStatus: response.VerificationStatus,
       dkimStatus: response.DkimAttributes?.Status || 'PENDING',
+      dkimTokens: response.DkimAttributes?.Tokens || [],
       mailFromDomain: response.MailFromAttributes?.MailFromDomain,
       mailFromStatus: response.MailFromAttributes?.MailFromDomainStatus || 'PENDING',
+      behaviorOnMxFailure: response.MailFromAttributes?.BehaviorOnMxFailure,
     };
   } catch (error) {
     throw new Error(`Failed to get domain verification status: ${error.message}`);
@@ -222,39 +146,6 @@ export async function deleteDomainFromSES(
       EmailIdentity: domain,
     })
   );
-}
-
-/**
- * Generate a unique DKIM selector
- */
-export function generateDkimSelector(domain: string): string {
-  const timestamp = Date.now();
-  const randomStr = crypto.randomBytes(4).toString('hex');
-  return `byteinbox-${timestamp}-${randomStr}`;
-}
-
-/**
- * Save DKIM keys to storage (file system or database)
- * In production, you should encrypt these keys before storing
- */
-export function saveDkimKeys(
-  domain: string,
-  keys: DkimKeys,
-  storagePath: string = './dkim-keys'
-): { publicKeyPath: string; privateKeyPath: string } {
-  // Create storage directory if it doesn't exist
-  if (!fs.existsSync(storagePath)) {
-    fs.mkdirSync(storagePath, { recursive: true });
-  }
-
-  const sanitizedDomain = domain.replace(/[^a-zA-Z0-9]/g, '_');
-  const publicKeyPath = path.join(storagePath, `${sanitizedDomain}_public.pem`);
-  const privateKeyPath = path.join(storagePath, `${sanitizedDomain}_private.pem`);
-
-  fs.writeFileSync(publicKeyPath, keys.publicKey);
-  fs.writeFileSync(privateKeyPath, keys.privateKey);
-
-  return { publicKeyPath, privateKeyPath };
 }
 
 /**

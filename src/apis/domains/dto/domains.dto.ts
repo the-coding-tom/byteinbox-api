@@ -7,6 +7,8 @@ export class GetDomainsFilterDto {
   keyword?: string; // Search by domain name
   status?: string;  // Filter by status (pending, verified, failed)
   region?: string;  // Filter by AWS region
+  offset?: number;  // Pagination offset
+  limit?: number;   // Pagination limit
 }
 
 export class AddDomainResponseDto {
@@ -33,6 +35,11 @@ export class GetDomainsResponseDto {
     createdAt: string;
     updatedAt: string;
   }>;
+  meta?: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
 }
 
 export class GetDomainDetailsResponseDto {
