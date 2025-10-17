@@ -34,28 +34,37 @@ export class ApiKeyRepository {
   }
 
   async findById(id: number): Promise<any | null> {
-    return prisma.apiKey.findUnique({
-      where: { id },
-      include: {
-        Team: true,
-        Creator: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    const query = Prisma.sql`
+      SELECT 
+        AK.id,
+        CONCAT(LEFT(AK.key, 11), '...') as key,
+        AK.name,
+        AK.team_id as "teamId",
+        AK.permission,
+        AK.domain,
+        AK.status,
+        AK.last_used as "lastUsed",
+        AK.created_at as "createdAt",
+        AK.created_by as "createdBy",
+        T.id as "Team.id",
+        T.reference as "Team.reference",
+        T.name as "Team.name",
+        T.slug as "Team.slug",
+        U.id as "Creator.id",
+        U.email as "Creator.email",
+        U.name as "Creator.name",
+        U.first_name as "Creator.firstName",
+        U.last_name as "Creator.lastName"
+      FROM api_keys AK
+      LEFT JOIN teams T ON AK.team_id = T.id
+      LEFT JOIN users U ON AK.created_by = U.id
+      WHERE AK.id = ${id}
+    `;
+
+    const results = await prisma.$queryRaw(query) as any[];
+    return results[0];
   }
 
-  async findByKey(key: string): Promise<any | null> {
-    return prisma.apiKey.findUnique({
-      where: { key },
-    });
-  }
 
   async findByKeyWithRelations(key: string): Promise<any | null> {
     return prisma.apiKey.findUnique({
@@ -75,23 +84,6 @@ export class ApiKeyRepository {
     });
   }
 
-  async findByTeamId(teamId: number): Promise<any[]> {
-    return prisma.apiKey.findMany({
-      where: { teamId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        Creator: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
-  }
 
   async findByTeamIdAndName(teamId: number, name: string): Promise<any | null> {
     return prisma.apiKey.findFirst({
@@ -117,7 +109,7 @@ export class ApiKeyRepository {
     const retrieveApiKeysQuery = Prisma.sql`
       SELECT 
         AK.id,
-        AK.key,
+        CONCAT(LEFT(AK.key, 11), '...') as key,
         AK.name,
         AK.team_id as "teamId",
         AK.permission,
