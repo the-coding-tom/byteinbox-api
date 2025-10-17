@@ -143,22 +143,29 @@ export class ApiKeyRepository {
   }
 
   async update(id: number, data: UpdateApiKeyData): Promise<any> {
-    return prisma.apiKey.update({
-      where: { id },
-      data,
-      include: {
-        Team: true,
-        Creator: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    const query = Prisma.sql`
+      UPDATE api_keys 
+      SET 
+        name = COALESCE(${data.name}, name),
+        permission = COALESCE(${data.permission}, permission),
+        domain = COALESCE(${data.domain}, domain),
+        status = COALESCE(${data.status}, status)
+      WHERE id = ${id}
+      RETURNING 
+        id,
+        CONCAT(LEFT(key, 11), '...') as key,
+        name,
+        team_id as "teamId",
+        permission,
+        domain,
+        status,
+        last_used as "lastUsed",
+        created_at as "createdAt",
+        created_by as "createdBy"
+    `;
+
+    const results = await prisma.$queryRaw(query) as any[];
+    return results[0];
   }
 
   async updateLastUsed(id: number): Promise<void> {

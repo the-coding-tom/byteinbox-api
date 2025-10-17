@@ -6,17 +6,16 @@ export class CreateApiKeyDto {
 
 export class UpdateApiKeyDto {
   name?: string;
-  description?: string;
-  scopes?: string[];
-  isActive?: boolean;
-  expiresAt?: Date;
+  permission?: string;
+  domain?: string;
+  status?: 'active' | 'revoked';
 }
 
 export class GetApiKeysDto {
   page?: number;
   limit?: number;
   search?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
+  status?: 'active' | 'revoked';
 }
 
 export class ApiKeyResponseDto {

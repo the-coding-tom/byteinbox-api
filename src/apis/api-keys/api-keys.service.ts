@@ -24,20 +24,10 @@ export class ApiKeysService {
       const page = validatedData.page || config.validation.pagination.defaultPage;
       const limit = validatedData.limit || config.validation.pagination.defaultLimit;
 
-      // Map frontend status values to database enum values
-      let mappedStatus: 'active' | 'revoked' | undefined = undefined;
-      if (validatedData.status === 'ACTIVE') {
-        mappedStatus = 'active';
-      } else if (validatedData.status === 'INACTIVE') {
-        mappedStatus = 'revoked';
-      } else if (validatedData.status === 'ALL') {
-        mappedStatus = undefined; // No filter
-      }
-
       // Get API keys with pagination
       const result = await this.apiKeyRepository.findByTeamIdWithPagination({
         teamId,
-        status: mappedStatus,
+        status: validatedData.status,
         keyword: validatedData.search,
         offset: (page - 1) * limit,
         limit: limit
@@ -59,8 +49,8 @@ export class ApiKeysService {
       // Validate request
       const validatedData = await this.apiKeysValidator.validateCreateApiKeyRequest(createApiKeyDto, teamId);
 
-        // Generate API key
-        const apiKey = generateApiKey();
+      // Generate API key
+      const apiKey = generateApiKey();
 
       // Create new API key
       const newApiKey = await this.apiKeyRepository.create({
@@ -126,7 +116,6 @@ export class ApiKeysService {
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
         message: Constants.deletedSuccessfully,
-        data: { id: apiKeyId }
       });
     } catch (error) {
       return handleServiceError('Error deleting API key', error);

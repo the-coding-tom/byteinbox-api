@@ -74,16 +74,15 @@ export class ApiKeysValidator {
         'string.min': 'Name must be at least 1 character long',
         'string.max': 'Name must not exceed 100 characters',
       }),
-      description: Joi.string().optional().max(500).messages({
-        'string.max': 'Description must not exceed 500 characters',
+      permission: Joi.string().valid('full', 'sending').optional().messages({
+        'any.only': 'Permission must be one of: full, sending',
       }),
-      scopes: Joi.array().items(Joi.string()).min(1).optional().messages({
-        'array.min': 'At least one scope is required',
+      domain: Joi.string().optional().allow('').messages({
+        'string.base': 'Domain must be a string',
       }),
-      expiresAt: Joi.date().optional().greater('now').messages({
-        'date.greater': 'Expiration date must be in the future',
-      }),
-      isActive: Joi.boolean().optional()
+      status: Joi.string().valid('active', 'revoked').optional().messages({
+        'any.only': 'Status must be one of: active, revoked',
+      })
     });
 
     const error = validateJoiSchema(schema, updateApiKeyDto);
@@ -103,14 +102,6 @@ export class ApiKeysValidator {
 
     if (apiKey.teamId !== teamId) {
       throwError('API key does not belong to this team', HttpStatus.FORBIDDEN, 'apiKeyAccessDenied');
-    }
-
-    // 4. Business logic validation - Check if API key name is unique within the team (if name is being updated)
-    if (updateApiKeyDto.name && updateApiKeyDto.name !== apiKey.name) {
-      const existingKey = await this.apiKeyRepository.findByTeamIdAndName(teamId, updateApiKeyDto.name);
-      if (existingKey && existingKey.id !== apiKeyId) {
-        throwError('API key name already exists in this team', HttpStatus.CONFLICT, 'apiKeyNameExists');
-      }
     }
 
     return { apiKeyId, validatedData: updateApiKeyDto, apiKey };
