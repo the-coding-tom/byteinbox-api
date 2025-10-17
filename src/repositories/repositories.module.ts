@@ -9,6 +9,8 @@ import { BackupCodeRepository } from './backup-code.repository';
 import { DomainRepository } from './domain.repository';
 import { TeamRepository } from './team.repository';
 import { OAuthAccountRepository } from './oauth-account.repository';
+import { LocalAuthAccountRepository } from './local-auth-account.repository';
+import { VerificationRequestRepository } from './verification-request.repository';
 import { ApiRequestLogRepository } from './api-request-log.repository';
 
 @Module({
@@ -23,6 +25,8 @@ import { ApiRequestLogRepository } from './api-request-log.repository';
     DomainRepository,
     TeamRepository,
     OAuthAccountRepository,
+    LocalAuthAccountRepository,
+    VerificationRequestRepository,
     ApiRequestLogRepository,
   ],
   exports: [
@@ -36,6 +40,8 @@ import { ApiRequestLogRepository } from './api-request-log.repository';
     DomainRepository,
     TeamRepository,
     OAuthAccountRepository,
+    LocalAuthAccountRepository,
+    VerificationRequestRepository,
     ApiRequestLogRepository,
   ],
 })

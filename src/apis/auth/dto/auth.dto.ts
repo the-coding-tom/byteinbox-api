@@ -9,10 +9,16 @@ export class LoginResponseDto {
   user: {
     id: number;
     email: string;
-    firstName?: string;
-    lastName?: string;
+    name?: string | null;
+    photoUrl?: string | null;
     isEmailVerified: boolean;
     status: string;
+  };
+  defaultTeam: {
+    id: number;
+    reference: string;
+    name: string;
+    slug: string;
   };
 }
 
@@ -38,12 +44,19 @@ export class OAuthLoginResponseDto {
   user: {
     id: number;
     email: string;
+    name?: string;
     firstName?: string;
     lastName?: string;
+    photoUrl?: string;
     isEmailVerified: boolean;
     status: string;
   };
-  isNewUser: boolean;
+  defaultTeam: {
+    id: number;
+    reference: string;
+    name: string;
+    slug: string;
+  };
 }
 
 export class LogoutDto {
@@ -111,22 +124,21 @@ export class MfaRegenerateBackupCodesDto {
 
 // MFA Response DTOs
 export class TotpSetupResponseDto {
-  qr_code: string;
-  manual_entry_key: string;
+  qrCode: string;
+  manualEntryKey: string;
   issuer: string;
-  account_name: string;
+  accountName: string;
 }
 
 export class TotpVerifySetupResponseDto {
-  backup_codes: string[];
+  backupCodes: string[];
 }
 
 export class BackupCodesResponseDto {
-  remaining_count: number;
+  remainingCount: number;
   codes: string[]; // masked codes like "1234****"
 }
 
 export class RegenerateBackupCodesResponseDto {
-  backup_codes: string[];
-  message: string;
+  backupCodes: string[];
 }

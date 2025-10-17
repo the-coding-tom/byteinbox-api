@@ -85,7 +85,7 @@ export const config = {
       pass: process.env.SMTP_PASS,
     },
     from: process.env.SMTP_FROM_EMAIL || 'noreply@yourapp.com',
-    fromName: process.env.SMTP_FROM_NAME || 'Your App',
+    fromName: process.env.SMTP_FROM_NAME || 'ByteInbox',
   },
 
   // SMS Configuration (Twilio)
@@ -99,6 +99,7 @@ export const config = {
 
   // MFA Configuration
   mfa: {
+    issuer: process.env.MFA_ISSUER || 'ByteInbox', // TOTP issuer name for authenticator apps
     otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '5'),
     otpLength: parseInt(process.env.OTP_LENGTH || '6'),
     totpWindow: parseInt(process.env.TOTP_WINDOW || '2'),

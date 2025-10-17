@@ -28,7 +28,7 @@ export class TeamRepository {
   }
 
   async findBySlug(slug: string): Promise<any> {
-    return prisma.team.findUnique({
+    return prisma.team.findFirst({
       where: { slug },
     });
   }
@@ -217,6 +217,22 @@ export class TeamRepository {
   async delete(id: number): Promise<any> {
     return prisma.team.delete({
       where: { id },
+    });
+  }
+
+  /**
+   * Find user's personal team (the team they own)
+   */
+  async findUserPersonalTeam(userId: number): Promise<any> {
+    return prisma.team.findFirst({
+      where: {
+        members: {
+          some: {
+            userId: userId,
+            role: TeamMemberRole.owner,
+          },
+        },
+      },
     });
   }
 

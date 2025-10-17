@@ -27,7 +27,6 @@ export class UpdateUserData {
   emailVerificationExpiresAt?: Date | null;
   passwordResetToken?: string | null;
   passwordResetExpiresAt?: Date | null;
-  lastLoginAt?: Date | null;
   totpSecret?: string | null;
   totpEnabled?: boolean | null;
   status?: string;
@@ -70,11 +69,11 @@ export class UserEntity {
   phoneNumber?: string | null;
   oauthProvider?: string | null;
   oauthId?: string | null;
-  lastLoginAt?: Date | null;
   userType?: string;
   emailVerificationToken?: string | null;
   emailVerificationExpiresAt?: Date | null;
   passwordResetToken?: string | null;
   passwordResetExpiresAt?: Date | null;
   createdBy?: number | null;
+  localAuthAccount?: any | null;
 }

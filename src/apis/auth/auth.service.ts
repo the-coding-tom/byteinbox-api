@@ -1,21 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from '../../repositories/user.repository';
 import { SessionRepository } from '../../repositories/session.repository';
 import { BackupCodeRepository } from '../../repositories/backup-code.repository';
 import { OAuthAccountRepository } from '../../repositories/oauth-account.repository';
+import { LocalAuthAccountRepository } from '../../repositories/local-auth-account.repository';
+import { VerificationRequestRepository } from '../../repositories/verification-request.repository';
+import { TeamRepository } from '../../repositories/team.repository';
 import { AuthValidator } from './auth.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { generateTokens, hashPassword } from '../../utils/authentication.util';
 import { generateSessionToken, setupTotp, generateBackupCodes, hashBackupCode, maskBackupCode } from '../../helpers/mfa.helper';
 import { randomBytes } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { OAuth2Client } from 'google-auth-library';
 import { config } from '../../config/config';
 import * as moment from 'moment';
 import { verifyGoogleToken, verifyGitHubToken } from '../../helpers/oauth.helper';
-import { OAuthProvider, Constants } from '../../common/enums/generic.enum';
+import { OAuthProvider, Constants, UserStatus } from '../../common/enums/generic.enum';
 import { LoginDto, LoginResponseDto, OAuthCallbackDto, OAuthLoginResponseDto, LogoutDto, RefreshTokenDto, ResetPasswordRequestDto, ResetPasswordConfirmDto, ChangePasswordDto, RegisterDto, VerifyEmailDto, ResendVerificationDto, MfaVerifyDto, MfaChallengeDto, MfaBackupCodeConsumeDto, MfaDisableDto, MfaRegenerateBackupCodesDto, TotpSetupResponseDto, TotpVerifySetupResponseDto, BackupCodesResponseDto, RegenerateBackupCodesResponseDto } from './dto/auth.dto';
+import { generateUniqueTeamSlug } from '../../utils/team.util';
+import prisma from '../../common/prisma';
+import { MfaMethod, MfaVerificationSessionStatus, VerificationRequestType } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -24,33 +31,38 @@ export class AuthService {
     private readonly sessionRepository: SessionRepository,
     private readonly backupCodeRepository: BackupCodeRepository,
     private readonly oauthAccountRepository: OAuthAccountRepository,
+    private readonly localAuthAccountRepository: LocalAuthAccountRepository,
+    private readonly verificationRequestRepository: VerificationRequestRepository,
+    private readonly teamRepository: TeamRepository,
     private readonly authValidator: AuthValidator,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async login(loginDto: LoginDto, request: any): Promise<any> {
     try {
       // Validate login data
       const { user } = await this.authValidator.validateLogin(loginDto);
 
-      // Check if user has 2FA enabled (simplified for now)
-      // TODO: Implement proper MFA check when MFA repository methods are available
-      const hasMfaEnabled = false; // Placeholder
-      if (hasMfaEnabled) {
-        // Generate session token for 2FA verification
+      // Check if user has MFA enabled
+      if (user.totpEnabled) {
+        // Generate session token for MFA verification
         const sessionToken = generateSessionToken();
 
-        // Store session token temporarily
-        await this.sessionRepository.createSession({
-          userId: user.id,
-          token: sessionToken,
-          expiresAt: moment().add(10, 'minutes').toDate(),
-          isRevoked: false,
+        // Store MFA verification session temporarily
+        await prisma.mfaVerificationSession.create({
+          data: {
+            userId: user.id,
+            email: user.email,
+            mfaMethod: MfaMethod.TOTP,
+            sessionToken: sessionToken,
+            expiresAt: moment().add(10, 'minutes').toDate(),
+            status: MfaVerificationSessionStatus.pending,
+          },
         });
 
         return generateSuccessResponse({
-          statusCode: 200,
-          message: 'Two-factor authentication required',
+          statusCode: HttpStatus.OK,
+          message: Constants.requiresTwoFactor,
           data: {
             requiresTwoFactor: true,
             sessionToken,
@@ -70,10 +82,11 @@ export class AuthService {
         isRevoked: false,
       });
 
-      // Update user login time
-      await this.userRepository.update(user.id, {
-        lastLoginAt: moment().toDate(),
-      });
+      // Get user's personal team
+      const personalTeam = await this.teamRepository.findUserPersonalTeam(user.id);
+      if (!personalTeam) {
+        throw new Error('Personal team not found for user');
+      }
 
       const response: LoginResponseDto = {
         accessToken,
@@ -81,10 +94,16 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.firstName || undefined,
-          lastName: user.lastName || undefined,
+          name: user.name,
+          photoUrl: user.photoUrl,
           isEmailVerified: !!user.emailVerifiedAt,
           status: user.status,
+        },
+        defaultTeam: {
+          id: personalTeam.id,
+          reference: personalTeam.reference,
+          name: personalTeam.name,
+          slug: personalTeam.slug,
         },
       };
 
@@ -94,7 +113,51 @@ export class AuthService {
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Login failed');
+      return handleServiceError('Login failed', error);
+    }
+  }
+
+  async register(registerDto: RegisterDto, request: any): Promise<any> {
+    try {
+      // Validate registration data
+      const validatedData = await this.authValidator.validateRegister(registerDto);
+
+      // Hash the password
+      const hashedPassword = await hashPassword(validatedData.password);
+
+      // Generate unique team slug
+      const teamNameAndSlugInfo = await generateUniqueTeamSlug(validatedData.email);
+
+      // Generate email verification token
+      const emailVerificationToken = randomBytes(32).toString('hex');
+      const emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      // Create new user
+      const user = await this.userRepository.createLocalAuthUserAndPersonalTeam({
+        email: validatedData.email,
+        password: hashedPassword,
+        name: validatedData.name,
+        isEmailVerified: false,
+        status: UserStatus.inactive,
+        teamName: teamNameAndSlugInfo.name,
+        teamSlug: teamNameAndSlugInfo.slug,
+        emailVerificationToken,
+        emailVerificationExpiresAt,
+      });
+
+      // TODO: Send email verification email
+      console.log(`Email verification needed for ${user.email}`);
+
+      return generateSuccessResponse({
+        statusCode: HttpStatus.OK,
+        message: 'Account registered successfully. Please check your email to verify your email.',
+        data: {
+          email: user.email,
+          verificationRequired: true,
+        },
+      });
+    } catch (error) {
+      return handleServiceError('Registration failed', error);
     }
   }
 
@@ -119,12 +182,12 @@ export class AuthService {
         statusCode: 200,
         message: Constants.successMessage,
         data: {
-          provider: OAuthProvider.google,
+          provider: OAuthProvider.GOOGLE,
           url: oauthUrl,
         },
       });
     } catch (error) {
-      return handleServiceError(error, 'Failed to generate Google OAuth URL');
+      return handleServiceError('Failed to generate Google OAuth URL', error);
     }
   }
 
@@ -154,9 +217,8 @@ export class AuthService {
       const oauthUserInfo = await verifyGoogleToken(tokens.access_token);
 
       // Find or create user
-      const oauthAccount = await this.oauthAccountRepository.findByProviderAndUserId(OAuthProvider.google, oauthUserInfo.id);
+      const oauthAccount = await this.oauthAccountRepository.findByProviderAndUserId(OAuthProvider.GOOGLE, oauthUserInfo.id);
       let user = oauthAccount?.User || null;
-      let isNewUser = false;
 
       if (!user) {
         // Check if user exists by email
@@ -164,30 +226,56 @@ export class AuthService {
 
         if (user) {
           // Link existing user to OAuth provider
-          await this.oauthAccountRepository.create(user.id, OAuthProvider.google, oauthUserInfo.id, tokens.access_token);
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.GOOGLE, oauthUserInfo.id, tokens.access_token);
         } else {
           // Create new user with personal team
           const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(oauthUserInfo.email));
-          
-          user = await this.userRepository.createUserAndPersonalTeam(
-            {
-              email: oauthUserInfo.email,
-              firstName: oauthUserInfo.firstName,
-              lastName: oauthUserInfo.lastName,
-              emailVerifiedAt: new Date(), // OAuth users are pre-verified
-              status: 'ACTIVE',
-            },
-            teamData
-          );
+
+          user = await this.userRepository.createOAuthUserAndPersonalTeam({
+            email: oauthUserInfo.email,
+            firstName: oauthUserInfo.firstName,
+            lastName: oauthUserInfo.lastName,
+            emailVerifiedAt: new Date(), // OAuth users are pre-verified
+            status: 'ACTIVE',
+            teamName: teamData.name,
+            teamSlug: teamData.slug,
+          });
 
           // Link OAuth account
-          await this.oauthAccountRepository.create(user.id, OAuthProvider.google, oauthUserInfo.id, tokens.access_token);
-          
-          isNewUser = true;
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.GOOGLE, oauthUserInfo.id, tokens.access_token);
         }
       } else {
         // Update OAuth access token
-        await this.userRepository.update(user.id, { oauthProvider: OAuthProvider.google, accessToken: tokens.access_token });
+        await this.oauthAccountRepository.update(oauthAccount.id, {
+          accessToken: tokens.access_token
+        });
+      }
+
+      // Check if user has MFA enabled
+      if (user.totpEnabled) {
+        // Generate session token for MFA verification
+        const sessionToken = generateSessionToken();
+
+        // Store MFA verification session temporarily
+        await prisma.mfaVerificationSession.create({
+          data: {
+            userId: user.id,
+            email: user.email,
+            mfaMethod: MfaMethod.TOTP,
+            sessionToken: sessionToken,
+            expiresAt: moment().add(10, 'minutes').toDate(),
+            status: MfaVerificationSessionStatus.pending,
+          },
+        });
+
+        return generateSuccessResponse({
+          statusCode: HttpStatus.OK,
+          message: Constants.requiresTwoFactor,
+          data: {
+            requiresTwoFactor: true,
+            sessionToken,
+          },
+        });
       }
 
       // Generate tokens
@@ -203,10 +291,11 @@ export class AuthService {
         ipAddress: request.ip || 'unknown',
       });
 
-      // Update user login time
-      await this.userRepository.update(user.id, {
-        lastLoginAt: moment().toDate(),
-      });
+      // Get user's personal team
+      const personalTeam = await this.teamRepository.findUserPersonalTeam(user.id);
+      if (!personalTeam) {
+        throw new Error('Personal team not found for user');
+      }
 
       const response: OAuthLoginResponseDto = {
         accessToken,
@@ -214,21 +303,28 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
+          name: user.name || undefined,
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
+          photoUrl: user.photoUrl || undefined,
           isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
         },
-        isNewUser,
+        defaultTeam: {
+          id: personalTeam.id,
+          reference: personalTeam.reference,
+          name: personalTeam.name,
+          slug: personalTeam.slug,
+        },
       };
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: isNewUser ? 'Account created and login successful' : 'Login successful',
+        statusCode: HttpStatus.OK,
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Google OAuth callback failed');
+      return handleServiceError('Google OAuth callback failed', error);
     }
   }
 
@@ -238,19 +334,19 @@ export class AuthService {
       const githubOAuthUrl = new URL(config.oauth.github.authUrl!);
       githubOAuthUrl.searchParams.set('client_id', config.oauth.github.clientId!);
       githubOAuthUrl.searchParams.set('redirect_uri', config.oauth.redirectUri!);
-      githubOAuthUrl.searchParams.set('scope', 'user:email');
+      githubOAuthUrl.searchParams.set('scope', 'read:user user:email');
       githubOAuthUrl.searchParams.set('state', randomBytes(32).toString('hex'));
 
       return generateSuccessResponse({
         statusCode: 200,
         message: Constants.successMessage,
         data: {
-          provider: OAuthProvider.github,
+          provider: OAuthProvider.GITHUB,
           url: githubOAuthUrl.toString(),
         },
       });
     } catch (error) {
-      return handleServiceError(error, 'Failed to generate GitHub OAuth URL');
+      return handleServiceError('Failed to generate GitHub OAuth URL', error);
     }
   }
 
@@ -284,9 +380,8 @@ export class AuthService {
       const oauthUserInfo = await verifyGitHubToken(tokenData.access_token);
 
       // Find or create user
-      const githubAccount = await this.oauthAccountRepository.findByProviderAndUserId(OAuthProvider.github, oauthUserInfo.id);
+      const githubAccount = await this.oauthAccountRepository.findByProviderAndUserId(OAuthProvider.GITHUB, oauthUserInfo.id);
       let user = githubAccount?.User || null;
-      let isNewUser = false;
 
       if (!user) {
         // Check if user exists by email
@@ -294,30 +389,57 @@ export class AuthService {
 
         if (user) {
           // Link existing user to OAuth provider
-          await this.oauthAccountRepository.create(user.id, OAuthProvider.github, oauthUserInfo.id, tokenData.access_token);
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.GITHUB, oauthUserInfo.id, tokenData.access_token);
         } else {
           // Create new user with personal team
           const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(oauthUserInfo.email));
-          
-          user = await this.userRepository.createUserAndPersonalTeam(
-            {
-              email: oauthUserInfo.email,
-              firstName: oauthUserInfo.firstName,
-              lastName: oauthUserInfo.lastName,
-              emailVerifiedAt: new Date(), // OAuth users are pre-verified
-              status: 'ACTIVE',
-            },
-            teamData
-          );
+
+          user = await this.userRepository.createOAuthUserAndPersonalTeam({
+            email: oauthUserInfo.email,
+            firstName: oauthUserInfo.firstName,
+            lastName: oauthUserInfo.lastName,
+            emailVerifiedAt: new Date(), // OAuth users are pre-verified
+            status: UserStatus.active,
+            teamName: teamData.name,
+            teamSlug: teamData.slug,
+          });
 
           // Link OAuth account
-          await this.oauthAccountRepository.create(user.id, OAuthProvider.github, oauthUserInfo.id, tokenData.access_token);
-          
-          isNewUser = true;
+          await this.oauthAccountRepository.create(user.id, OAuthProvider.GITHUB, oauthUserInfo.id, tokenData.access_token);
+
         }
       } else {
         // Update OAuth access token
-        await this.userRepository.update(user.id, { oauthProvider: OAuthProvider.github, accessToken: tokenData.access_token });
+        await this.oauthAccountRepository.update(githubAccount.id, {
+          accessToken: tokenData.access_token
+        });
+      }
+
+      // Check if user has MFA enabled
+      if (user.totpEnabled) {
+        // Generate session token for MFA verification
+        const sessionToken = generateSessionToken();
+
+        // Store MFA verification session temporarily
+        await prisma.mfaVerificationSession.create({
+          data: {
+            userId: user.id,
+            email: user.email,
+            mfaMethod: MfaMethod.TOTP,
+            sessionToken: sessionToken,
+            expiresAt: moment().add(10, 'minutes').toDate(),
+            status: MfaVerificationSessionStatus.pending,
+          },
+        });
+
+        return generateSuccessResponse({
+          statusCode: HttpStatus.OK,
+          message: Constants.requiresTwoFactor,
+          data: {
+            requiresTwoFactor: true,
+            sessionToken,
+          },
+        });
       }
 
       // Generate tokens
@@ -333,10 +455,11 @@ export class AuthService {
         ipAddress: request.ip || 'unknown',
       });
 
-      // Update user login time
-      await this.userRepository.update(user.id, {
-        lastLoginAt: moment().toDate(),
-      });
+      // Get user's personal team
+      const personalTeam = await this.teamRepository.findUserPersonalTeam(user.id);
+      if (!personalTeam) {
+        throw new Error('Personal team not found for user');
+      }
 
       const response: OAuthLoginResponseDto = {
         accessToken,
@@ -344,46 +467,45 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
+          name: user.name || undefined,
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
+          photoUrl: user.photoUrl || undefined,
           isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
         },
-        isNewUser,
+        defaultTeam: {
+          id: personalTeam.id,
+          reference: personalTeam.reference,
+          name: personalTeam.name,
+          slug: personalTeam.slug,
+        },
       };
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: isNewUser ? 'Account created and login successful' : 'Login successful',
+        statusCode: HttpStatus.OK,
+        message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'GitHub OAuth callback failed');
+      return handleServiceError('GitHub OAuth callback failed', error);
     }
   }
 
-  async logout(logoutDto: LogoutDto, request: any): Promise<any> {
+  async logout(logoutDto: LogoutDto): Promise<any> {
     try {
-      // Validate logout data
-      const validatedData = await this.authValidator.validateLogout(logoutDto);
-
-      // Find the session by refresh token
-      const session = await this.sessionRepository.findSessionByRefreshToken(validatedData.refreshToken);
-
-      if (!session) {
-        throw new Error('Invalid refresh token');
-      }
+      // Validate logout data and session
+      const { validatedData } = await this.authValidator.validateLogout(logoutDto);
 
       // Revoke the refresh token
       await this.sessionRepository.deleteSessionByRefreshToken(validatedData.refreshToken);
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: 'Logout successful',
-        data: {},
+        statusCode: HttpStatus.OK,
+        message: Constants.successMessage,
       });
     } catch (error) {
-      return handleServiceError(error, 'Logout failed');
+      return handleServiceError('Logout failed', error);
     }
   }
 
@@ -417,7 +539,7 @@ export class AuthService {
         },
       });
     } catch (error) {
-      return handleServiceError(error, 'Token refresh failed');
+      return handleServiceError('Token refresh failed', error);
     }
   }
 
@@ -431,7 +553,7 @@ export class AuthService {
         message: Constants.successMessage
       });
     } catch (error) {
-      return handleServiceError(error, 'Logout from all devices failed');
+      return handleServiceError('Logout from all devices failed', error);
     }
   }
 
@@ -443,17 +565,23 @@ export class AuthService {
       // Always return success to prevent email enumeration
       // If user exists, send reset email; if not, still return success
       if (user) {
-        // Generate reset token
-        const resetToken = generateSessionToken(); // Using the same token generator for now
+        // Invalidate any existing password reset tokens for this user
+        await this.verificationRequestRepository.deleteByUserIdAndType(
+          user.id,
+          VerificationRequestType.PASSWORD_RESET
+        );
 
-        // Store reset token with expiration (e.g., 1 hour)
-        await this.sessionRepository.createSession({
-          userId: user.id,
-          token: resetToken,
-          expiresAt: moment().add(1, 'hour').toDate(),
-          userAgent: request.headers['user-agent'] || 'unknown',
-          ipAddress: request.ip || 'unknown',
-        });
+        // Generate reset token
+        const resetToken = uuidv4();
+
+        // Store reset token with expiration (1 hour)
+        await this.verificationRequestRepository.create(
+          user.id,
+          user.email,
+          resetToken,
+          VerificationRequestType.PASSWORD_RESET,
+          moment().add(1, 'hour').toDate()
+        );
 
         // TODO: Send password reset email with resetToken
         // This would typically use a queue system to send emails
@@ -461,41 +589,39 @@ export class AuthService {
       }
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: 'If an account with that email exists, a password reset link has been sent',
-        data: {},
+        statusCode: HttpStatus.OK,
+        message: Constants.passwordResetMessage,
       });
     } catch (error) {
-      return handleServiceError(error, 'Password reset request failed');
+      return handleServiceError('Password reset request failed', error);
     }
   }
 
   async confirmPasswordReset(resetPasswordConfirmDto: ResetPasswordConfirmDto, request: any): Promise<any> {
     try {
       // Validate reset password confirm data
-      const { user } = await this.authValidator.validateResetPasswordConfirm(resetPasswordConfirmDto);
+      const { user, verificationRequest } = await this.authValidator.validateResetPasswordConfirm(resetPasswordConfirmDto);
 
       // Hash the new password
       const hashedPassword = await hashPassword(resetPasswordConfirmDto.newPassword);
 
-      // Update user password
-      await this.userRepository.update(user.id, {
-        password: hashedPassword,
-      });
+      // Update user password in LocalAuthAccount
+      if (user.localAuthAccount) {
+        await prisma.localAuthAccount.update({
+          where: { userId: user.id },
+          data: { passwordHash: hashedPassword },
+        });
+      }
 
-      // Revoke the reset token
-      await this.sessionRepository.deleteSessionByRefreshToken(resetPasswordConfirmDto.token);
-
-      // Revoke all user sessions to force re-login
-      await this.sessionRepository.deleteAllUserSessionsByuserId(user.id);
+      // Invalidate the password reset token by deleting it
+      await this.verificationRequestRepository.delete(verificationRequest.id);
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: 'Password reset successfully. Please log in with your new password.',
-        data: {},
+        statusCode: HttpStatus.OK,
+        message: Constants.passwordResetSuccessMessage,
       });
     } catch (error) {
-      return handleServiceError(error, 'Password reset confirmation failed');
+      return handleServiceError('Password reset confirmation failed', error);
     }
   }
 
@@ -508,71 +634,33 @@ export class AuthService {
       const hashedPassword = await hashPassword(changePasswordDto.newPassword);
 
       // Update user password
-      await this.userRepository.update(user.id, {
-        password: hashedPassword,
-      });
+      await this.localAuthAccountRepository.updatePassword(user.id, hashedPassword);
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: Constants.updatedSuccessfully,
-        data: {},
+        message: Constants.successMessage,
       });
     } catch (error) {
-      return handleServiceError(error, 'Password change failed');
-    }
-  }
-
-  async register(registerDto: RegisterDto, request: any): Promise<any> {
-    try {
-      // Validate registration data
-      const validatedData = await this.authValidator.validateRegister(registerDto);
-
-      // Hash the password
-      const hashedPassword = await hashPassword(validatedData.password);
-
-      // Generate unique team slug
-      const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(validatedData.email));
-
-      // Create new user
-      const user = await this.userRepository.createUserAndPersonalTeam(
-        {
-          email: validatedData.email,
-          password: hashedPassword,
-          name: validatedData.name,
-          isEmailVerified: false, // Email verification required
-          status: 'ACTIVE',
-        },
-        teamData
-      );
-
-      // TODO: Send email verification email
-      console.log(`Email verification needed for ${user.email}`);
-
-      return generateSuccessResponse({
-        statusCode: 201,
-        message: 'Account registered successfully. Please check your email to verify your email.',
-        data: {
-          email: user.email,
-          verificationRequired: true,
-        },
-      });
-    } catch (error) {
-      return handleServiceError(error, 'Registration failed');
+      return handleServiceError('Password change failed', error);
     }
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<any> {
     try {
       // Validate email verification data
-      const { user } = await this.authValidator.validateVerifyEmail(verifyEmailDto);
+      const { user, verificationRequest } = await this.authValidator.validateVerifyEmail(verifyEmailDto);
 
       // Update user email verification status
       await this.userRepository.update(user.id, {
-        isEmailVerified: true,
+        emailVerifiedAt: new Date(),
+        status: UserStatus.active,
       });
 
+      // Delete the verification token after successful verification
+      await this.verificationRequestRepository.delete(verificationRequest.id);
+
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.successMessage,
         data: {
           email: user.email,
@@ -580,7 +668,7 @@ export class AuthService {
         },
       });
     } catch (error) {
-      return handleServiceError(error, 'Email verification failed');
+      return handleServiceError('Email verification failed', error);
     }
   }
 
@@ -589,15 +677,24 @@ export class AuthService {
       // Validate resend verification data
       const { user } = await this.authValidator.validateResendVerification(resendVerificationDto);
 
+      // Delete any existing email verification tokens for this user
+      await this.verificationRequestRepository.deleteByUserIdAndType(
+        user.id,
+        VerificationRequestType.EMAIL_VERIFICATION
+      );
+
       // Generate new verification token
       const verificationToken = generateSessionToken(); // Using the same token generator for now
       const verificationExpiresAt = moment().add(1, 'day').toDate();
 
-      // Update user with new verification token
-      await this.userRepository.update(user.id, {
-        emailVerificationToken: verificationToken,
-        emailVerificationExpiresAt: verificationExpiresAt,
-      });
+      // Create new verification request
+      await this.verificationRequestRepository.create(
+        user.id,
+        user.email,
+        verificationToken,
+        VerificationRequestType.EMAIL_VERIFICATION,
+        verificationExpiresAt
+      );
 
       // TODO: Send email verification email with verificationToken
       // This would typically use a queue system to send emails
@@ -611,7 +708,7 @@ export class AuthService {
         },
       });
     } catch (error) {
-      return handleServiceError(error, 'Resend verification failed');
+      return handleServiceError('Resend verification failed', error);
     }
   }
 
@@ -638,10 +735,10 @@ export class AuthService {
 
       // Build response object
       const response: TotpSetupResponseDto = {
-        qr_code: qrCode,
-        manual_entry_key: secret,
-        issuer: 'YourApp',
-        account_name: user.email,
+        qrCode: qrCode,
+        manualEntryKey: secret,
+        issuer: config.mfa.issuer,
+        accountName: user.email,
       };
 
       return generateSuccessResponse({
@@ -650,7 +747,7 @@ export class AuthService {
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error setting up TOTP');
+      return handleServiceError('Error setting up TOTP', error);
     }
   }
 
@@ -671,23 +768,29 @@ export class AuthService {
 
       // Build response
       const response: TotpVerifySetupResponseDto = {
-        backup_codes: backupCodes.map(code => maskBackupCode(code)),
+        backupCodes
       };
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error verifying TOTP setup');
+      return handleServiceError('Error verifying TOTP setup', error);
     }
   }
 
   async challengeMfa(mfaChallengeDto: MfaChallengeDto, request: any): Promise<any> {
     try {
       // Validate MFA challenge data
-      const { user } = await this.authValidator.validateMfaChallenge(mfaChallengeDto);
+      const { user, session } = await this.authValidator.validateMfaChallenge(mfaChallengeDto);
+
+      // Mark MFA verification session as verified
+      await prisma.mfaVerificationSession.update({
+        where: { id: session.id },
+        data: { status: 'verified' },
+      });
 
       // Generate tokens
       const tokens = await generateTokens(user, this.jwtService);
@@ -702,11 +805,14 @@ export class AuthService {
         ipAddress: request.ip || 'unknown',
       });
 
-      // Update user login time
-      await this.userRepository.update(user.id, {
-        lastLoginAt: moment().toDate(),
-      });
+      // Note: Login time is tracked via session creation above
 
+
+      // Get user's personal team
+      const personalTeam = await this.teamRepository.findUserPersonalTeam(user.id);
+      if (!personalTeam) {
+        throw new Error('Personal team not found for user');
+      }
 
       const response: LoginResponseDto = {
         accessToken,
@@ -714,10 +820,16 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.firstName || undefined,
-          lastName: user.lastName || undefined,
+          name: user.name,
+          photoUrl: user.photoUrl,
           isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
+        },
+        defaultTeam: {
+          id: personalTeam.id,
+          reference: personalTeam.reference,
+          name: personalTeam.name,
+          slug: personalTeam.slug,
         },
       };
 
@@ -727,7 +839,7 @@ export class AuthService {
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error verifying 2FA');
+      return handleServiceError('Error verifying 2FA', error);
     }
   }
 
@@ -742,7 +854,7 @@ export class AuthService {
 
       // Build response
       const response: BackupCodesResponseDto = {
-        remaining_count: unusedCodes.length,
+        remainingCount: unusedCodes.length,
         codes: unusedCodes.map(code => maskBackupCode(code.code)),
       };
 
@@ -752,7 +864,7 @@ export class AuthService {
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error retrieving backup codes');
+      return handleServiceError('Error retrieving backup codes', error);
     }
   }
 
@@ -777,11 +889,11 @@ export class AuthService {
         ipAddress: request.ip || 'unknown',
       });
 
-      // Update user login time
-      await this.userRepository.update(user.id, {
-        lastLoginAt: moment().toDate(),
-      });
-
+      // Get user's personal team
+      const personalTeam = await this.teamRepository.findUserPersonalTeam(user.id);
+      if (!personalTeam) {
+        throw new Error('Personal team not found for user');
+      }
 
       const response: LoginResponseDto = {
         accessToken,
@@ -789,20 +901,26 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.firstName || undefined,
-          lastName: user.lastName || undefined,
+          name: user.name,
+          photoUrl: user.photoUrl,
           isEmailVerified: user.isEmailVerified ?? !!user.emailVerifiedAt,
           status: user.status,
+        },
+        defaultTeam: {
+          id: personalTeam.id,
+          reference: personalTeam.reference,
+          name: personalTeam.name,
+          slug: personalTeam.slug,
         },
       };
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: 'Backup code verification successful',
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error consuming backup code');
+      return handleServiceError('Error consuming backup code', error);
     }
   }
 
@@ -821,12 +939,11 @@ export class AuthService {
       await this.backupCodeRepository.deleteByUserId(userId);
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.successMessage,
-        data: {},
       });
     } catch (error) {
-      return handleServiceError(error, 'Error disabling MFA');
+      return handleServiceError('Error disabling MFA', error);
     }
   }
 
@@ -845,17 +962,16 @@ export class AuthService {
 
       // Build response
       const response: RegenerateBackupCodesResponseDto = {
-        backup_codes: backupCodes.map(code => maskBackupCode(code)),
-        message: Constants.successMessage,
+        backupCodes
       };
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.successMessage,
         data: response,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error regenerating backup codes');
+      return handleServiceError('Error regenerating backup codes', error);
     }
   }
 }

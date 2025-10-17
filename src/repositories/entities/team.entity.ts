@@ -25,5 +25,5 @@ export class CreateTeamApiKeyData {
   name: string;
   permission: string;
   domain?: string;
-  createdBy?: number;
+  createdBy: number;
 }

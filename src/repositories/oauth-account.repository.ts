@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { OAuthProvider } from '@prisma/client';
 import prisma from '../common/prisma';
 
 @Injectable()
 export class OAuthAccountRepository {
-  async findByProviderAndUserId(provider: string, providerUserId: string): Promise<any> {
+  async findByProviderAndUserId(provider: OAuthProvider, providerUserId: string): Promise<any> {
     return prisma.oAuthAccount.findFirst({
       where: {
-        provider: provider as any,
+        provider,
         providerUserId,
       },
       include: {
@@ -15,14 +16,21 @@ export class OAuthAccountRepository {
     });
   }
 
-  async create(userId: number, provider: string, providerUserId: string, accessToken?: string): Promise<any> {
+  async create(userId: number, provider: OAuthProvider, providerUserId: string, accessToken?: string): Promise<any> {
     return prisma.oAuthAccount.create({
       data: {
         userId,
-        provider: provider as any,
+        provider,
         providerUserId,
         accessToken,
       },
+    });
+  }
+
+  async update(id: number, data: any): Promise<any> {
+    return prisma.oAuthAccount.update({
+      where: { id },
+      data,
     });
   }
 }

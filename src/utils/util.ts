@@ -1,5 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 import { CaughtError, RequestResponse } from './entities/utils.entity';
+import { Constants } from '../common/enums/generic.enum';
 
 export function generateSuccessResponse(response: RequestResponse) {
   if (!response.data) return {
@@ -16,17 +17,19 @@ export function generateSuccessResponse(response: RequestResponse) {
 }
 
 export function generateErrorResponse(error: CaughtError | any) {
-  if (error.response && error.response.status === HttpStatus.BAD_REQUEST) return {
-    status: error.response.status,
-    errorCode: 'badRequest',
-    message: error.response.data.message,
-  };
+  if (error.response && error.response.status === HttpStatus.BAD_REQUEST)
+    return {
+      status: error.response.status,
+      errorCode: 'serverError',
+      message: error.response.data.message || error.response.data.error || error.response.data.error_description,
+    };
 
-  if (!error.code || typeof error.code === 'string') return {
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    errorCode: 'serverError',
-    message: 'Internal server error',
-  };
+  if (!error.code || typeof error.code === 'string')
+    return {
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      errorCode: 'serverError',
+      message: Constants.serverError,
+    };
 
   return {
     status: error.code,
@@ -35,15 +38,11 @@ export function generateErrorResponse(error: CaughtError | any) {
   };
 }
 
-export function throwError(
-  message: string,
-  statusCode: number | null = null,
-  errorCode: string | null = null,
-) {
-  // Create error with the structure expected by generateErrorResponse
+export function throwError(message: string, code: number | null = null, errorCode: string | null = null) {
   const error: any = new Error(message);
-  error.code = statusCode;
+  error.code = code;
   error.errorCode = errorCode;
+
   throw error;
 }
 

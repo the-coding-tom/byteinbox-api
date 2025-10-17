@@ -41,4 +41,11 @@ export class SessionRepository {
       where: { userId },
     });
   }
+
+  async getLatestSessionByUserId(userId: number): Promise<any | null> {
+    return prisma.session.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 } 

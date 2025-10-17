@@ -7,7 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { ApiRequestLogRepository } from '../../repositories/api-request-log.repository';
-import { AuthenticatedRequest } from '../middlewares/is-authenticated.middleware';
+import { AuthenticatedRequest } from '../types/request.types';
 
 /**
  * Logging Interceptor - Tracks all API requests and responses
@@ -27,7 +27,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const { method, url, body, headers, ip } = request;
     
     // Extract relevant data
-    const teamId = request.teamId;
+    const teamId = request.team?.id;
     const apiKeyId = request.apiKeyId;
     const userAgent = headers['user-agent'];
 

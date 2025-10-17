@@ -49,11 +49,10 @@ export class TeamsService {
         message: Constants.createdSuccessfully,
         data: {
           id: team.id,
+          reference: team.reference,
           name: team.name,
-          description: team.description,
           slug: team.slug,
-          isPublic: team.isPublic,
-          isDefault: team.isDefault,
+          image: team.image,
           createdAt: team.createdAt,
           userRole: 'OWNER',
         },
@@ -74,19 +73,15 @@ export class TeamsService {
       // Format team data
       const formattedTeams = teams.map(team => ({
         id: team.id,
+        reference: team.reference,
         name: team.name,
-        description: team.description,
         slug: team.slug,
-        avatar: team.avatar,
-        isDefault: team.isDefault,
-        isPublic: team.isPublic,
-        isActive: team.isActive,
+        image: team.image,
         createdAt: team.createdAt,
         updatedAt: team.updatedAt,
-        createdBy: team.createdBy,
-        memberCount: team._count.teamMembers,
-        apiKeyCount: team._count.teamApiKeys,
-        userRole: team.teamMembers[0]?.role,
+        memberCount: team._count.members,
+        apiKeyCount: team._count.apiKeys,
+        userRole: team.members[0]?.role,
       }));
 
       return generateSuccessResponse({
@@ -128,16 +123,12 @@ export class TeamsService {
       // Format team data
       const formattedTeam = {
         id: team.id,
+        reference: team.reference,
         name: team.name,
-        description: team.description,
         slug: team.slug,
-        avatar: team.avatar,
-        isDefault: team.isDefault,
-        isPublic: team.isPublic,
-        isActive: team.isActive,
+        image: team.image,
         createdAt: team.createdAt,
         updatedAt: team.updatedAt,
-        createdBy: team.createdBy,
         userRole: member?.role,
       };
 
@@ -167,10 +158,10 @@ export class TeamsService {
         message: Constants.updatedSuccessfully,
         data: {
           id: updatedTeam.id,
+          reference: updatedTeam.reference,
           name: updatedTeam.name,
-          description: updatedTeam.description,
           slug: updatedTeam.slug,
-          isPublic: updatedTeam.isPublic,
+          image: updatedTeam.image,
           updatedAt: updatedTeam.updatedAt,
         },
       });

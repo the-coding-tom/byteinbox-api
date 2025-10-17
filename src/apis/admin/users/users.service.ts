@@ -1,5 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { UserRepository } from '../../../repositories/user.repository';
+import { SessionRepository } from '../../../repositories/session.repository';
 import { AdminUsersValidator } from './users.validator';
 import { generateSuccessResponse, transformToPaginationMeta } from '../../../utils/util';
 import { handleServiceError } from '../../../utils/error.util';
@@ -11,8 +12,10 @@ import { config } from '../../../config/config';
 export class AdminUsersService {
   constructor(
     private readonly userRepository: UserRepository,
+    private readonly sessionRepository: SessionRepository,
     private readonly adminUsersValidator: AdminUsersValidator,
   ) {}
+
 
   async createUserByAdmin(createUserDto: CreateUserByAdminDto): Promise<{ status: number; message: string; data: any }> {
     try {
@@ -40,7 +43,14 @@ export class AdminUsersService {
       // Generate unique team slug
       const teamData = await import('../../../utils/team.util').then(m => m.generateUniqueTeamSlug(userData.email));
       
-      const result = await this.userRepository.createUserAndPersonalTeam(userData, teamData);
+      // Combine userData with teamData for single parameter
+      const combinedData = {
+        ...userData,
+        teamName: teamData.name,
+        teamSlug: teamData.slug,
+      };
+      
+      const result = await this.userRepository.createLocalAuthUserAndPersonalTeam(combinedData);
 
       const { user } = result;
 
@@ -58,7 +68,7 @@ export class AdminUsersService {
           phoneNumber: user.phoneNumber,
           status: user.status,
           isEmailVerified: user.isEmailVerified,
-          lastLoginAt: user.lastLoginAt,
+          lastLoginAt: (await this.sessionRepository.getLatestSessionByUserId(user.id))?.createdAt || null,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -84,7 +94,7 @@ export class AdminUsersService {
         statusCode: HttpStatus.OK,
         message: Constants.retrievedSuccessfully,
         data: {
-          data: result.data.map((user: any) => ({
+          data: await Promise.all(result.data.map(async (user: any) => ({
             id: user.id,
             email: user.email,
             firstName: user.firstName,
@@ -92,10 +102,10 @@ export class AdminUsersService {
             phoneNumber: user.phoneNumber,
             status: user.status,
             isEmailVerified: user.isEmailVerified,
-            lastLoginAt: user.lastLoginAt,
+            lastLoginAt: (await this.sessionRepository.getLatestSessionByUserId(user.id))?.createdAt || null,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
-          })),
+          }))),
           meta: transformToPaginationMeta({ limit: result.limit, offset: result.offset, total: result.total }),
         },
       });
@@ -120,7 +130,7 @@ export class AdminUsersService {
           phoneNumber: user.phoneNumber,
           status: user.status,
           isEmailVerified: user.isEmailVerified,
-          lastLoginAt: user.lastLoginAt,
+          lastLoginAt: (await this.sessionRepository.getLatestSessionByUserId(user.id))?.createdAt || null,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },

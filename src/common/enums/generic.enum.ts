@@ -19,15 +19,15 @@ export enum TransactionType {
 }
 
 export enum UserStatus {
-  active = 'active',
-  inactive = 'inactive',
-  pending = 'pending',
-  suspended = 'suspended',
+  active = 'ACTIVE',
+  inactive = 'INACTIVE',
+  suspended = 'SUSPENDED',
+  banned = 'BANNED',
 }
 
 export enum OAuthProvider {
-  google = 'google',
-  github = 'github',
+  GOOGLE = 'GOOGLE',
+  GITHUB = 'GITHUB',
 }
 
 export enum ApiKeyStatus {
@@ -121,6 +121,10 @@ export const Constants = {
   notFoundMessage: 'Resource not found',
   validationErrorMessage: 'Validation failed',
   internalServerErrorMessage: 'Internal server error',
+  serverError: 'Internal server error',
+  passwordResetMessage: 'Password reset link requested successfully',
+  passwordResetSuccessMessage: 'Password reset successfully. Please log in with your new password.',
+  requiresTwoFactor: 'Two-factor authentication required',
   
   // Operation messages
   createdSuccessfully: 'Created successfully',

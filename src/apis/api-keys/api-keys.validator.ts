@@ -15,7 +15,7 @@ export class ApiKeysValidator {
       page: Joi.number().integer().min(1).optional(),
       limit: Joi.number().integer().min(1).max(100).optional(),
       status: Joi.string().valid('ACTIVE', 'INACTIVE', 'ALL').optional(),
-      search: Joi.string().max(100).optional(),
+      search: Joi.string().max(100).allow('').optional(),
     });
 
     const error = validateJoiSchema(schema, query);
@@ -32,26 +32,17 @@ export class ApiKeysValidator {
         'string.max': 'Name must not exceed 100 characters',
         'any.required': 'Name is required',
       }),
-      description: Joi.string().optional().max(500).messages({
-        'string.max': 'Description must not exceed 500 characters',
+      permission: Joi.string().valid('full', 'sending').required().messages({
+        'any.only': 'Permission must be one of: full, sending',
+        'any.required': 'Permission is required',
       }),
-      scopes: Joi.array().items(Joi.string()).min(1).required().messages({
-        'array.min': 'At least one scope is required',
-        'any.required': 'Scopes are required',
-      }),
-      expiresAt: Joi.date().optional().greater('now').messages({
-        'date.greater': 'Expiration date must be in the future',
+      domain: Joi.string().optional().allow('').messages({
+        'string.base': 'Domain must be a string',
       })
     });
 
     const error = validateJoiSchema(schema, createApiKeyDto);
     if (error) throwError(error, HttpStatus.BAD_REQUEST, 'validationError');
-
-    // 2. Business logic validation - Check if API key name is unique within the team
-    const existingKey = await this.apiKeyRepository.findByTeamIdAndName(teamId, createApiKeyDto.name);
-    if (existingKey) {
-      throwError('API key name already exists in this team', HttpStatus.CONFLICT, 'apiKeyNameExists');
-    }
 
     return createApiKeyDto;
   }

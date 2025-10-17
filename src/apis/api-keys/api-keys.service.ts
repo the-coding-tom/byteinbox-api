@@ -24,10 +24,20 @@ export class ApiKeysService {
       const page = validatedData.page || config.validation.pagination.defaultPage;
       const limit = validatedData.limit || config.validation.pagination.defaultLimit;
 
+      // Map frontend status values to database enum values
+      let mappedStatus: 'active' | 'revoked' | undefined = undefined;
+      if (validatedData.status === 'ACTIVE') {
+        mappedStatus = 'active';
+      } else if (validatedData.status === 'INACTIVE') {
+        mappedStatus = 'revoked';
+      } else if (validatedData.status === 'ALL') {
+        mappedStatus = undefined; // No filter
+      }
+
       // Get API keys with pagination
       const result = await this.apiKeyRepository.findByTeamIdWithPagination({
         teamId,
-        status: validatedData.status,
+        status: mappedStatus,
         keyword: validatedData.search,
         offset: (page - 1) * limit,
         limit: limit
@@ -57,7 +67,7 @@ export class ApiKeysService {
         key: apiKey,
         name: validatedData.name,
         teamId,
-        permission: validatedData.permission || 'read',
+        permission: validatedData.permission,
         domain: validatedData.domain,
         createdBy: user.id
       });

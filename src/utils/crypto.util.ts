@@ -8,8 +8,8 @@ import { TotpSetupResult } from '../common/entities/mfa.entity';
 // TOTP Functions (Pure utility functions)
 export function generateTotpSecret(userEmail: string): TotpSetupResult {
   const secret = speakeasy.generateSecret({
-    name: userEmail,
-    issuer: config.email.fromName,
+    name: `${config.mfa.issuer}:${userEmail}`,
+    issuer: config.mfa.issuer,
     length: 32,
   });
 
@@ -23,8 +23,8 @@ export function generateTotpSecret(userEmail: string): TotpSetupResult {
 export async function generateQrCode(secret: string, userEmail: string): Promise<string> {
   const otpAuthUrl = speakeasy.otpauthURL({
     secret,
-    label: userEmail,
-    issuer: config.email.fromName,
+    label: `${config.mfa.issuer}:${userEmail}`,
+    issuer: config.mfa.issuer,
     encoding: 'base32',
   });
 

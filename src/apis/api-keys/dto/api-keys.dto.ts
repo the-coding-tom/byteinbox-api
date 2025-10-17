@@ -1,6 +1,6 @@
 export class CreateApiKeyDto {
   name: string;
-  permission?: string;
+  permission: string;
   domain?: string;
 }
 

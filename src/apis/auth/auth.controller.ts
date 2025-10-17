@@ -21,7 +21,7 @@ export class AuthController {
 
   @Post('logout')
   async logout(@Body() logoutDto: LogoutDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.authService.logout(logoutDto, request);
+    const { status, ...restOfResponse } = await this.authService.logout(logoutDto);
     response.status(status).json(restOfResponse);
   }
 

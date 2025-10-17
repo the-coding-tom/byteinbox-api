@@ -3,6 +3,7 @@ import { UserRepository } from '../../repositories/user.repository';
 import { SessionRepository } from '../../repositories/session.repository';
 import { MfaVerificationSessionRepository } from '../../repositories/mfa-verification-session.repository';
 import { BackupCodeRepository } from '../../repositories/backup-code.repository';
+import { VerificationRequestRepository } from '../../repositories/verification-request.repository';
 import { verifyTotpCode, hashBackupCode } from '../../helpers/mfa.helper';
 import { validateJoiSchema } from '../../utils/joi.validator';
 import { throwError } from '../../utils/util';
@@ -18,6 +19,7 @@ export class AuthValidator {
         private readonly sessionRepository: SessionRepository,
         private readonly mfaVerificationSessionRepository: MfaVerificationSessionRepository,
         private readonly backupCodeRepository: BackupCodeRepository,
+        private readonly verificationRequestRepository: VerificationRequestRepository,
     ) { }
 
     async validateLogin(data: LoginDto): Promise<{ validatedData: LoginDto; user: UserEntity }> {
@@ -44,13 +46,22 @@ export class AuthValidator {
             throwError('Invalid email or password', HttpStatus.UNAUTHORIZED, 'invalidCredentials');
         }
 
+        // Check email verification first
+        if (!user.emailVerifiedAt) {
+            throwError('Please verify your email before logging in', HttpStatus.UNAUTHORIZED, 'emailNotVerified');
+        }
+
         // Check if user is active
         if (user.status !== 'ACTIVE') {
             throwError('Account is not active', HttpStatus.UNAUTHORIZED, 'accountInactive');
         }
 
         // Validate password
-        const isPasswordValid = await validatePassword(data.password, user.password);
+        if (!user.localAuthAccount) {
+            throwError('Invalid email or password', HttpStatus.UNAUTHORIZED, 'invalidCredentials');
+        }
+        
+        const isPasswordValid = await validatePassword(data.password, user.localAuthAccount.passwordHash);
         if (!isPasswordValid) {
             throwError('Invalid email or password', HttpStatus.UNAUTHORIZED, 'invalidCredentials');
         }
@@ -92,7 +103,7 @@ export class AuthValidator {
         return data;
     }
 
-    async validateLogout(data: LogoutDto): Promise<LogoutDto> {
+    async validateLogout(data: LogoutDto): Promise<{ validatedData: LogoutDto; session: any }> {
         // Validate input schema
         const schema = Joi.object({
             refreshToken: Joi.string().required(),
@@ -103,7 +114,13 @@ export class AuthValidator {
             throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
         }
 
-        return data;
+        // Find and validate the session
+        const session = await this.sessionRepository.findSessionByRefreshToken(data.refreshToken);
+        if (!session) {
+            throwError('Invalid refresh token', HttpStatus.UNAUTHORIZED, 'invalidRefreshToken');
+        }
+
+        return { validatedData: data, session };
     }
 
     async validateRefreshToken(data: RefreshTokenDto): Promise<{ validatedData: RefreshTokenDto; session: any; user: UserEntity }> {
@@ -170,7 +187,7 @@ export class AuthValidator {
         return { validatedData: data, user };
     }
 
-    async validateResetPasswordConfirm(data: ResetPasswordConfirmDto): Promise<{ validatedData: ResetPasswordConfirmDto; session: any; user: UserEntity }> {
+    async validateResetPasswordConfirm(data: ResetPasswordConfirmDto): Promise<{ validatedData: ResetPasswordConfirmDto; verificationRequest: any; user: UserEntity }> {
         // Validate input schema
         const schema = Joi.object({
             token: Joi.string().required().messages({
@@ -178,7 +195,7 @@ export class AuthValidator {
             }),
             newPassword: Joi.string()
                 .min(8)
-                .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+                .pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[#@$!%*?&]).{8,}$/)
                 .required()
                 .messages({
                     'string.min': 'Password must be at least 8 characters long',
@@ -192,24 +209,24 @@ export class AuthValidator {
             throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
         }
 
-        // Find the session by reset token
-        const session = await this.sessionRepository.findSessionByRefreshToken(data.token);
-        if (!session) {
+        // Find the verification request by reset token
+        const verificationRequest = await this.verificationRequestRepository.findByToken(data.token);
+        if (!verificationRequest) {
             throwError('Invalid or expired reset token', HttpStatus.UNAUTHORIZED, 'invalidResetToken');
         }
 
-        // Check if session is expired
-        if (session.expiresAt < new Date()) {
+        // Check if verification request is expired
+        if (verificationRequest.expiresAt < new Date()) {
             throwError('Reset token has expired', HttpStatus.UNAUTHORIZED, 'expiredResetToken');
         }
 
-        // Check if session is revoked
-        if (session.isRevoked) {
-            throwError('Reset token has been revoked', HttpStatus.UNAUTHORIZED, 'revokedResetToken');
+        // Check if it's a password reset request
+        if (verificationRequest.type !== 'PASSWORD_RESET') {
+            throwError('Invalid verification token type', HttpStatus.UNAUTHORIZED, 'invalidTokenType');
         }
 
-        // Get user from session
-        const user = await this.userRepository.findById(session.userId);
+        // Get user from verification request
+        const user = await this.userRepository.findById(verificationRequest.userId);
         if (!user) {
             throwError('User not found', HttpStatus.UNAUTHORIZED, 'userNotFound');
         }
@@ -219,7 +236,7 @@ export class AuthValidator {
             throwError('User account is not active', HttpStatus.UNAUTHORIZED, 'accountInactive');
         }
 
-        return { validatedData: data, session, user };
+        return { validatedData: data, verificationRequest, user };
     }
 
     async validateChangePassword(data: ChangePasswordDto, userId: number): Promise<{ validatedData: ChangePasswordDto; user: UserEntity }> {
@@ -230,7 +247,7 @@ export class AuthValidator {
             }),
             newPassword: Joi.string()
                 .min(8)
-                .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+                .pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[#@$!%*?&]).{8,}$/)
                 .required()
                 .messages({
                     'string.min': 'Password must be at least 8 characters long',
@@ -256,13 +273,17 @@ export class AuthValidator {
         }
 
         // Validate current password
-        const isCurrentPasswordValid = await validatePassword(data.currentPassword, user.password);
+        if (!user.localAuthAccount) {
+            throwError('No password set for this account', HttpStatus.UNAUTHORIZED, 'noPasswordSet');
+        }
+        
+        const isCurrentPasswordValid = await validatePassword(data.currentPassword, user.localAuthAccount.passwordHash);
         if (!isCurrentPasswordValid) {
             throwError('Current password is incorrect', HttpStatus.UNAUTHORIZED, 'invalidCurrentPassword');
         }
 
         // Check if new password is different from current password
-        const isNewPasswordSame = await validatePassword(data.newPassword, user.password);
+        const isNewPasswordSame = await validatePassword(data.newPassword, user.localAuthAccount.passwordHash);
         if (isNewPasswordSame) {
             throwError('New password must be different from current password', HttpStatus.BAD_REQUEST, 'samePassword');
         }
@@ -282,11 +303,11 @@ export class AuthValidator {
                 }),
             password: Joi.string()
                 .min(8)
-                .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+                .pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[#@$!%*?&]).{8,}$/)
                 .required()
                 .messages({
                     'string.min': 'Password must be at least 8 characters long',
-                    'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+                    'string.pattern.base': 'Password must contain at least one uppercase letter, one number, and one special character',
                     'any.required': 'Password is required',
                 }),
             name: Joi.string()
@@ -314,7 +335,7 @@ export class AuthValidator {
         return data;
     }
 
-    async validateVerifyEmail(data: VerifyEmailDto): Promise<{ validatedData: VerifyEmailDto; session: any; user: UserEntity }> {
+    async validateVerifyEmail(data: VerifyEmailDto): Promise<{ validatedData: VerifyEmailDto; verificationRequest: any; user: UserEntity }> {
         // Validate input schema
         const schema = Joi.object({
             token: Joi.string().required().messages({
@@ -327,39 +348,39 @@ export class AuthValidator {
             throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
         }
 
-        // Find the session by verification token
-        const session = await this.sessionRepository.findSessionByRefreshToken(data.token);
-        if (!session) {
+        // Find the verification request by token
+        const verificationRequest = await this.verificationRequestRepository.findByToken(data.token);
+        if (!verificationRequest) {
             throwError('Invalid or expired verification token', HttpStatus.UNAUTHORIZED, 'invalidVerificationToken');
         }
 
-        // Check if session is expired
-        if (session.expiresAt < new Date()) {
+        // Check if verification request is expired
+        if (verificationRequest.expiresAt < new Date()) {
             throwError('Verification token has expired', HttpStatus.UNAUTHORIZED, 'expiredVerificationToken');
         }
 
-        // Check if session is revoked
-        if (session.isRevoked) {
-            throwError('Verification token has been revoked', HttpStatus.UNAUTHORIZED, 'revokedVerificationToken');
+        // Check if it's an email verification request
+        if (verificationRequest.type !== 'EMAIL_VERIFICATION') {
+            throwError('Invalid verification token type', HttpStatus.UNAUTHORIZED, 'invalidTokenType');
         }
 
-        // Get user from session
-        const user = await this.userRepository.findById(session.userId);
+        // Get user from verification request
+        const user = verificationRequest.User;
         if (!user) {
             throwError('User not found', HttpStatus.UNAUTHORIZED, 'userNotFound');
         }
 
-        // Check if user is active
-        if (user.status !== 'ACTIVE') {
-            throwError('User account is not active', HttpStatus.UNAUTHORIZED, 'accountInactive');
-        }
-
         // Check if email is already verified
-        if (user.isEmailVerified) {
+        if (user.emailVerifiedAt) {
             throwError('Email is already verified', HttpStatus.BAD_REQUEST, 'emailAlreadyVerified');
         }
 
-        return { validatedData: data, session, user };
+        // Check if user is inactive (expected for unverified users)
+        if (user.status !== 'INACTIVE') {
+            throwError('User account status is invalid for email verification', HttpStatus.BAD_REQUEST, 'invalidAccountStatus');
+        }
+
+        return { validatedData: data, verificationRequest, user };
     }
 
     async validateResendVerification(data: ResendVerificationDto): Promise<{ validatedData: ResendVerificationDto; user: UserEntity }> {
@@ -386,7 +407,7 @@ export class AuthValidator {
         }
 
         // Check if email is already verified
-        if (user.isEmailVerified) {
+        if (user.emailVerifiedAt) {
             throwError('Email is already verified', HttpStatus.BAD_REQUEST, 'emailAlreadyVerified');
         }
 

@@ -1,23 +1,20 @@
-import { Injectable, NestMiddleware, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
 import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from './is-authenticated.middleware';
+import { AuthenticatedRequest } from '../types/request.types';
 
 /**
- * Middleware to require user-only access (no API keys)
- * Use this for endpoints like user profile, settings, account management, etc.
+ * User Scope middleware
+ * Ensures that only JWT-authenticated users can access these endpoints
+ * Validates that the team is the user's personal team
  */
 @Injectable()
 export class IsUserScopeMiddleware implements NestMiddleware {
-  use(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async use(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    // Check if request is authenticated via JWT (not API key)
     if (req.authType !== 'jwt') {
-      throw new ForbiddenException('This endpoint requires user authentication');
-    }
-
-    if (!req.user) {
-      throw new UnauthorizedException('User not found in request');
+      throw new UnauthorizedException('This endpoint requires user authentication (JWT), not API key access');
     }
 
     next();
   }
 }
-

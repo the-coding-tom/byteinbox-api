@@ -6,13 +6,13 @@ import { generateSlug } from './string.util';
  */
 export async function generateUniqueTeamSlug(email: string): Promise<{ name: string; slug: string }> {
   const emailPrefix = email.split('@')[0];
-  const teamName = `${emailPrefix}'s Team`;
+  const teamName = emailPrefix; // Just the email prefix, no "'s Team"
   const baseSlug = generateSlug(teamName);
   
   // Generate unique slug
   let slug = baseSlug;
   let counter = 1;
-  while (await prisma.team.findUnique({ where: { slug } })) {
+  while (await prisma.team.findFirst({ where: { slug } })) {
     slug = `${baseSlug}-${counter}`;
     counter++;
   }

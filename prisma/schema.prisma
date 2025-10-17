@@ -46,6 +46,7 @@ model User {
   teamMemberships         TeamMember[]
   backupCodes             MfaBackupCode[]
   mfaVerificationSessions MfaVerificationSession[]
+  verificationRequests    VerificationRequest[]
   blacklistsCreated       Blacklist[]
 
   @@map("users")
@@ -104,11 +105,14 @@ model Session {
 
 model VerificationRequest {
   id        Int                     @id @default(autoincrement())
+  userId    Int                     @map("user_id")
   email     String
   token     String                  @unique
   type      VerificationRequestType
   expiresAt DateTime                @map("expires_at")
   createdAt DateTime                @default(now()) @map("created_at")
+
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([email, token])
   @@map("verification_requests")
@@ -176,8 +180,9 @@ model Blacklist {
 
 model Team {
   id        Int      @id @default(autoincrement())
+  reference String   @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   name      String
-  slug      String   @unique
+  slug      String   // Non-unique slug for display purposes
   image     String? // Team logo/avatar URL
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -418,14 +423,14 @@ model EmailEvent {
   emailId   Int      @map("email_id")
   type      String // delivered, opened, clicked, bounced, complained
   timestamp DateTime @default(now())
-  
+
   // Bounce/Complaint details
-  bounceType String? @map("bounce_type") // transient, permanent, undetermined
-  bounceSubType String? @map("bounce_sub_type") // MailboxFull, NoSuchUser, etc.
+  bounceType            String? @map("bounce_type") // transient, permanent, undetermined
+  bounceSubType         String? @map("bounce_sub_type") // MailboxFull, NoSuchUser, etc.
   complaintFeedbackType String? @map("complaint_feedback_type") // abuse, fraud, etc.
-  
-  userAgent String?  @map("user_agent")
-  ipAddress String?  @map("ip_address")
+
+  userAgent String? @map("user_agent")
+  ipAddress String? @map("ip_address")
   location  String?
   metadata  Json? // Additional event data
 
@@ -509,7 +514,7 @@ model WebhookDelivery {
 
 model ApiKey {
   id         Int          @id @default(autoincrement())
-  createdBy  Int?         @map("created_by") // User who created this API key
+  createdBy  Int          @map("created_by") // User who created this API key
   teamId     Int          @map("team_id") // Team that owns this API key (personal or shared)
   name       String
   key        String       @unique // The actual API key (hashed)
@@ -557,15 +562,15 @@ model Contact {
 }
 
 model Audience {
-  id         Int      @id @default(autoincrement())
-  reference  String   @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
-  createdBy  Int?     @map("created_by") // User who created this audience
-  teamId     Int      @map("team_id") // Team that owns this audience (personal or shared)
-  name       String
-  type       String   @default("custom") // all, premium, custom, etc.
-  filters    Json? // Filter criteria for dynamic audiences
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  reference String   @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
+  createdBy Int?     @map("created_by") // User who created this audience
+  teamId    Int      @map("team_id") // Team that owns this audience (personal or shared)
+  name      String
+  type      String   @default("custom") // all, premium, custom, etc.
+  filters   Json? // Filter criteria for dynamic audiences
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   Creator          User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   Team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -726,34 +731,34 @@ model ApiUsageMetric {
 // EMAIL METRICS - Daily aggregated data
 // ============================================
 model EmailMetrics {
-  id           String   @id @default(cuid())
-  teamId       Int      @map("team_id")
-  
+  id     String @id @default(cuid())
+  teamId Int    @map("team_id")
+
   // Time period (daily)
-  date         DateTime @db.Date
-  
+  date DateTime @db.Date
+
   // Email counts
-  sentCount    Int      @default(0) @map("sent_count")
-  deliveredCount Int    @default(0) @map("delivered_count")
-  bouncedCount Int      @default(0) @map("bounced_count")
-  complainedCount Int   @default(0) @map("complained_count")
-  
+  sentCount       Int @default(0) @map("sent_count")
+  deliveredCount  Int @default(0) @map("delivered_count")
+  bouncedCount    Int @default(0) @map("bounced_count")
+  complainedCount Int @default(0) @map("complained_count")
+
   // Bounce breakdown
-  transientBounces Int  @default(0) @map("transient_bounces")
-  permanentBounces Int  @default(0) @map("permanent_bounces")
+  transientBounces    Int @default(0) @map("transient_bounces")
+  permanentBounces    Int @default(0) @map("permanent_bounces")
   undeterminedBounces Int @default(0) @map("undetermined_bounces")
-  
+
   // Calculated rates (stored as percentages * 100 for precision)
   deliverabilityRate Int @default(0) @map("deliverability_rate") // e.g., 9500 = 95.00%
-  bounceRate Int @default(0) @map("bounce_rate") // e.g., 250 = 2.50%
-  complainRate Int @default(0) @map("complain_rate") // e.g., 8 = 0.08%
-  
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  
+  bounceRate         Int @default(0) @map("bounce_rate") // e.g., 250 = 2.50%
+  complainRate       Int @default(0) @map("complain_rate") // e.g., 8 = 0.08%
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   // Relations
   Team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
+
   // Unique constraint: one record per team per day
   @@unique([teamId, date])
   @@index([teamId, date])

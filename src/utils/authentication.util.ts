@@ -1,15 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
-
-
 import { config } from '../config/config';
-import { UserEntity } from '../repositories/entities/user.entity';
 import { JwtPayload } from '../common/entities/auth.entity';
-import {
-  PASSWORD_RESET_TOKEN_EXPIRY_MINUTES,
-  MILLISECONDS_IN_MINUTE,
-} from '../common/constants/time.constant';
 import {
   validateEmail as validateEmailUtil,
   validatePasswordStrength as validatePasswordStrengthUtil,
@@ -62,19 +54,4 @@ export async function generateTokens(
   });
 
   return { accessToken, refreshToken };
-}
-
-// User update functions
-export async function updateUserLoginTime(user: UserEntity, authRepository: any): Promise<void> {
-  await authRepository.updateUser(user.id, { lastLoginAt: new Date() });
-}
-
-// Password reset token generation
-export function generatePasswordResetToken(): { token: string; expiresAt: Date } {
-  const passwordResetToken = uuidv4();
-  const passwordResetExpiresAt = new Date(
-    Date.now() + PASSWORD_RESET_TOKEN_EXPIRY_MINUTES * MILLISECONDS_IN_MINUTE,
-  );
-
-  return { token: passwordResetToken, expiresAt: passwordResetExpiresAt };
 }

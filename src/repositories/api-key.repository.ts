@@ -20,6 +20,16 @@ export class ApiKeyRepository {
         createdBy: data.createdBy,
         status: ApiKeyStatus.active,
       },
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        permission: true,
+        domain: true,
+        status: true,
+        lastUsed: true,
+        createdAt: true,
+      },
     });
   }
 
@@ -100,8 +110,8 @@ export class ApiKeyRepository {
         AK.name::text ILIKE CONCAT('%', ${filter.keyword}::text, '%') 
         OR COALESCE(${filter.keyword}, NULL) IS NULL
       )
-      AND AK.team_id = ${filter.teamId}::text
-      AND (AK.status = ${filter.status}::text OR COALESCE(${filter.status}, NULL) IS NULL)
+      AND AK.team_id = ${filter.teamId}
+      AND (AK.status = ${filter.status} OR COALESCE(${filter.status}, NULL) IS NULL)
     `;
 
     const retrieveApiKeysQuery = Prisma.sql`

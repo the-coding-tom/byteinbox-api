@@ -4,7 +4,7 @@ export class CreateApiKeyData {
   teamId: number;
   permission: string;
   domain?: string;
-  createdBy?: number;
+  createdBy: number;
 }
 
 import { ApiKeyStatus } from '@prisma/client';
@@ -19,7 +19,7 @@ export class UpdateApiKeyData {
 
 export class FindByTeamIdWithPaginationFilter {
   teamId: number;
-  status?: string;
+  status?: 'active' | 'revoked' | undefined;
   keyword?: string;
   offset: number;
   limit: number;
