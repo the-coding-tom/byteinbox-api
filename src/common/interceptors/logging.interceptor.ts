@@ -1,18 +1,9 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { ApiRequestLogRepository } from '../../repositories/api-request-log.repository';
 import { AuthenticatedRequest } from '../types/request.types';
 
-/**
- * Logging Interceptor - Tracks all API requests and responses
- * Logs to ApiRequestLog table for analytics and debugging
- */
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   constructor(
@@ -26,19 +17,29 @@ export class LoggingInterceptor implements NestInterceptor {
     const startTime = Date.now();
     const { method, url, body, headers, ip } = request;
     
-    // Extract relevant data
+    if (!this.shouldLogEndpoint(url)) {
+      return next.handle();
+    }
+    
     const teamId = request.team?.id;
     const apiKeyId = request.apiKeyId;
     const userAgent = headers['user-agent'];
 
+    // Capture response body by overriding res.json()
+    let capturedBody: any = null;
+    const originalJson = response.json.bind(response);
+    
+    response.json = function(body: any) {
+      capturedBody = body;
+      return originalJson(body);
+    };
+
     return next.handle().pipe(
       tap({
-        next: (responseBody) => {
-          // On successful response
+        next: () => {
           const responseTime = Date.now() - startTime;
           const statusCode = response.statusCode;
 
-          // Log to database (fire and forget - don't block response)
           if (teamId) {
             this.logRequest({
               teamId,
@@ -49,8 +50,8 @@ export class LoggingInterceptor implements NestInterceptor {
               responseTime,
               ipAddress: ip,
               userAgent,
-              requestBody: this.sanitizeBody(body),
-              responseBody: this.sanitizeBody(responseBody?.data || responseBody),
+              requestBody: body,
+              responseBody: capturedBody,
               errorMessage: null,
               errorCode: null,
             }).catch((error) => {
@@ -59,11 +60,9 @@ export class LoggingInterceptor implements NestInterceptor {
           }
         },
         error: (error) => {
-          // On error response
           const responseTime = Date.now() - startTime;
           const statusCode = error.status || 500;
 
-          // Log error to database
           if (teamId) {
             this.logRequest({
               teamId,
@@ -74,7 +73,7 @@ export class LoggingInterceptor implements NestInterceptor {
               responseTime,
               ipAddress: ip,
               userAgent,
-              requestBody: this.sanitizeBody(body),
+              requestBody: body,
               responseBody: null,
               errorMessage: error.message || 'Unknown error',
               errorCode: error.code || error.name || 'INTERNAL_ERROR',
@@ -87,36 +86,29 @@ export class LoggingInterceptor implements NestInterceptor {
     );
   }
 
-  /**
-   * Log request to database
-   */
   private async logRequest(data: any): Promise<void> {
     await this.apiRequestLogRepository.create(data);
   }
 
-  /**
-   * Sanitize request/response body to avoid logging sensitive data
-   */
-  private sanitizeBody(body: any): any {
-    if (!body) return null;
+  private shouldLogEndpoint(url: string): boolean {
+    const excludedEndpoints = [
+      '/api/v1/auth/login',
+      '/api/v1/auth/signup',
+      '/api/v1/auth/refresh',
+      '/api/v1/auth/reset-password',
+      '/api/v1/auth/confirm-password-reset',
+      '/api/v1/auth/verify-email',
+      '/api/v1/auth/resend-verification',
+      '/api/v1/auth/mfa/challenge',
+      '/api/v1/auth/mfa/backup-codes/consume',
+      '/api/v1/auth/google',
+      '/api/v1/auth/google/callback',
+      '/api/v1/auth/github',
+      '/api/v1/auth/github/callback',
+      '/api/v1/account/change-password',
+      '/api/v1/account/delete-account',
+    ];
 
-    // Don't log if body is too large (> 100KB)
-    const bodyString = JSON.stringify(body);
-    if (bodyString.length > 100000) {
-      return { _truncated: true, size: bodyString.length };
-    }
-
-    // Remove sensitive fields
-    const sanitized = { ...body };
-    const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'authorization'];
-    
-    for (const field of sensitiveFields) {
-      if (sanitized[field]) {
-        sanitized[field] = '[REDACTED]';
-      }
-    }
-
-    return sanitized;
+    return !excludedEndpoints.some(endpoint => url.startsWith(endpoint));
   }
 }
-
