@@ -1,122 +1,71 @@
-import { Injectable } from '@nestjs/common';
-import { generateSuccessResponse } from '../../utils/util';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { generateSuccessResponse, transformToPaginationMeta } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { Constants } from '../../common/enums/generic.enum';
 import { config } from '../../config/config';
-import { GetLogsResponseDto, GetLogDetailsResponseDto, LogFilterDto } from './dto/logs.dto';
+import { GetLogsDto } from './dto/logs.dto';
+import { LogsValidator } from './logs.validator';
+import { ApiRequestLogRepository } from '../../repositories/api-request-log.repository';
 
 @Injectable()
 export class LogsService {
-  constructor() {}
+  constructor(
+    private readonly apiRequestLogRepository: ApiRequestLogRepository,
+    private readonly logsValidator: LogsValidator,
+  ) { }
 
-  async getLogs(userId: number, filter: LogFilterDto): Promise<any> {
+  async getLogs(query: GetLogsDto, teamId: number) {
     try {
-      // Set defaults from config
-      const page = filter.page || config.validation.pagination.defaultPage;
-      const limit = filter.limit || config.validation.pagination.defaultLimit;
-      
-      // Dummy response - in real implementation, this would fetch API logs with pagination
-      const response: GetLogsResponseDto = {
-        logs: [
-          {
-            id: 'log_123',
-            apiKeyId: 'api_key_123',
-            endpoint: '/api/v1/emails',
-            method: 'POST',
-            status: '200',
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            requestBody: {
-              to: ['user@example.com'],
-              subject: 'Test Email',
-              html: '<p>Test content</p>',
-            },
-            responseBody: {
-              success: true,
-              messageId: 'msg_123',
-            },
-            timestamp: '2024-01-15T10:00:00Z',
-          },
-          {
-            id: 'log_456',
-            apiKeyId: 'api_key_123',
-            endpoint: '/api/v1/contacts',
-            method: 'GET',
-            status: '200',
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            timestamp: '2024-01-15T09:30:00Z',
-          },
-          {
-            id: 'log_789',
-            apiKeyId: 'api_key_456',
-            endpoint: '/api/v1/templates',
-            method: 'POST',
-            status: '400',
-            userAgent: 'curl/7.68.0',
-            requestBody: {
-              name: '',
-              html: '<p>Invalid template</p>',
-            },
-            responseBody: {
-              error: 'Template name is required',
-            },
-            timestamp: '2024-01-15T09:00:00Z',
-          },
-        ],
-        meta: {
-          page,
-          limit,
-          total: 3,
-          totalPages: 1,
-        },
-      };
+      // Validate request
+      const validatedData = await this.logsValidator.validateGetLogsRequest(query);
+
+      // Set pagination parameters
+      const page = validatedData.page || config.validation.pagination.defaultPage;
+      const limit = validatedData.limit || config.validation.pagination.defaultLimit;
+
+      // Get logs with pagination
+      const result = await this.apiRequestLogRepository.findByTeamIdWithPagination({
+        teamId,
+        statusCode: validatedData.statusCode,
+        httpMethod: validatedData.httpMethod,
+        endpoint: validatedData.endpoint,
+        startDate: validatedData.startDate,
+        endDate: validatedData.endDate,
+        apiKeyId: validatedData.apiKeyId,
+        offset: (page - 1) * limit,
+        limit: limit
+      });
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: Constants.retrievedSuccessfully,
-        data: response,
+        statusCode: HttpStatus.OK,
+        message: Constants.successMessage,
+        data: result.data,
+        meta: transformToPaginationMeta({
+          total: result.total,
+          offset: result.offset,
+          limit: result.limit
+        })
       });
     } catch (error) {
-      return handleServiceError(error, 'Error retrieving logs');
+      return handleServiceError('Error retrieving logs', error);
     }
   }
 
-  async getLogDetails(logId: string, userId: number): Promise<any> {
+  async getLogDetails(id: string, teamId: number) {
     try {
-      // Dummy response - in real implementation, this would fetch detailed log information
-      const response: GetLogDetailsResponseDto = {
-        log: {
-          id: logId,
-          apiKeyId: 'api_key_123',
-          endpoint: '/api/v1/emails',
-          method: 'POST',
-          status: '200',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          requestBody: {
-            to: ['user@example.com'],
-            subject: 'Test Email',
-            html: '<p>Test content</p>',
-          },
-          responseBody: {
-            success: true,
-            messageId: 'msg_123',
-          },
-          timestamp: '2024-01-15T10:00:00Z',
-          apiKey: {
-            id: 'api_key_123',
-            name: 'Production Key',
-            permission: 'Full access',
-            domain: 'example.com',
-          },
-        },
-      };
+      // Validate request
+      const { logId } = await this.logsValidator.validateGetLogDetailsRequest(id, teamId);
+
+      // Get detailed log information
+      const detailedLog = await this.apiRequestLogRepository.findByIdWithRelations(logId);
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: Constants.retrievedSuccessfully,
-        data: response,
+        statusCode: HttpStatus.OK,
+        message: Constants.successMessage,
+        data: detailedLog
       });
     } catch (error) {
-      return handleServiceError(error, 'Error retrieving log details');
+      return handleServiceError('Error retrieving log details', error);
     }
   }
 }

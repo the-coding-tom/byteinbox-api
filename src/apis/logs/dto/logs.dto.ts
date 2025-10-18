@@ -1,24 +1,36 @@
-export class LogFilterDto {
+export class GetLogsDto {
   page?: number;
   limit?: number;
-  status?: string;
-  method?: string;
+  statusCode?: number;
+  httpMethod?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   endpoint?: string;
   startDate?: string;
   endDate?: string;
+  apiKeyId?: number;
 }
 
 export class GetLogsResponseDto {
   logs: Array<{
     id: string;
-    apiKeyId?: string;
+    teamId: number;
+    apiKeyId?: number;
     endpoint: string;
-    method: string;
-    status: string;
+    httpMethod: string;
+    statusCode: number;
+    responseTime: number;
+    ipAddress?: string;
     userAgent?: string;
     requestBody?: any;
     responseBody?: any;
-    timestamp: string;
+    errorMessage?: string;
+    errorCode?: string;
+    createdAt: string;
+    apiKey?: {
+      id: number;
+      name: string;
+      permission: string;
+      domain?: string;
+    };
   }>;
   meta: {
     page: number;
@@ -31,16 +43,21 @@ export class GetLogsResponseDto {
 export class GetLogDetailsResponseDto {
   log: {
     id: string;
-    apiKeyId?: string;
+    teamId: number;
+    apiKeyId?: number;
     endpoint: string;
-    method: string;
-    status: string;
+    httpMethod: string;
+    statusCode: number;
+    responseTime: number;
+    ipAddress?: string;
     userAgent?: string;
     requestBody?: any;
     responseBody?: any;
-    timestamp: string;
+    errorMessage?: string;
+    errorCode?: string;
+    createdAt: string;
     apiKey?: {
-      id: string;
+      id: number;
       name: string;
       permission: string;
       domain?: string;

@@ -2,7 +2,6 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { validateJoiSchema } from '../../utils/joi.validator';
 import { throwError } from '../../utils/util';
 import { AddDomainDto, UpdateDomainDto, UpdateDomainConfigurationDto, GetDomainsFilterDto } from './dto/domains.dto';
-import { isValidDomainName } from '../../helpers/aws-ses.helper';
 import { DomainRepository } from '../../repositories/domain.repository';
 import * as Joi from 'joi';
 
@@ -11,10 +10,11 @@ export class DomainsValidator {
   constructor(private readonly domainRepository: DomainRepository) {}
   async validateAddDomain(data: AddDomainDto): Promise<{ validatedData: AddDomainDto }> {
     const schema = Joi.object({
-      domainName: Joi.string().min(3).max(253).required().messages({
+      domainName: Joi.string().min(3).max(253).required().pattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i).messages({
         'string.min': 'Domain name must be at least 3 characters',
         'string.max': 'Domain name must not exceed 253 characters',
         'any.required': 'Domain name is required',
+        'string.pattern.base': 'Invalid domain name format',
       }),
       region: Joi.string().required().messages({
         'any.required': 'Region is required',
@@ -24,11 +24,6 @@ export class DomainsValidator {
     const validationError = validateJoiSchema(schema, data);
     if (validationError) {
       throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
-    }
-
-    // Validate domain name format
-    if (!isValidDomainName(data.domainName)) {
-      throwError('Invalid domain name format', HttpStatus.BAD_REQUEST, 'validationError');
     }
 
     // Check if domain already exists
@@ -42,9 +37,10 @@ export class DomainsValidator {
 
   async validateUpdateDomain(data: UpdateDomainDto): Promise<{ validatedData: UpdateDomainDto }> {
     const schema = Joi.object({
-      name: Joi.string().min(3).max(253).optional().messages({
+      name: Joi.string().min(3).max(253).optional().pattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i).messages({
         'string.min': 'Domain name must be at least 3 characters',
         'string.max': 'Domain name must not exceed 253 characters',
+        'string.pattern.base': 'Invalid domain name format',
       }),
       region: Joi.string().optional(),
       clickTracking: Joi.boolean().optional(),

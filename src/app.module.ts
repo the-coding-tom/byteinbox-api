@@ -105,6 +105,8 @@ export class AppModule implements NestModule {
         { path: 'api/v1/api-keys/*path', method: RequestMethod.ALL },
         { path: 'api/v1/teams', method: RequestMethod.ALL },
         { path: 'api/v1/teams/*path', method: RequestMethod.ALL },
+        { path: 'api/v1/logs', method: RequestMethod.ALL },
+        { path: 'api/v1/logs/*path', method: RequestMethod.ALL },
         { path: 'api/v1/auth/logout', method: RequestMethod.POST },
         { path: 'api/v1/auth/logout-all-devices', method: RequestMethod.POST },
         { path: 'api/v1/auth/change-password', method: RequestMethod.POST },
@@ -113,28 +115,6 @@ export class AppModule implements NestModule {
         { path: 'api/v1/auth/mfa/disable', method: RequestMethod.POST },
         { path: 'api/v1/auth/mfa/backup-codes', method: RequestMethod.GET },
         { path: 'api/v1/auth/mfa/backup-codes/regenerate', method: RequestMethod.POST },
-      );
-
-    // Team Scope routes (handled by IsAuthenticatedMiddleware)
-    consumer
-      .apply(IsAuthenticatedMiddleware)
-      .forRoutes(
-        { path: 'api/v1/domains', method: RequestMethod.ALL },
-        { path: 'api/v1/domains/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/emails', method: RequestMethod.ALL },
-        { path: 'api/v1/emails/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/templates', method: RequestMethod.ALL },
-        { path: 'api/v1/templates/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/webhooks', method: RequestMethod.ALL },
-        { path: 'api/v1/webhooks/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/broadcasts', method: RequestMethod.ALL },
-        { path: 'api/v1/broadcasts/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/audiences', method: RequestMethod.ALL },
-        { path: 'api/v1/audiences/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/metrics', method: RequestMethod.ALL },
-        { path: 'api/v1/metrics/*path', method: RequestMethod.ALL },
-        { path: 'api/v1/logs', method: RequestMethod.ALL },
-        { path: 'api/v1/logs/*path', method: RequestMethod.ALL },
       );
 
     // Admin middleware for admin routes
