@@ -28,6 +28,9 @@ export class EmailsController {
   @Post('aws-sns-callback')
   async handleAwsSnsCallback(@Body() body: any, @Req() request: any, @Res() response: Response) {
     const messageType = request.headers['x-amz-sns-message-type'];
+    console.log('SNS Callback - Message Type:', messageType);
+    console.log('SNS Callback - Body:', JSON.stringify(body, null, 2));
+    console.log('SNS Callback - Body type:', typeof body);
     const { status, ...restOfResponse } = await this.emailsService.handleAwsSnsEvent(messageType, body);
     response.status(status).json(restOfResponse);
   }
