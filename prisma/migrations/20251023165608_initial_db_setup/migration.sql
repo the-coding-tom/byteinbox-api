@@ -368,6 +368,7 @@ CREATE TABLE "notifications" (
 -- CreateTable
 CREATE TABLE "emails" (
     "id" SERIAL NOT NULL,
+    "reference" TEXT,
     "created_by" INTEGER,
     "team_id" INTEGER NOT NULL,
     "domain_id" INTEGER,
@@ -400,9 +401,9 @@ CREATE TABLE "attachments" (
     "id" SERIAL NOT NULL,
     "email_id" INTEGER NOT NULL,
     "filename" TEXT NOT NULL,
-    "content" TEXT NOT NULL,
+    "content" TEXT,
+    "path" TEXT,
     "type" TEXT,
-    "size" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "attachments_pkey" PRIMARY KEY ("id")
@@ -717,9 +718,6 @@ CREATE UNIQUE INDEX "plans_slug_key" ON "plans"("slug");
 CREATE UNIQUE INDEX "subscriptions_stripe_subscription_id_key" ON "subscriptions"("stripe_subscription_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "domains_name_key" ON "domains"("name");
-
--- CreateIndex
 CREATE INDEX "domain_ownership_history_domain_id_idx" ON "domain_ownership_history"("domain_id");
 
 -- CreateIndex
@@ -736,6 +734,9 @@ CREATE INDEX "notifications_team_id_read_idx" ON "notifications"("team_id", "rea
 
 -- CreateIndex
 CREATE INDEX "notifications_created_at_idx" ON "notifications"("created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "emails_reference_key" ON "emails"("reference");
 
 -- CreateIndex
 CREATE INDEX "emails_message_id_idx" ON "emails"("message_id");
