@@ -1,14 +1,14 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { validateJoiSchema } from '../../utils/joi.validator';
 import { throwError } from '../../utils/util';
-import { AddDomainDto, UpdateDomainDto, UpdateDomainConfigurationDto, GetDomainsFilterDto } from './dto/domains.dto';
+import { AddDomainDto, UpdateDomainDto, UpdateDomainSettingsDto, GetDomainsFilterDto } from './dto/domains.dto';
 import { DomainRepository } from '../../repositories/domain.repository';
 import * as Joi from 'joi';
 
 @Injectable()
 export class DomainsValidator {
   constructor(private readonly domainRepository: DomainRepository) {}
-  async validateAddDomain(data: AddDomainDto): Promise<{ validatedData: AddDomainDto }> {
+  async validateAddDomain(data: AddDomainDto, teamId: number): Promise<{ validatedData: AddDomainDto }> {
     const schema = Joi.object({
       domainName: Joi.string().min(3).max(253).required().pattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i).messages({
         'string.min': 'Domain name must be at least 3 characters',
@@ -26,10 +26,10 @@ export class DomainsValidator {
       throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
     }
 
-    // Check if domain already exists
-    const existingDomain = await this.domainRepository.findByName(data.domainName);
+    // Check if domain already exists for this team
+    const existingDomain = await this.domainRepository.findByTeamIdAndName(teamId, data.domainName);
     if (existingDomain) {
-      throwError('Domain already exists', HttpStatus.BAD_REQUEST, 'validationError');
+      throwError('Domain already exists in this team', HttpStatus.BAD_REQUEST, 'domainExists');
     }
 
     return { validatedData: data };
@@ -58,7 +58,7 @@ export class DomainsValidator {
     return { validatedData: data };
   }
 
-  async validateUpdateDomainConfiguration(domainId: string, teamId: number, data: UpdateDomainConfigurationDto): Promise<{ validatedData: { domainId: number; teamId: number; validatedData: UpdateDomainConfigurationDto } }> {
+  async validateUpdateDomainSettings(domainId: string, teamId: number, data: UpdateDomainSettingsDto): Promise<{ validatedData: { domainId: number; teamId: number; validatedData: UpdateDomainSettingsDto } }> {
     const schema = Joi.object({
       domainId: Joi.string().required().messages({
         'any.required': 'Domain ID is required',
@@ -155,7 +155,7 @@ export class DomainsValidator {
     return { validatedData: { domainId: parsedDomainId, teamId } };
   }
 
-  async validateVerifyDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number } }> {
+  async validateDeleteDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number; domain: any } }> {
     const schema = Joi.object({
       domainId: Joi.string().required().messages({
         'any.required': 'Domain ID is required',
@@ -180,17 +180,17 @@ export class DomainsValidator {
     // Check if domain exists and belongs to team
     const domain = await this.domainRepository.findById(parsedDomainId);
     if (!domain) {
-      throwError('Domain not found', HttpStatus.NOT_FOUND, 'validationError');
+      throwError('Domain not found', HttpStatus.NOT_FOUND, 'domainNotFound');
     }
 
     if (domain.teamId !== teamId) {
-      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'validationError');
+      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'accessDenied');
     }
 
-    return { validatedData: { domainId: parsedDomainId, teamId } };
+    return { validatedData: { domainId: parsedDomainId, teamId, domain } };
   }
 
-  async validateDeleteDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number } }> {
+  async validateRestartDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number; domain: any } }> {
     const schema = Joi.object({
       domainId: Joi.string().required().messages({
         'any.required': 'Domain ID is required',
@@ -215,48 +215,13 @@ export class DomainsValidator {
     // Check if domain exists and belongs to team
     const domain = await this.domainRepository.findById(parsedDomainId);
     if (!domain) {
-      throwError('Domain not found', HttpStatus.NOT_FOUND, 'validationError');
+      throwError('Domain not found', HttpStatus.NOT_FOUND, 'domainNotFound');
     }
 
     if (domain.teamId !== teamId) {
-      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'validationError');
+      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'accessDenied');
     }
 
-    return { validatedData: { domainId: parsedDomainId, teamId } };
-  }
-
-  async validateRestartDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number } }> {
-    const schema = Joi.object({
-      domainId: Joi.string().required().messages({
-        'any.required': 'Domain ID is required',
-      }),
-      teamId: Joi.number().integer().min(1).required().messages({
-        'number.base': 'Team ID must be a number',
-        'number.integer': 'Team ID must be an integer',
-        'number.min': 'Team ID must be greater than 0',
-        'any.required': 'Team ID is required',
-      }),
-    });
-
-    const data = { domainId, teamId };
-    const validationError = validateJoiSchema(schema, data);
-    if (validationError) {
-      throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
-    }
-
-    // Parse domainId to number
-    const parsedDomainId = parseInt(domainId);
-
-    // Check if domain exists and belongs to team
-    const domain = await this.domainRepository.findById(parsedDomainId);
-    if (!domain) {
-      throwError('Domain not found', HttpStatus.NOT_FOUND, 'validationError');
-    }
-
-    if (domain.teamId !== teamId) {
-      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'validationError');
-    }
-
-    return { validatedData: { domainId: parsedDomainId, teamId } };
+    return { validatedData: { domainId: parsedDomainId, teamId, domain } };
   }
 }

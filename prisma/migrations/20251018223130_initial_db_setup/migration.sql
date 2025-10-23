@@ -1,4 +1,10 @@
 -- CreateEnum
+CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED');
+
+-- CreateEnum
+CREATE TYPE "UserType" AS ENUM ('CUSTOMER', 'ADMIN', 'SUPER_ADMIN');
+
+-- CreateEnum
 CREATE TYPE "VerificationRequestType" AS ENUM ('EMAIL_VERIFICATION', 'PASSWORD_RESET');
 
 -- CreateEnum
@@ -11,22 +17,58 @@ CREATE TYPE "BlacklistType" AS ENUM ('EMAIL', 'IP_ADDRESS', 'DOMAIN', 'USER_ID')
 CREATE TYPE "OAuthProvider" AS ENUM ('GOOGLE', 'GITHUB');
 
 -- CreateEnum
+CREATE TYPE "BillingInterval" AS ENUM ('MONTHLY', 'YEARLY', 'LIFETIME');
+
+-- CreateEnum
+CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELED', 'UNPAID', 'INCOMPLETE', 'INCOMPLETE_EXPIRED', 'PAUSED');
+
+-- CreateEnum
 CREATE TYPE "RoleName" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'USER', 'GUEST');
 
 -- CreateEnum
 CREATE TYPE "PermissionName" AS ENUM ('USER_CREATE', 'USER_READ', 'USER_UPDATE', 'USER_DELETE', 'USER_LIST', 'ROLE_CREATE', 'ROLE_READ', 'ROLE_UPDATE', 'ROLE_DELETE', 'ROLE_LIST', 'PERMISSION_CREATE', 'PERMISSION_READ', 'PERMISSION_UPDATE', 'PERMISSION_DELETE', 'PERMISSION_LIST', 'DOMAIN_CREATE', 'DOMAIN_READ', 'DOMAIN_UPDATE', 'DOMAIN_DELETE', 'DOMAIN_LIST', 'EMAIL_CREATE', 'EMAIL_READ', 'EMAIL_UPDATE', 'EMAIL_DELETE', 'EMAIL_LIST', 'EMAIL_SEND', 'TEMPLATE_CREATE', 'TEMPLATE_READ', 'TEMPLATE_UPDATE', 'TEMPLATE_DELETE', 'TEMPLATE_LIST', 'WEBHOOK_CREATE', 'WEBHOOK_READ', 'WEBHOOK_UPDATE', 'WEBHOOK_DELETE', 'WEBHOOK_LIST', 'CONTACT_CREATE', 'CONTACT_READ', 'CONTACT_UPDATE', 'CONTACT_DELETE', 'CONTACT_LIST', 'AUDIENCE_CREATE', 'AUDIENCE_READ', 'AUDIENCE_UPDATE', 'AUDIENCE_DELETE', 'AUDIENCE_LIST', 'BROADCAST_CREATE', 'BROADCAST_READ', 'BROADCAST_UPDATE', 'BROADCAST_DELETE', 'BROADCAST_LIST', 'BROADCAST_SEND', 'METRICS_READ', 'ANALYTICS_READ', 'SYSTEM_ADMIN', 'SYSTEM_SETTINGS', 'TEAM_CREATE', 'TEAM_READ', 'TEAM_UPDATE', 'TEAM_DELETE', 'TEAM_LIST', 'TEAM_MEMBER_INVITE', 'TEAM_MEMBER_REMOVE');
 
 -- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED');
+CREATE TYPE "TeamInvitationStatus" AS ENUM ('pending', 'accepted', 'expired', 'cancelled');
 
 -- CreateEnum
-CREATE TYPE "UserType" AS ENUM ('CUSTOMER', 'ADMIN', 'SUPER_ADMIN');
+CREATE TYPE "DomainStatus" AS ENUM ('pending_dns', 'dns_verified', 'pending_aws', 'verified', 'failed', 'revoked');
 
 -- CreateEnum
-CREATE TYPE "BillingInterval" AS ENUM ('MONTHLY', 'YEARLY', 'LIFETIME');
+CREATE TYPE "EmailStatus" AS ENUM ('queued', 'sent', 'delivered', 'failed', 'bounced');
 
 -- CreateEnum
-CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELED', 'UNPAID', 'INCOMPLETE', 'INCOMPLETE_EXPIRED', 'PAUSED');
+CREATE TYPE "TemplateStatus" AS ENUM ('active', 'archived');
+
+-- CreateEnum
+CREATE TYPE "WebhookStatus" AS ENUM ('enabled', 'disabled');
+
+-- CreateEnum
+CREATE TYPE "WebhookDeliveryStatus" AS ENUM ('attempting', 'success', 'fail');
+
+-- CreateEnum
+CREATE TYPE "ApiKeyStatus" AS ENUM ('active', 'revoked');
+
+-- CreateEnum
+CREATE TYPE "ContactStatus" AS ENUM ('subscribed', 'unsubscribed', 'bounced');
+
+-- CreateEnum
+CREATE TYPE "BroadcastStatus" AS ENUM ('draft', 'scheduled', 'sending', 'sent', 'cancelled');
+
+-- CreateEnum
+CREATE TYPE "BroadcastRecipientStatus" AS ENUM ('pending', 'sent', 'failed', 'opened', 'clicked');
+
+-- CreateEnum
+CREATE TYPE "MfaVerificationSessionStatus" AS ENUM ('pending', 'verified', 'expired', 'failed');
+
+-- CreateEnum
+CREATE TYPE "TeamMemberRole" AS ENUM ('owner', 'admin', 'member', 'viewer');
+
+-- CreateEnum
+CREATE TYPE "NotificationType" AS ENUM ('domain_transfer', 'domain_verified', 'domain_failed', 'domain_dns_verified', 'domain_aws_pending', 'domain_deleted', 'api_key_created', 'api_key_revoked', 'team_member_added', 'team_member_removed', 'subscription_updated', 'subscription_expired', 'limit_reached', 'system_maintenance');
+
+-- CreateEnum
+CREATE TYPE "NotificationSeverity" AS ENUM ('info', 'success', 'warning', 'error');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -35,7 +77,7 @@ CREATE TABLE "users" (
     "name" TEXT,
     "first_name" TEXT,
     "last_name" TEXT,
-    "image" TEXT,
+    "photo_url" TEXT,
     "timezone" TEXT NOT NULL DEFAULT 'UTC',
     "language" TEXT NOT NULL DEFAULT 'en',
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
@@ -99,6 +141,7 @@ CREATE TABLE "sessions" (
 -- CreateTable
 CREATE TABLE "verification_requests" (
     "id" SERIAL NOT NULL,
+    "user_id" INTEGER NOT NULL,
     "email" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "type" "VerificationRequestType" NOT NULL,
@@ -127,7 +170,7 @@ CREATE TABLE "mfa_verification_sessions" (
     "user_id" INTEGER NOT NULL,
     "email" TEXT NOT NULL,
     "mfa_method" "MfaMethod" NOT NULL,
-    "is_verified" BOOLEAN NOT NULL DEFAULT false,
+    "status" "MfaVerificationSessionStatus" NOT NULL DEFAULT 'pending',
     "expires_at" TIMESTAMP(3) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -161,6 +204,7 @@ CREATE TABLE "blacklists" (
 -- CreateTable
 CREATE TABLE "teams" (
     "id" SERIAL NOT NULL,
+    "reference" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "image" TEXT,
@@ -175,7 +219,7 @@ CREATE TABLE "team_members" (
     "id" SERIAL NOT NULL,
     "team_id" INTEGER NOT NULL,
     "user_id" INTEGER NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'member',
+    "role" "TeamMemberRole" NOT NULL DEFAULT 'member',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -190,7 +234,7 @@ CREATE TABLE "team_invitations" (
     "role" TEXT NOT NULL DEFAULT 'member',
     "token" TEXT NOT NULL,
     "invited_by" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'pending',
+    "status" "TeamInvitationStatus" NOT NULL DEFAULT 'pending',
     "expires_at" TIMESTAMP(3) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -260,11 +304,15 @@ CREATE TABLE "domains" (
     "name" TEXT NOT NULL,
     "created_by" INTEGER,
     "team_id" INTEGER NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'pending',
+    "status" "DomainStatus" NOT NULL DEFAULT 'pending_dns',
     "region" TEXT,
     "click_tracking" BOOLEAN NOT NULL DEFAULT true,
     "open_tracking" BOOLEAN NOT NULL DEFAULT true,
     "tls_mode" TEXT NOT NULL DEFAULT 'enforced',
+    "dkim_selector" TEXT,
+    "dkim_public_key" TEXT,
+    "dkim_private_key" TEXT,
+    "aws_registered_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -279,11 +327,42 @@ CREATE TABLE "dns_records" (
     "name" TEXT NOT NULL,
     "record_type" TEXT NOT NULL,
     "value" TEXT NOT NULL,
-    "verified" BOOLEAN NOT NULL DEFAULT false,
-    "status" TEXT NOT NULL DEFAULT 'pending',
+    "status" "DomainStatus" NOT NULL DEFAULT 'pending_dns',
     "priority" INTEGER,
+    "last_checked_at" TIMESTAMP(3),
 
     CONSTRAINT "dns_records_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "domain_ownership_history" (
+    "id" SERIAL NOT NULL,
+    "domain_id" INTEGER NOT NULL,
+    "domain_name" TEXT NOT NULL,
+    "previous_team_id" INTEGER,
+    "new_team_id" INTEGER NOT NULL,
+    "transfer_reason" TEXT,
+    "metadata" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "domain_ownership_history_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "notifications" (
+    "id" SERIAL NOT NULL,
+    "user_id" INTEGER,
+    "team_id" INTEGER,
+    "type" "NotificationType" NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "severity" "NotificationSeverity" NOT NULL DEFAULT 'info',
+    "read" BOOLEAN NOT NULL DEFAULT false,
+    "read_at" TIMESTAMP(3),
+    "metadata" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -301,7 +380,8 @@ CREATE TABLE "emails" (
     "subject" TEXT NOT NULL,
     "text" TEXT,
     "html" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'queued',
+    "status" "EmailStatus" NOT NULL DEFAULT 'queued',
+    "message_id" TEXT,
     "opens" INTEGER NOT NULL DEFAULT 0,
     "clicks" INTEGER NOT NULL DEFAULT 0,
     "last_opened" TIMESTAMP(3),
@@ -334,6 +414,9 @@ CREATE TABLE "email_events" (
     "email_id" INTEGER NOT NULL,
     "type" TEXT NOT NULL,
     "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "bounce_type" TEXT,
+    "bounce_sub_type" TEXT,
+    "complaint_feedback_type" TEXT,
     "user_agent" TEXT,
     "ip_address" TEXT,
     "location" TEXT,
@@ -353,7 +436,7 @@ CREATE TABLE "templates" (
     "subject" TEXT,
     "category" TEXT,
     "variables" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "status" TEXT NOT NULL DEFAULT 'active',
+    "status" "TemplateStatus" NOT NULL DEFAULT 'active',
     "opens" INTEGER NOT NULL DEFAULT 0,
     "clicks" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -369,7 +452,7 @@ CREATE TABLE "webhooks" (
     "team_id" INTEGER NOT NULL,
     "url" TEXT NOT NULL,
     "events" TEXT[],
-    "status" TEXT NOT NULL DEFAULT 'enabled',
+    "status" "WebhookStatus" NOT NULL DEFAULT 'enabled',
     "secret" TEXT NOT NULL,
     "last_triggered" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -384,7 +467,7 @@ CREATE TABLE "webhook_deliveries" (
     "webhook_id" INTEGER NOT NULL,
     "event_type" TEXT NOT NULL,
     "message_id" TEXT,
-    "status" TEXT NOT NULL,
+    "status" "WebhookDeliveryStatus" NOT NULL,
     "request" JSONB NOT NULL,
     "response" JSONB,
     "attempts" INTEGER NOT NULL DEFAULT 1,
@@ -397,13 +480,13 @@ CREATE TABLE "webhook_deliveries" (
 -- CreateTable
 CREATE TABLE "api_keys" (
     "id" SERIAL NOT NULL,
-    "created_by" INTEGER,
+    "created_by" INTEGER NOT NULL,
     "team_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "key" TEXT NOT NULL,
     "permission" TEXT NOT NULL,
     "domain" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'active',
+    "status" "ApiKeyStatus" NOT NULL DEFAULT 'active',
     "last_used" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -418,7 +501,7 @@ CREATE TABLE "contacts" (
     "email" TEXT NOT NULL,
     "first_name" TEXT,
     "last_name" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'subscribed',
+    "status" "ContactStatus" NOT NULL DEFAULT 'subscribed',
     "subscribed_at" TIMESTAMP(3),
     "last_activity" TIMESTAMP(3),
     "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
@@ -432,6 +515,7 @@ CREATE TABLE "contacts" (
 -- CreateTable
 CREATE TABLE "audiences" (
     "id" SERIAL NOT NULL,
+    "reference" TEXT NOT NULL,
     "created_by" INTEGER,
     "team_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
@@ -463,7 +547,7 @@ CREATE TABLE "broadcasts" (
     "name" TEXT NOT NULL,
     "subject" TEXT NOT NULL,
     "content" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'draft',
+    "status" "BroadcastStatus" NOT NULL DEFAULT 'draft',
     "total_sent" INTEGER NOT NULL DEFAULT 0,
     "opens" INTEGER NOT NULL DEFAULT 0,
     "clicks" INTEGER NOT NULL DEFAULT 0,
@@ -480,7 +564,7 @@ CREATE TABLE "broadcast_recipients" (
     "id" SERIAL NOT NULL,
     "broadcast_id" INTEGER NOT NULL,
     "contact_id" INTEGER NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'pending',
+    "status" "BroadcastRecipientStatus" NOT NULL DEFAULT 'pending',
     "sent_at" TIMESTAMP(3),
     "opened_at" TIMESTAMP(3),
     "clicked_at" TIMESTAMP(3),
@@ -489,18 +573,64 @@ CREATE TABLE "broadcast_recipients" (
 );
 
 -- CreateTable
-CREATE TABLE "logs" (
-    "id" SERIAL NOT NULL,
+CREATE TABLE "api_request_logs" (
+    "id" TEXT NOT NULL,
+    "team_id" INTEGER NOT NULL,
     "api_key_id" INTEGER,
     "endpoint" TEXT NOT NULL,
-    "method" TEXT NOT NULL,
-    "status" TEXT NOT NULL,
+    "http_method" TEXT NOT NULL,
+    "status_code" INTEGER NOT NULL,
+    "response_time" INTEGER NOT NULL,
+    "ip_address" TEXT,
     "user_agent" TEXT,
     "request_body" JSONB,
     "response_body" JSONB,
-    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "error_message" TEXT,
+    "error_code" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "logs_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "api_request_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "api_usage_metrics" (
+    "id" TEXT NOT NULL,
+    "team_id" INTEGER NOT NULL,
+    "api_key_id" INTEGER,
+    "date" DATE NOT NULL,
+    "hour" INTEGER,
+    "total_requests" INTEGER NOT NULL DEFAULT 0,
+    "successful_requests" INTEGER NOT NULL DEFAULT 0,
+    "failed_requests" INTEGER NOT NULL DEFAULT 0,
+    "status2xx" INTEGER NOT NULL DEFAULT 0,
+    "status4xx" INTEGER NOT NULL DEFAULT 0,
+    "status5xx" INTEGER NOT NULL DEFAULT 0,
+    "avg_response_time" INTEGER NOT NULL DEFAULT 0,
+    "endpoint_stats" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "api_usage_metrics_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "email_metrics" (
+    "id" TEXT NOT NULL,
+    "team_id" INTEGER NOT NULL,
+    "date" DATE NOT NULL,
+    "sent_count" INTEGER NOT NULL DEFAULT 0,
+    "delivered_count" INTEGER NOT NULL DEFAULT 0,
+    "bounced_count" INTEGER NOT NULL DEFAULT 0,
+    "complained_count" INTEGER NOT NULL DEFAULT 0,
+    "transient_bounces" INTEGER NOT NULL DEFAULT 0,
+    "permanent_bounces" INTEGER NOT NULL DEFAULT 0,
+    "undetermined_bounces" INTEGER NOT NULL DEFAULT 0,
+    "deliverability_rate" INTEGER NOT NULL DEFAULT 0,
+    "bounce_rate" INTEGER NOT NULL DEFAULT 0,
+    "complain_rate" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "email_metrics_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -566,7 +696,7 @@ CREATE INDEX "blacklists_type_value_idx" ON "blacklists"("type", "value");
 CREATE UNIQUE INDEX "blacklists_type_value_key" ON "blacklists"("type", "value");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "teams_slug_key" ON "teams"("slug");
+CREATE UNIQUE INDEX "teams_reference_key" ON "teams"("reference");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "team_members_team_id_user_id_key" ON "team_members"("team_id", "user_id");
@@ -590,16 +720,73 @@ CREATE UNIQUE INDEX "subscriptions_stripe_subscription_id_key" ON "subscriptions
 CREATE UNIQUE INDEX "domains_name_key" ON "domains"("name");
 
 -- CreateIndex
+CREATE INDEX "domain_ownership_history_domain_id_idx" ON "domain_ownership_history"("domain_id");
+
+-- CreateIndex
+CREATE INDEX "domain_ownership_history_previous_team_id_idx" ON "domain_ownership_history"("previous_team_id");
+
+-- CreateIndex
+CREATE INDEX "domain_ownership_history_new_team_id_idx" ON "domain_ownership_history"("new_team_id");
+
+-- CreateIndex
+CREATE INDEX "notifications_user_id_read_idx" ON "notifications"("user_id", "read");
+
+-- CreateIndex
+CREATE INDEX "notifications_team_id_read_idx" ON "notifications"("team_id", "read");
+
+-- CreateIndex
+CREATE INDEX "notifications_created_at_idx" ON "notifications"("created_at");
+
+-- CreateIndex
+CREATE INDEX "emails_message_id_idx" ON "emails"("message_id");
+
+-- CreateIndex
+CREATE INDEX "email_events_type_timestamp_idx" ON "email_events"("type", "timestamp");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "api_keys_key_key" ON "api_keys"("key");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "contacts_team_id_email_key" ON "contacts"("team_id", "email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "audiences_reference_key" ON "audiences"("reference");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "audience_contacts_audience_id_contact_id_key" ON "audience_contacts"("audience_id", "contact_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "broadcast_recipients_broadcast_id_contact_id_key" ON "broadcast_recipients"("broadcast_id", "contact_id");
+
+-- CreateIndex
+CREATE INDEX "api_request_logs_team_id_created_at_idx" ON "api_request_logs"("team_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "api_request_logs_api_key_id_created_at_idx" ON "api_request_logs"("api_key_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "api_request_logs_created_at_idx" ON "api_request_logs"("created_at");
+
+-- CreateIndex
+CREATE INDEX "api_request_logs_status_code_idx" ON "api_request_logs"("status_code");
+
+-- CreateIndex
+CREATE INDEX "api_usage_metrics_team_id_date_idx" ON "api_usage_metrics"("team_id", "date");
+
+-- CreateIndex
+CREATE INDEX "api_usage_metrics_api_key_id_date_idx" ON "api_usage_metrics"("api_key_id", "date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "api_usage_metrics_team_id_api_key_id_date_hour_key" ON "api_usage_metrics"("team_id", "api_key_id", "date", "hour");
+
+-- CreateIndex
+CREATE INDEX "email_metrics_team_id_date_idx" ON "email_metrics"("team_id", "date");
+
+-- CreateIndex
+CREATE INDEX "email_metrics_date_idx" ON "email_metrics"("date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "email_metrics_team_id_date_key" ON "email_metrics"("team_id", "date");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
@@ -618,6 +805,9 @@ ALTER TABLE "local_auth_accounts" ADD CONSTRAINT "local_auth_accounts_user_id_fk
 
 -- AddForeignKey
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "verification_requests" ADD CONSTRAINT "verification_requests_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "mfa_backup_codes" ADD CONSTRAINT "mfa_backup_codes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -651,6 +841,15 @@ ALTER TABLE "domains" ADD CONSTRAINT "domains_team_id_fkey" FOREIGN KEY ("team_i
 
 -- AddForeignKey
 ALTER TABLE "dns_records" ADD CONSTRAINT "dns_records_domain_id_fkey" FOREIGN KEY ("domain_id") REFERENCES "domains"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "domain_ownership_history" ADD CONSTRAINT "domain_ownership_history_domain_id_fkey" FOREIGN KEY ("domain_id") REFERENCES "domains"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "emails" ADD CONSTRAINT "emails_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -728,7 +927,19 @@ ALTER TABLE "broadcast_recipients" ADD CONSTRAINT "broadcast_recipients_broadcas
 ALTER TABLE "broadcast_recipients" ADD CONSTRAINT "broadcast_recipients_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "logs" ADD CONSTRAINT "logs_api_key_id_fkey" FOREIGN KEY ("api_key_id") REFERENCES "api_keys"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "api_request_logs" ADD CONSTRAINT "api_request_logs_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "api_request_logs" ADD CONSTRAINT "api_request_logs_api_key_id_fkey" FOREIGN KEY ("api_key_id") REFERENCES "api_keys"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "api_usage_metrics" ADD CONSTRAINT "api_usage_metrics_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "api_usage_metrics" ADD CONSTRAINT "api_usage_metrics_api_key_id_fkey" FOREIGN KEY ("api_key_id") REFERENCES "api_keys"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "email_metrics" ADD CONSTRAINT "email_metrics_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;

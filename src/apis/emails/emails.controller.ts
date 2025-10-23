@@ -9,31 +9,26 @@ export class EmailsController {
 
   @Post()
   async sendEmail(@Body() sendEmailDto: SendEmailDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.emailsService.sendEmail(request.user.id, sendEmailDto, request);
+    const { status, ...restOfResponse } = await this.emailsService.sendEmail(request, sendEmailDto);
     response.status(status).json(restOfResponse);
   }
 
   @Get()
   async getEmails(@Query() filter: EmailFilterDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.emailsService.getEmails(request.user.id, filter);
+    const { status, ...restOfResponse } = await this.emailsService.getEmails(request, filter);
     response.status(status).json(restOfResponse);
   }
 
   @Get(':id')
   async getEmailDetails(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.emailsService.getEmailDetails(id, request.user.id);
+    const { status, ...restOfResponse } = await this.emailsService.getEmailDetails(request, id);
     response.status(status).json(restOfResponse);
   }
 
-  @Get('stats/overview')
-  async getEmailStats(@Query() filter: EmailFilterDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.emailsService.getEmailStats(request.user.id, filter);
-    response.status(status).json(restOfResponse);
-  }
-
-  @Get('statuses')
-  async getEmailStatuses(@Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.emailsService.getEmailStatuses(request.user.id);
+  @Post('aws-sns-callback')
+  async handleAwsSnsCallback(@Body() body: any, @Req() request: any, @Res() response: Response) {
+    const messageType = request.headers['x-amz-sns-message-type'];
+    const { status, ...restOfResponse } = await this.emailsService.handleAwsSnsEvent(messageType, body);
     response.status(status).json(restOfResponse);
   }
 }

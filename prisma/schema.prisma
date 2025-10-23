@@ -48,6 +48,7 @@ model User {
   mfaVerificationSessions MfaVerificationSession[]
   verificationRequests    VerificationRequest[]
   blacklistsCreated       Blacklist[]
+  notifications           Notification[]
 
   @@map("users")
 }
@@ -182,7 +183,7 @@ model Team {
   id        Int      @id @default(autoincrement())
   reference String   @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   name      String
-  slug      String   // Non-unique slug for display purposes
+  slug      String // Non-unique slug for display purposes
   image     String? // Team logo/avatar URL
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -202,6 +203,7 @@ model Team {
   apiRequestLogs  ApiRequestLog[]
   apiUsageMetrics ApiUsageMetric[]
   emailMetrics    EmailMetrics[]
+  notifications   Notification[]
 
   @@map("teams")
 }
@@ -324,41 +326,96 @@ model Subscription {
 
 model Domain {
   id            Int          @id @default(autoincrement())
-  name          String       @unique
+  name          String // Domain name - multiple teams can use the same domain
   createdBy     Int?         @map("created_by") // User who created this domain
   teamId        Int          @map("team_id") // Team that owns this domain (personal or shared)
-  status        DomainStatus @default(pending)
+  status        DomainStatus @default(pending_dns)
   region        String? // us-east-1, eu-west-1, etc.
   clickTracking Boolean      @default(true) @map("click_tracking")
   openTracking  Boolean      @default(true) @map("open_tracking")
   tlsMode       String       @default("enforced") @map("tls_mode") // enforced, opportunistic, disabled
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
 
-  // DNS Records
-  dnsRecords DnsRecord[]
+  // DKIM Configuration (per-domain keys)
+  dkimSelector   String? @map("dkim_selector") // Unique DKIM selector for this domain
+  dkimPublicKey  String? @map("dkim_public_key") // Base64 encoded DKIM public key
+  dkimPrivateKey String? @map("dkim_private_key") // Base64 encoded DKIM private key (encrypted)
+
+  // AWS Registration tracking
+  awsRegisteredAt DateTime? @map("aws_registered_at") // When domain was registered with AWS SES
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  Creator User?   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  Team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  emails  Email[]
+  Creator          User?                    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team             Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  dnsRecords       DnsRecord[]
+  emails           Email[]
+  ownershipHistory DomainOwnershipHistory[]
 
   @@map("domains")
 }
 
 model DnsRecord {
-  id         Int          @id @default(autoincrement())
-  domainId   Int          @map("domain_id")
-  type       String // dkim, spf, dmarc, mx, tracking
-  name       String
-  recordType String       @map("record_type") // TXT, MX, CNAME
-  value      String
-  status     DomainStatus @default(pending)
-  priority   Int? // for MX records
+  id            Int          @id @default(autoincrement())
+  domainId      Int          @map("domain_id")
+  type          String // dkim, spf, dmarc, mx, tracking
+  name          String
+  recordType    String       @map("record_type") // TXT, MX, CNAME
+  value         String
+  status        DomainStatus @default(pending_dns)
+  priority      Int? // for MX records
+  lastCheckedAt DateTime?    @map("last_checked_at") // When this DNS record was last verified
 
   Domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
 
   @@map("dns_records")
+}
+
+// Domain Ownership History - tracks domain transfers between teams
+model DomainOwnershipHistory {
+  id             Int      @id @default(autoincrement())
+  domainId       Int      @map("domain_id")
+  domainName     String   @map("domain_name") // Denormalized for historical records
+  previousTeamId Int?     @map("previous_team_id") // Team that previously owned the domain
+  newTeamId      Int      @map("new_team_id") // Team that now owns the domain
+  transferReason String?  @map("transfer_reason") // Why the domain was transferred (dns_verification, manual, etc.)
+  metadata       Json? // Additional transfer metadata (DKIM keys changed, AWS status, etc.)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  Domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([domainId])
+  @@index([previousTeamId])
+  @@index([newTeamId])
+  @@map("domain_ownership_history")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+// Notifications table - stores all system notifications for users/teams
+model Notification {
+  id        Int                  @id @default(autoincrement())
+  userId    Int?                 @map("user_id") // User to notify (if user-specific)
+  teamId    Int?                 @map("team_id") // Team to notify (if team-wide)
+  type      NotificationType // domain_transfer, domain_verified, domain_failed, etc.
+  title     String // Notification title
+  message   String               @db.Text // Notification message body
+  severity  NotificationSeverity @default(info) // info, warning, error, success
+  read      Boolean              @default(false) // Whether notification has been read
+  readAt    DateTime?            @map("read_at") // When notification was read
+  metadata  Json? // Additional context (domain name, domain ID, etc.)
+  createdAt DateTime             @default(now()) @map("created_at")
+
+  User User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([teamId, read])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 // ============================================
@@ -367,6 +424,7 @@ model DnsRecord {
 
 model Email {
   id          Int         @id @default(autoincrement())
+  reference   String?     @unique @default(cuid()) @map("reference") // Public-facing UUID reference for API
   createdBy   Int?        @map("created_by") // User who created/sent this email
   teamId      Int         @map("team_id") // Team that owns this email (personal or shared)
   domainId    Int?        @map("domain_id")
@@ -408,9 +466,9 @@ model Attachment {
   id        Int      @id @default(autoincrement())
   emailId   Int      @map("email_id")
   filename  String
-  content   String // Base64 encoded content
+  content   String? // Base64 encoded content (optional if path is provided)
+  path      String? // URL to download attachment from
   type      String? // MIME type
-  size      Int? // Size in bytes
   createdAt DateTime @default(now()) @map("created_at")
 
   Email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
@@ -968,9 +1026,12 @@ enum TeamInvitationStatus {
 }
 
 enum DomainStatus {
-  pending
-  verified
-  failed
+  pending_dns // Waiting for DNS records to be added by user
+  dns_verified // DNS records verified, ready for AWS registration
+  pending_aws // Registered with AWS, waiting for AWS verification
+  verified // Fully verified and ready to send emails
+  failed // Verification failed
+  revoked // Domain was transferred to another team
 }
 
 enum EmailStatus {
@@ -1036,4 +1097,28 @@ enum TeamMemberRole {
   admin
   member
   viewer
+}
+
+enum NotificationType {
+  domain_transfer // Domain was transferred to/from your team
+  domain_verified // Domain verification successful
+  domain_failed // Domain verification failed
+  domain_dns_verified // DNS records verified
+  domain_aws_pending // Domain registered with AWS, awaiting verification
+  domain_deleted // Domain was deleted
+  api_key_created // New API key created
+  api_key_revoked // API key was revoked
+  team_member_added // New team member added
+  team_member_removed // Team member removed
+  subscription_updated // Subscription plan changed
+  subscription_expired // Subscription expired
+  limit_reached // Usage limit reached (emails, domains, etc.)
+  system_maintenance // System maintenance notification
+}
+
+enum NotificationSeverity {
+  info // Informational notification
+  success // Success notification (green)
+  warning // Warning notification (yellow)
+  error // Error notification (red)
 }

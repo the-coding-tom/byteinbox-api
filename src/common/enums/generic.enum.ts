@@ -63,8 +63,10 @@ export enum EmailStatus {
   queued = 'queued',
   sent = 'sent',
   delivered = 'delivered',
-  failed = 'failed',
+  opened = 'opened',
+  clicked = 'clicked',
   bounced = 'bounced',
+  failed = 'failed',
 }
 
 export enum WebhookStatus {

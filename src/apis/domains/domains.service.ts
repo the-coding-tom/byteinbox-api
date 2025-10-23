@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { DomainStatus } from '@prisma/client';
 import { DomainsValidator } from './domains.validator';
 import { DomainRepository } from '../../repositories/domain.repository';
@@ -6,19 +8,17 @@ import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { Constants } from '../../common/enums/generic.enum';
 import { config } from '../../config/config';
+import { VERIFY_DOMAIN_DNS_QUEUE } from '../../common/constants/queues.constant';
 import {
-  registerDomainWithSES,
   generateDnsRecords,
   deleteDomainFromSES,
 } from '../../helpers/aws-ses.helper';
-import { 
-  AddDomainDto, 
-  AddDomainResponseDto, 
-  GetDomainsResponseDto, 
-  GetDomainDetailsResponseDto, 
-  UpdateDomainConfigurationDto,
-  UpdateDomainConfigurationResponseDto,
-  VerifyDomainResponseDto, 
+import { generateDkimKeyPair } from '../../utils/dkim.util';
+import {
+  AddDomainDto,
+  AddDomainResponseDto,
+  UpdateDomainSettingsDto,
+  UpdateDomainSettingsResponseDto,
   RestartDomainResponseDto
 } from './dto/domains.dto';
 
@@ -27,72 +27,75 @@ export class DomainsService {
   constructor(
     private readonly domainsValidator: DomainsValidator,
     private readonly domainRepository: DomainRepository,
-  ) {}
+    @InjectQueue(VERIFY_DOMAIN_DNS_QUEUE) private readonly verifyDnsQueue: Queue,
+  ) { }
 
   async addDomain(userId: number, teamId: number, addDomainDto: AddDomainDto): Promise<any> {
     try {
-      // Validate input data
-      await this.domainsValidator.validateAddDomain(addDomainDto);
+      // Validate input data (this already checks for duplicates and handles conflicts)
+      await this.domainsValidator.validateAddDomain(addDomainDto, teamId);
 
-      // Get static DKIM keys from config (environment variables)
-      const publicKeyBase64 = config.aws.ses.dkimPublicKey;
-      const privateKeyBase64 = config.aws.ses.dkimPrivateKey;
-      const selector = config.aws.ses.dkimSelector;
+      // Generate unique DKIM key pair
+      const dkimKeys = generateDkimKeyPair();
 
-      // Register domain with AWS SES (includes custom MAIL FROM domain setup)
-      await registerDomainWithSES(
-        addDomainDto.domainName,
-        selector,
-        privateKeyBase64,
-        addDomainDto.region
-      );
-
-      // Generate DNS records (DKIM, SPF, MX, DMARC)
+      // Generate DNS records using domain-specific public key
+      // NOTE: We do NOT register with AWS SES yet - only after DNS verification
       const dnsRecords = generateDnsRecords(
         addDomainDto.domainName,
-        selector,
-        publicKeyBase64,
+        dkimKeys.selector,
+        dkimKeys.publicKey,
         addDomainDto.region
       );
 
-      // Create domain in database
-      const domain = await this.domainRepository.createDomain({
+      // Create domain and DNS records in a single atomic transaction
+      // Status: pending_dns (waiting for user to add DNS records)
+      const domain = await this.domainRepository.createDomainWithDnsRecords({
         name: addDomainDto.domainName,
         createdBy: userId,
         teamId,
-        status: DomainStatus.pending,
+        status: DomainStatus.pending_dns,
         region: addDomainDto.region,
         clickTracking: true,
         openTracking: true,
         tlsMode: 'enforced',
-      });
+        dkimSelector: dkimKeys.selector,
+        dkimPublicKey: dkimKeys.publicKey,
+        dkimPrivateKey: dkimKeys.privateKey,
+      }, dnsRecords);
 
-      // Create DNS records in database
-      await this.domainRepository.createDnsRecords(domain.id, dnsRecords);
-
-      // Fetch created DNS records
-      const createdDnsRecords = await this.domainRepository.findDnsRecordsByDomainId(domain.id);
+      // Immediately enqueue for DNS verification with TTL
+      await this.verifyDnsQueue.add(
+        'verify-dns-records',
+        {
+          domainId: domain.id,
+          ttl: Date.now() + config.domainVerification.ttl,
+        },
+        {
+          jobId: `dns-verification-${domain.id}`,
+          repeat: {
+            every: config.domainVerification.dnsVerificationInterval,
+          },
+        }
+      );
 
       const response: AddDomainResponseDto = {
-        domain: {
-          id: domain.id.toString(),
-          domainName: domain.name,
-          region: domain.region,
-          status: domain.status,
-          createdAt: domain.createdAt.toISOString(),
-          dnsRecords: createdDnsRecords.map(record => ({
-            type: record.type,
-            name: record.name,
-            value: record.value,
-            status: record.status,
-            priority: record.priority,
-          })),
-        },
+        id: domain.id.toString(),
+        domainName: domain.name,
+        region: domain.region,
+        status: domain.status,
+        createdAt: domain.createdAt.toISOString(),
+        dnsRecords: domain.dnsRecords.map((record: any) => ({
+          type: record.type,
+          name: record.name,
+          value: record.value,
+          status: record.status,
+          priority: record.priority,
+        })),
       };
 
       return generateSuccessResponse({
         statusCode: 201,
-        message: 'Domain created successfully. Please add the DNS records to your domain provider.',
+        message: 'Domain created successfully. Please add the DNS records to your domain provider. We will verify them automatically.',
         data: response,
       });
     } catch (error) {
@@ -111,29 +114,19 @@ export class DomainsService {
         keyword: validatedData.filter.keyword,
         status: validatedData.filter.status,
         region: validatedData.filter.region,
-        offset: validatedData.filter.offset || config.validation.pagination.defaultPage,
+        offset: validatedData.filter.offset || (config.validation.pagination.defaultPage - 1),
         limit: validatedData.filter.limit || config.validation.pagination.defaultLimit,
       });
 
-      const response: GetDomainsResponseDto = {
-        domains: teamDomains.map(domain => ({
-          id: domain.id.toString(),
-          name: domain.name,
-          status: domain.status,
-          createdAt: new Date(domain.createdAt).toISOString(),
-          updatedAt: new Date(domain.updatedAt).toISOString(),
-        })),
+      return generateSuccessResponse({
+        statusCode: HttpStatus.OK,
+        message: Constants.successMessage,
+        data: teamDomains,
         meta: {
           total,
-          offset: validatedData.filter.offset || config.validation.pagination.defaultPage,
-          limit: validatedData.filter.limit || config.validation.pagination.defaultLimit,
+          offset: validatedData.filter.offset,
+          limit: validatedData.filter.limit,
         },
-      };
-
-      return generateSuccessResponse({
-        statusCode: 200,
-        message: Constants.retrievedSuccessfully,
-        data: response,
       });
     } catch (error) {
       return handleServiceError('Error retrieving domains', error);
@@ -148,94 +141,27 @@ export class DomainsService {
       // Get domain with DNS records in a single optimized query
       const domainWithRecords = await this.domainRepository.findDomainWithDnsRecords(validatedData.domainId);
 
-      const response: GetDomainDetailsResponseDto = {
-        domain: {
-          id: domainWithRecords!.id.toString(),
-          name: domainWithRecords!.name,
-          status: domainWithRecords!.status,
-          region: domainWithRecords!.region,
-          clickTracking: domainWithRecords!.clickTracking,
-          openTracking: domainWithRecords!.openTracking,
-          tlsMode: domainWithRecords!.tlsMode,
-          createdAt: domainWithRecords!.createdAt.toISOString(),
-          updatedAt: domainWithRecords!.updatedAt.toISOString(),
-          dnsRecords: domainWithRecords!.dnsRecords.map(record => ({
-            id: record.id.toString(),
-            type: record.type,
-            name: record.name,
-            recordType: record.recordType,
-            value: record.value,
-            status: record.status,
-            ...(record.priority && { priority: record.priority }),
-          })),
-        },
-      };
-
       return generateSuccessResponse({
-        statusCode: 200,
-        message: Constants.retrievedSuccessfully,
-        data: response,
+        statusCode: HttpStatus.OK,
+        message: Constants.successMessage,
+        data: domainWithRecords,
       });
     } catch (error) {
       return handleServiceError('Error retrieving domain details', error);
     }
   }
 
-
-  async verifyDomain(domainId: string, teamId: number): Promise<any> {
-    try {
-      // Validate input data
-      const { validatedData } = await this.domainsValidator.validateVerifyDomain(domainId, teamId);
-
-      // Find domain (already validated in validator)
-      const domain = await this.domainRepository.findById(validatedData.domainId);
-
-      // Get DNS records from database (verification status is updated by cron job)
-      const dnsRecords = await this.domainRepository.findDnsRecordsByDomainId(domain.id);
-
-      // Calculate verification status based on DNS records
-      const allVerified = dnsRecords.every(record => record.status === DomainStatus.verified);
-      const anyFailed = dnsRecords.some(record => record.status === DomainStatus.failed);
-
-      let message = '';
-      if (allVerified && domain.status === DomainStatus.verified) {
-        message = 'Domain verification completed successfully';
-      } else if (anyFailed) {
-        message = 'Domain verification failed. Please check your DNS records and try again.';
-      } else {
-        message = 'Domain verification is still pending. Please ensure DNS records are properly configured. Verification checks run every 5 minutes.';
-      }
-
-      const response: VerifyDomainResponseDto = {
-        message,
-        domain: {
-          id: domain.id.toString(),
-          name: domain.name,
-          status: domain.status,
-          verifiedAt: domain.status === DomainStatus.verified ? domain.updatedAt.toISOString() : '',
-        },
-      };
-
-      return generateSuccessResponse({
-        statusCode: 200,
-        message: response.message,
-        data: response,
-      });
-    } catch (error) {
-      return handleServiceError('Error verifying domain', error);
-    }
-  }
-
   async deleteDomain(domainId: string, teamId: number): Promise<any> {
     try {
-      // Validate input data
+      // Validate input data (domain is fetched and returned in validatedData)
       const { validatedData } = await this.domainsValidator.validateDeleteDomain(domainId, teamId);
+      const { domain } = validatedData;
 
-      // Find domain (already validated in validator)
-      const domain = await this.domainRepository.findById(validatedData.domainId);
-
-      // Delete domain from AWS SES
-      await deleteDomainFromSES(domain.name, domain.region || 'us-east-1');
+      // Delete domain from AWS SES only if it was registered
+      // (domains in pending_dns or failed state may not be in AWS yet)
+      if (domain.awsRegisteredAt || domain.status === DomainStatus.pending_aws || domain.status === DomainStatus.verified) {
+        await deleteDomainFromSES(domain.name, domain.region);
+      }
 
       // Delete domain from database (will cascade delete DNS records)
       await this.domainRepository.delete(domain.id);
@@ -249,10 +175,10 @@ export class DomainsService {
     }
   }
 
-  async updateDomainConfiguration(domainId: string, teamId: number, updateDomainConfigurationDto: UpdateDomainConfigurationDto): Promise<any> {
+  async updateDomainSettings(domainId: string, teamId: number, updateDomainSettingsDto: UpdateDomainSettingsDto): Promise<any> {
     try {
       // Validate input data
-      const { validatedData } = await this.domainsValidator.validateUpdateDomainConfiguration(domainId, teamId, updateDomainConfigurationDto);
+      const { validatedData } = await this.domainsValidator.validateUpdateDomainSettings(domainId, teamId, updateDomainSettingsDto);
 
       // Update domain configuration in database
       const updatedDomain = await this.domainRepository.update(validatedData.domainId, {
@@ -261,7 +187,7 @@ export class DomainsService {
         tlsMode: validatedData.validatedData.tlsMode,
       });
 
-      const response: UpdateDomainConfigurationResponseDto = {
+      const response: UpdateDomainSettingsResponseDto = {
         domain: {
           id: updatedDomain.id.toString(),
           name: updatedDomain.name,
@@ -284,27 +210,45 @@ export class DomainsService {
 
   async restartDomain(domainId: string, teamId: number): Promise<any> {
     try {
-      // Validate input data
+      // Validate input data (domain is fetched and returned in validatedData)
       const { validatedData } = await this.domainsValidator.validateRestartDomain(domainId, teamId);
+      const domain = validatedData.domain;
 
-      // Dummy response - in real implementation, this would restart the domain
+      // Re-enqueue for DNS verification based on current status
+      if (domain.status === DomainStatus.pending_dns || domain.status === DomainStatus.failed) {
+        // Restart DNS verification with fresh TTL (jobId ensures only one repeatable job exists)
+        await this.verifyDnsQueue.add(
+          'verify-dns-records',
+          {
+            domainId: domain.id,
+            ttl: Date.now() + config.domainVerification.ttl,
+          },
+          {
+            jobId: `dns-verification-${domain.id}`,
+            repeat: {
+              every: config.domainVerification.dnsVerificationInterval,
+            },
+          }
+        );
+      }
+
       const response: RestartDomainResponseDto = {
-        message: Constants.successMessage,
+        message: 'Domain verification restarted successfully',
         domain: {
-          id: validatedData.domainId.toString(),
-          name: 'example.com',
-          status: 'active',
+          id: domain.id.toString(),
+          name: domain.name,
+          status: domain.status,
           restartedAt: new Date().toISOString(),
         },
       };
 
       return generateSuccessResponse({
         statusCode: 200,
-        message: Constants.successMessage,
+        message: 'Domain verification restarted successfully',
         data: response,
       });
     } catch (error) {
-      return handleServiceError('Error restarting domain', error);
+      return handleServiceError('Error restarting domain verification', error);
     }
   }
 }

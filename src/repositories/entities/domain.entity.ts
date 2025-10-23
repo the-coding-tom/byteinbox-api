@@ -39,6 +39,7 @@ export class DnsRecordData {
   value: string;
   status: string;
   priority: number | null;
+  lastCheckedAt: Date | null;
 }
 
 export class DomainWithDnsRecordsData {
@@ -49,6 +50,9 @@ export class DomainWithDnsRecordsData {
   clickTracking: boolean;
   openTracking: boolean;
   tlsMode: string;
+  dkimSelector?: string;
+  dkimPublicKey?: string;
+  dkimPrivateKey?: string;
   createdAt: Date;
   updatedAt: Date;
   dnsRecords: DnsRecordData[];

@@ -12,19 +12,17 @@ export class GetDomainsFilterDto {
 }
 
 export class AddDomainResponseDto {
-  domain: {
-    id: string;
-    domainName: string;
-    region: string;
+  id: string;
+  domainName: string;
+  region: string;
+  status: string;
+  createdAt: string;
+  dnsRecords: Array<{
+    type: string;
+    name: string;
+    value: string;
     status: string;
-    createdAt: string;
-    dnsRecords: Array<{
-      type: string;
-      name: string;
-      value: string;
-      status: string;
-    }>;
-  };
+  }>;
 }
 
 export class GetDomainsResponseDto {
@@ -114,13 +112,13 @@ export class GetRegionsResponseDto {
   }>;
 }
 
-export class UpdateDomainConfigurationDto {
+export class UpdateDomainSettingsDto {
   clickTracking?: boolean;
   openTracking?: boolean;
   tlsMode?: string;
 }
 
-export class UpdateDomainConfigurationResponseDto {
+export class UpdateDomainSettingsResponseDto {
   domain: {
     id: string;
     name: string;

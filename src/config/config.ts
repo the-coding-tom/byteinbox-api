@@ -26,6 +26,9 @@ const BEARER_TOKEN_PREFIX_LENGTH = 7; // "Bearer ".length
 // Time-based constants
 const PAYMENT_STATUS_CHECKER_TTL_MINUTES = 30;
 const PAYMENT_STATUS_CHECKER_REPEAT_INTERVAL_MINUTES = 2;
+const DOMAIN_VERIFICATION_TTL_MINUTES = 30;
+const DOMAIN_DNS_VERIFICATION_INTERVAL_MINUTES = 1;
+const DOMAIN_AWS_VERIFICATION_INTERVAL_MINUTES = 1;
 
 // Fee constants
 const MIN_FEE_RANGE_1 = 0;
@@ -47,7 +50,7 @@ export const config = {
   authRefreshJWTSecret: process.env.AUTH_REFRESH_JWT_SECRET || process.env.JWT_SECRET!,
   tokenExpiration: process.env.TOKEN_EXPIRATION || '15m',
   refreshTokenExpiration: process.env.REFRESH_TOKEN_EXPIRATION || '7d',
-  tokenExpirationInSeconds: 15 * SECONDS_IN_MINUTE, // 15 minutes for access tokens
+  tokenExpirationInSeconds: 60 * 60 * SECONDS_IN_MINUTE, // 15 minutes for access tokens
   refreshTokenExpirationInSeconds: (7 * MILLISECONDS_IN_DAY) / MILLISECONDS_IN_SECOND, // 7 days for refresh tokens
   bcryptSaltRounds: DEFAULT_BCRYPT_SALT_ROUNDS,
   bearerTokenPrefixLength: BEARER_TOKEN_PREFIX_LENGTH,
@@ -142,10 +145,21 @@ export const config = {
     port: parseInt(process.env.REDIS_PORT || DEFAULT_REDIS_PORT.toString()),
     url: process.env.REDIS_URL!,
   },
+  queue: {
+    jobRetryAttempts: 3,
+    jobRetryDelayMs: 5000, // Base delay for exponential backoff
+  },
   paymentStatusCheckerTTL:
     PAYMENT_STATUS_CHECKER_TTL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 30 minutes
   paymentStatusCheckerRepeatInterval:
     PAYMENT_STATUS_CHECKER_REPEAT_INTERVAL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 2 minutes
+
+  // Domain Verification Configuration
+  domainVerification: {
+    ttl: DOMAIN_VERIFICATION_TTL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 30 minutes
+    dnsVerificationInterval: DOMAIN_DNS_VERIFICATION_INTERVAL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 1 minute
+    awsVerificationInterval: DOMAIN_AWS_VERIFICATION_INTERVAL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 1 minute
+  },
 
   // Business Logic
   defaultAccountCurrency: 'USD',
@@ -203,9 +217,7 @@ export const config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     ses: {
       defaultRegion: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'us-east-1',
-      dkimSelector: 'byteinbox', // Fixed selector for all domains
-      dkimPublicKey: process.env.AWS_DKIM_PUBLIC_KEY!, // Base64 encoded public key (required)
-      dkimPrivateKey: process.env.AWS_DKIM_PRIVATE_KEY!, // Base64 encoded private key (required)
+      configurationSetName: process.env.AWS_SES_CONFIGURATION_SET_NAME || 'byteinbox-tracking',
     },
   },
 };

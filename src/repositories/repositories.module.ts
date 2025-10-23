@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EmailTemplateRepository } from './email-template.repository';
+import { TemplateRepository } from './template.repository';
 import { UserRepository } from './user.repository';
 import { SessionRepository } from './session.repository';
 import { MfaVerificationSessionRepository } from './mfa-verification-session.repository';
@@ -12,6 +13,7 @@ import { OAuthAccountRepository } from './oauth-account.repository';
 import { LocalAuthAccountRepository } from './local-auth-account.repository';
 import { VerificationRequestRepository } from './verification-request.repository';
 import { ApiRequestLogRepository } from './api-request-log.repository';
+import { EmailRepository } from './email.repository';
 
 @Module({
   providers: [
@@ -20,6 +22,7 @@ import { ApiRequestLogRepository } from './api-request-log.repository';
     MfaVerificationSessionRepository,
     BlacklistRepository,
     EmailTemplateRepository,
+    TemplateRepository,
     ApiKeyRepository,
     BackupCodeRepository,
     DomainRepository,
@@ -28,6 +31,7 @@ import { ApiRequestLogRepository } from './api-request-log.repository';
     LocalAuthAccountRepository,
     VerificationRequestRepository,
     ApiRequestLogRepository,
+    EmailRepository,
   ],
   exports: [
     UserRepository,
@@ -35,6 +39,7 @@ import { ApiRequestLogRepository } from './api-request-log.repository';
     MfaVerificationSessionRepository,
     BlacklistRepository,
     EmailTemplateRepository,
+    TemplateRepository,
     ApiKeyRepository,
     BackupCodeRepository,
     DomainRepository,
@@ -43,6 +48,7 @@ import { ApiRequestLogRepository } from './api-request-log.repository';
     LocalAuthAccountRepository,
     VerificationRequestRepository,
     ApiRequestLogRepository,
+    EmailRepository,
   ],
 })
 export class RepositoriesModule {}

@@ -4,16 +4,16 @@ import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { Constants } from '../../common/enums/generic.enum';
 import { config } from '../../config/config';
-import { 
-  CreateWebhookDto, 
+import {
+  CreateWebhookDto,
   WebhookFilterDto,
-  CreateWebhookResponseDto, 
-  GetWebhooksResponseDto, 
-  GetWebhookDetailsResponseDto, 
-  UpdateWebhookDto, 
-  UpdateWebhookResponseDto, 
-  DeleteWebhookResponseDto, 
-  TestWebhookResponseDto, 
+  CreateWebhookResponseDto,
+  GetWebhooksResponseDto,
+  GetWebhookDetailsResponseDto,
+  UpdateWebhookDto,
+  UpdateWebhookResponseDto,
+  DeleteWebhookResponseDto,
+  TestWebhookResponseDto,
   GetWebhookDeliveriesResponseDto,
   ToggleWebhookStatusDto,
   ToggleWebhookStatusResponseDto,

@@ -4,6 +4,7 @@ export class TemplateFilterDto {
   category?: string;
   status?: string;
   search?: string;
+  teamId?: number;
 }
 
 export class CreateTemplateDto {
@@ -17,7 +18,7 @@ export class CreateTemplateDto {
 
 export class CreateTemplateResponseDto {
   template: {
-    id: string;
+    id: number;
     name: string;
     description?: string;
     html: string;
@@ -34,7 +35,7 @@ export class CreateTemplateResponseDto {
 
 export class GetTemplatesResponseDto {
   templates: Array<{
-    id: string;
+    id: number;
     name: string;
     description?: string;
     subject?: string;
@@ -55,7 +56,7 @@ export class GetTemplatesResponseDto {
 
 export class GetTemplateDetailsResponseDto {
   template: {
-    id: string;
+    id: number;
     name: string;
     description?: string;
     html: string;
@@ -82,7 +83,7 @@ export class UpdateTemplateDto {
 
 export class UpdateTemplateResponseDto {
   template: {
-    id: string;
+    id: number;
     name: string;
     description?: string;
     html: string;
@@ -103,7 +104,7 @@ export class DeleteTemplateResponseDto {
 
 export class DuplicateTemplateResponseDto {
   template: {
-    id: string;
+    id: number;
     name: string;
     description?: string;
     html: string;
@@ -116,4 +117,15 @@ export class DuplicateTemplateResponseDto {
     createdAt: string;
     lastModified: string;
   };
+}
+
+export class RenderTemplateDto {
+  templateId: number;
+  data: any;
+}
+
+export class RenderTemplateResponseDto {
+  html: string;
+  text: string;
+  subject?: string;
 }

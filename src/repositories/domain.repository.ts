@@ -6,37 +6,38 @@ import { CreateDomainData, CreateDnsRecordData, FindDomainsWithFilterData, Domai
 @Injectable()
 export class DomainRepository {
   /**
-   * Create a new domain with DNS records
+   * Create a new domain with DNS records in a single atomic transaction
    */
-  async createDomain(data: CreateDomainData): Promise<any> {
+  async createDomainWithDnsRecords(domainData: CreateDomainData, dnsRecords: CreateDnsRecordData[]): Promise<any> {
     return prisma.domain.create({
       data: {
-        name: data.name,
-        createdBy: data.createdBy,
-        teamId: data.teamId,
-        status: data.status,
-        region: data.region,
-        clickTracking: data.clickTracking,
-        openTracking: data.openTracking,
-        tlsMode: data.tlsMode,
+        name: domainData.name,
+        createdBy: domainData.createdBy,
+        teamId: domainData.teamId,
+        status: domainData.status,
+        region: domainData.region,
+        clickTracking: domainData.clickTracking,
+        openTracking: domainData.openTracking,
+        tlsMode: domainData.tlsMode,
+        dkimSelector: domainData.dkimSelector,
+        dkimPublicKey: domainData.dkimPublicKey,
+        dkimPrivateKey: domainData.dkimPrivateKey,
+        dnsRecords: {
+          createMany: {
+            data: dnsRecords.map((record) => ({
+              type: record.type,
+              name: record.name,
+              recordType: record.recordType,
+              value: record.value,
+              priority: record.priority,
+              status: DomainStatus.pending_dns,
+            })),
+          },
+        },
       },
-    });
-  }
-
-  /**
-   * Create DNS records for a domain
-   */
-  async createDnsRecords(domainId: number, records: CreateDnsRecordData[]): Promise<void> {
-    await prisma.dnsRecord.createMany({
-      data: records.map((record) => ({
-        domainId,
-        type: record.type,
-        name: record.name,
-        recordType: record.recordType,
-        value: record.value,
-        priority: record.priority,
-        status: DomainStatus.pending,
-      })),
+      include: {
+        dnsRecords: true,
+      },
     });
   }
 
@@ -50,20 +51,35 @@ export class DomainRepository {
   }
 
   /**
-   * Find domain by ID
+   * Find domain by ID with DNS records
    */
   async findById(id: number): Promise<any | null> {
     return prisma.domain.findUnique({
       where: { id },
+      include: {
+        dnsRecords: true,
+      },
     });
   }
 
   /**
-   * Find domain by name
+   * Find domain by name (returns first match since name is no longer unique)
    */
   async findByName(name: string): Promise<any | null> {
-    return prisma.domain.findUnique({
+    return prisma.domain.findFirst({
       where: { name },
+    });
+  }
+
+  /**
+   * Find domain by team ID and name
+   */
+  async findByTeamIdAndName(teamId: number, name: string): Promise<any | null> {
+    return prisma.domain.findFirst({
+      where: { 
+        teamId,
+        name 
+      },
     });
   }
 
@@ -163,26 +179,93 @@ export class DomainRepository {
   }
 
   /**
-   * Find all domains with unverified DNS records
-   * Used by cron job to queue for verification
+   * Find all domains with pending DNS verification
+   * Used by DNS verification cron job
    */
-  async findDomainsWithUnverifiedDnsRecords(): Promise<any[]> {
+  async findDomainsWithPendingDns(): Promise<any[]> {
     return prisma.domain.findMany({
       where: {
         OR: [
-          { status: DomainStatus.pending },
+          { status: DomainStatus.pending_dns },
           { status: DomainStatus.failed },
         ],
       },
       include: {
-        dnsRecords: {
-          where: {
-            OR: [
-              { status: DomainStatus.pending },
-              { status: DomainStatus.failed },
-            ],
-          },
-        },
+        dnsRecords: true,
+      },
+    });
+  }
+
+  /**
+   * Find all domains with pending AWS verification
+   * Used by AWS verification cron job
+   */
+  async findDomainsWithPendingAws(): Promise<any[]> {
+    return prisma.domain.findMany({
+      where: {
+        status: DomainStatus.pending_aws,
+      },
+      include: {
+        dnsRecords: true,
+      },
+    });
+  }
+
+  /**
+   * Find domains by status
+   */
+  async findByStatus(status: DomainStatus): Promise<any[]> {
+    return prisma.domain.findMany({
+      where: { status },
+      include: {
+        dnsRecords: true,
+      },
+    });
+  }
+
+  /**
+   * Find verified domain by name (globally)
+   */
+  async findVerifiedByName(name: string): Promise<any | null> {
+    return prisma.domain.findFirst({
+      where: {
+        name,
+        status: DomainStatus.verified,
+      },
+    });
+  }
+
+  /**
+   * Create domain ownership history record
+   */
+  async createOwnershipHistory(data: {
+    domainId: number;
+    domainName: string;
+    previousTeamId: number | null;
+    newTeamId: number;
+    transferReason?: string;
+    metadata?: any;
+  }): Promise<any> {
+    return prisma.domainOwnershipHistory.create({
+      data: {
+        domainId: data.domainId,
+        domainName: data.domainName,
+        previousTeamId: data.previousTeamId,
+        newTeamId: data.newTeamId,
+        transferReason: data.transferReason || 'dns_verification',
+        metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : null,
+      },
+    });
+  }
+
+  /**
+   * Get ownership history for a domain
+   */
+  async getOwnershipHistory(domainId: number): Promise<any[]> {
+    return prisma.domainOwnershipHistory.findMany({
+      where: { domainId },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }
@@ -200,7 +283,7 @@ export class DomainRepository {
   /**
    * Find domains with filtering and pagination
    */
-  async findWithFilter(filter: FindDomainsWithFilterData): Promise<{ data: any[]; total: number }> {
+  async findWithFilter(filter: FindDomainsWithFilterData): Promise<{ data: any[]; total: number; offset: number; limit: number }> {
     const { teamId, keyword, status, region, offset = 0, limit = 10 } = filter;
 
     const whereClause = Prisma.sql`
@@ -211,9 +294,12 @@ export class DomainRepository {
       )
       AND (
         CASE
-          WHEN ${status} = 'pending' THEN D.status = 'pending'
+          WHEN ${status} = 'pending_dns' THEN D.status = 'pending_dns'
+          WHEN ${status} = 'dns_verified' THEN D.status = 'dns_verified'
+          WHEN ${status} = 'pending_aws' THEN D.status = 'pending_aws'
           WHEN ${status} = 'verified' THEN D.status = 'verified'
           WHEN ${status} = 'failed' THEN D.status = 'failed'
+          WHEN ${status} = 'revoked' THEN D.status = 'revoked'
           ELSE TRUE
         END
       )
@@ -223,14 +309,13 @@ export class DomainRepository {
       )
     `;
 
-    const query = Prisma.sql`
+    const retrieveDomainsQuery = Prisma.sql`
       SELECT
         D.id,
         D.name,
         D.status,
-        D.region,
-        D.created_at,
-        D.updated_at
+        D.created_at::text as "createdAt",
+        D.updated_at::text as "updatedAt"
       FROM domains D
       ${whereClause}
       ORDER BY D.created_at DESC
@@ -238,20 +323,20 @@ export class DomainRepository {
       OFFSET ${offset}
     `;
 
-    const countQuery = Prisma.sql`
+    const countDomainsQuery = Prisma.sql`
       SELECT COUNT(*)::int
       FROM domains D
       ${whereClause}
     `;
 
-    const [data, countResult] = await Promise.all([
-      prisma.$queryRaw<any[]>(query),
-      prisma.$queryRaw<[{ count: number }]>(countQuery),
-    ]);
+    const domains: any[] = await prisma.$queryRaw(retrieveDomainsQuery);
+    const [{ count }]: { count: number }[] = await prisma.$queryRaw(countDomainsQuery);
 
     return {
-      data,
-      total: countResult[0]?.count || 0,
+      data: domains,
+      total: count,
+      offset,
+      limit,
     };
   }
 

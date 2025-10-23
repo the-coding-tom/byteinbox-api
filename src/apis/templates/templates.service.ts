@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { TemplatesValidator } from './templates.validator';
+import { TemplateRepository } from '../../repositories/template.repository';
+import { TemplateUtil } from '../../utils/template.util';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { Constants } from '../../common/enums/generic.enum';
 import { config } from '../../config/config';
+import { TemplateStatus } from '@prisma/client';
 import { 
   CreateTemplateDto, 
   TemplateFilterDto,
@@ -13,35 +16,47 @@ import {
   UpdateTemplateDto, 
   UpdateTemplateResponseDto, 
   DeleteTemplateResponseDto, 
-  DuplicateTemplateResponseDto 
+  DuplicateTemplateResponseDto,
+  RenderTemplateDto,
+  RenderTemplateResponseDto
 } from './dto/templates.dto';
 
 @Injectable()
 export class TemplatesService {
   constructor(
     private readonly templatesValidator: TemplatesValidator,
+    private readonly templateRepository: TemplateRepository,
   ) {}
 
-  async createTemplate(userId: number, createTemplateDto: CreateTemplateDto, request: any): Promise<any> {
+  async createTemplate(userId: number, teamId: number, createTemplateDto: CreateTemplateDto): Promise<any> {
     try {
-      // Validate input data
-      await this.templatesValidator.validateCreateTemplate(createTemplateDto);
+      const { validatedData } = await this.templatesValidator.validateCreateTemplate(createTemplateDto);
 
-      // Dummy response - in real implementation, this would create a template
+      const template = await this.templateRepository.create({
+        createdBy: userId,
+        teamId,
+        name: validatedData.name,
+        description: validatedData.description,
+        html: validatedData.html,
+        subject: validatedData.subject,
+        category: validatedData.category,
+        variables: validatedData.variables,
+      });
+
       const response: CreateTemplateResponseDto = {
         template: {
-          id: 'template_123',
-          name: createTemplateDto.name,
-          description: createTemplateDto.description,
-          html: createTemplateDto.html,
-          subject: createTemplateDto.subject,
-          category: createTemplateDto.category,
-          variables: createTemplateDto.variables || [],
-          status: 'active',
-          opens: 0,
-          clicks: 0,
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          html: template.html,
+          subject: template.subject,
+          category: template.category,
+          variables: template.variables,
+          status: template.status,
+          opens: template.opens,
+          clicks: template.clicks,
+          createdAt: template.createdAt.toISOString(),
+          lastModified: template.lastModified.toISOString(),
         },
       };
 
@@ -55,45 +70,40 @@ export class TemplatesService {
     }
   }
 
-  async getTemplates(userId: number, filter: TemplateFilterDto): Promise<any> {
+  async getTemplates(userId: number, teamId: number, filter: TemplateFilterDto): Promise<any> {
     try {
-      // Set defaults from config
       const page = filter.page || config.validation.pagination.defaultPage;
-      const limit = filter.limit || config.validation.pagination.defaultLimit;
+      const limit = Math.min(filter.limit || config.validation.pagination.defaultLimit, config.validation.pagination.maxLimit);
       
-      // Dummy response - in real implementation, this would fetch user's templates with pagination
+      const { templates, total } = await this.templateRepository.findByTeamId(
+        teamId,
+        {
+          page,
+          limit,
+          category: filter.category,
+          status: filter.status as TemplateStatus,
+          search: filter.search,
+        }
+      );
+
       const response: GetTemplatesResponseDto = {
-        templates: [
-          {
-            id: 'template_123',
-            name: 'Welcome Email',
-            description: 'Welcome email template for new users',
-            subject: 'Welcome to ByteInbox!',
-            category: 'transactional',
-            status: 'active',
-            opens: 45,
-            clicks: 12,
-            createdAt: '2024-01-01T00:00:00Z',
-            lastModified: '2024-01-15T10:00:00Z',
-          },
-          {
-            id: 'template_456',
-            name: 'Newsletter Template',
-            description: 'Monthly newsletter template',
-            subject: 'Monthly Newsletter',
-            category: 'marketing',
-            status: 'active',
-            opens: 120,
-            clicks: 30,
-            createdAt: '2024-01-05T00:00:00Z',
-            lastModified: '2024-01-20T15:30:00Z',
-          },
-        ],
+        templates: templates.map(template => ({
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          subject: template.subject,
+          category: template.category,
+          status: template.status,
+          opens: template.opens,
+          clicks: template.clicks,
+          createdAt: template.createdAt.toISOString(),
+          lastModified: template.lastModified.toISOString(),
+        })),
         meta: {
           page,
           limit,
-          total: 2,
-          totalPages: 1,
+          total,
+          totalPages: Math.ceil(total / limit),
         },
       };
 
@@ -107,23 +117,24 @@ export class TemplatesService {
     }
   }
 
-  async getTemplateDetails(templateId: string, userId: number): Promise<any> {
+  async getTemplateDetails(templateId: string, userId: number, teamId: number): Promise<any> {
     try {
-      // Dummy response - in real implementation, this would fetch template details
+      const { template } = await this.templatesValidator.validateGetTemplateDetails(templateId, teamId);
+
       const response: GetTemplateDetailsResponseDto = {
         template: {
-          id: templateId,
-          name: 'Welcome Email',
-          description: 'Welcome email template for new users',
-          html: '<h1>Welcome {{name}}!</h1><p>Thank you for joining ByteInbox.</p>',
-          subject: 'Welcome to ByteInbox!',
-          category: 'transactional',
-          variables: ['name', 'email'],
-          status: 'active',
-          opens: 45,
-          clicks: 12,
-          createdAt: '2024-01-01T00:00:00Z',
-          lastModified: '2024-01-15T10:00:00Z',
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          html: template.html,
+          subject: template.subject,
+          category: template.category,
+          variables: template.variables,
+          status: template.status,
+          opens: template.opens,
+          clicks: template.clicks,
+          createdAt: template.createdAt.toISOString(),
+          lastModified: template.lastModified.toISOString(),
         },
       };
 
@@ -137,26 +148,38 @@ export class TemplatesService {
     }
   }
 
-  async updateTemplate(templateId: string, userId: number, updateTemplateDto: UpdateTemplateDto, request: any): Promise<any> {
+  async updateTemplate(templateId: string, userId: number, teamId: number, updateTemplateDto: UpdateTemplateDto): Promise<any> {
     try {
-      // Validate input data
-      await this.templatesValidator.validateUpdateTemplate(updateTemplateDto);
+      const { templateId: validatedTemplateId, validatedData } = await this.templatesValidator.validateUpdateTemplateRequest(
+        templateId,
+        teamId,
+        updateTemplateDto,
+      );
 
-      // Dummy response - in real implementation, this would update the template
+      const template = await this.templateRepository.update(validatedTemplateId, teamId, {
+        name: validatedData.name,
+        description: validatedData.description,
+        html: validatedData.html,
+        subject: validatedData.subject,
+        category: validatedData.category,
+        variables: validatedData.variables,
+        status: validatedData.status as TemplateStatus,
+      });
+
       const response: UpdateTemplateResponseDto = {
         template: {
-          id: templateId,
-          name: updateTemplateDto.name || 'Welcome Email',
-          description: updateTemplateDto.description,
-          html: updateTemplateDto.html || '<h1>Welcome {{name}}!</h1><p>Thank you for joining ByteInbox.</p>',
-          subject: updateTemplateDto.subject || 'Welcome to ByteInbox!',
-          category: updateTemplateDto.category || 'transactional',
-          variables: updateTemplateDto.variables || ['name', 'email'],
-          status: updateTemplateDto.status || 'active',
-          opens: 45,
-          clicks: 12,
-          createdAt: '2024-01-01T00:00:00Z',
-          lastModified: new Date().toISOString(),
+          id: template!.id,
+          name: template!.name,
+          description: template!.description,
+          html: template!.html,
+          subject: template!.subject,
+          category: template!.category,
+          variables: template!.variables,
+          status: template!.status,
+          opens: template!.opens,
+          clicks: template!.clicks,
+          createdAt: template!.createdAt.toISOString(),
+          lastModified: template!.lastModified.toISOString(),
         },
       };
 
@@ -170,9 +193,12 @@ export class TemplatesService {
     }
   }
 
-  async deleteTemplate(templateId: string, userId: number, request: any): Promise<any> {
+  async deleteTemplate(templateId: string, userId: number, teamId: number): Promise<any> {
     try {
-      // Dummy response - in real implementation, this would delete the template
+      const { templateId: validatedTemplateId } = await this.templatesValidator.validateDeleteTemplateRequest(templateId, teamId);
+
+      await this.templateRepository.delete(validatedTemplateId, teamId);
+
       const response: DeleteTemplateResponseDto = {
         message: Constants.deletedSuccessfully,
       };
@@ -187,23 +213,26 @@ export class TemplatesService {
     }
   }
 
-  async duplicateTemplate(templateId: string, userId: number, request: any): Promise<any> {
+  async duplicateTemplate(templateId: string, userId: number, teamId: number): Promise<any> {
     try {
-      // Dummy response - in real implementation, this would duplicate the template
+      const { templateId: validatedTemplateId } = await this.templatesValidator.validateDuplicateTemplateRequest(templateId, teamId);
+
+      const duplicatedTemplate = await this.templateRepository.duplicate(validatedTemplateId, teamId, userId);
+
       const response: DuplicateTemplateResponseDto = {
         template: {
-          id: 'template_789',
-          name: 'Welcome Email (Copy)',
-          description: 'Welcome email template for new users',
-          html: '<h1>Welcome {{name}}!</h1><p>Thank you for joining ByteInbox.</p>',
-          subject: 'Welcome to ByteInbox!',
-          category: 'transactional',
-          variables: ['name', 'email'],
-          status: 'active',
-          opens: 0,
-          clicks: 0,
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
+          id: duplicatedTemplate!.id,
+          name: duplicatedTemplate!.name,
+          description: duplicatedTemplate!.description,
+          html: duplicatedTemplate!.html,
+          subject: duplicatedTemplate!.subject,
+          category: duplicatedTemplate!.category,
+          variables: duplicatedTemplate!.variables,
+          status: duplicatedTemplate!.status,
+          opens: duplicatedTemplate!.opens,
+          clicks: duplicatedTemplate!.clicks,
+          createdAt: duplicatedTemplate!.createdAt.toISOString(),
+          lastModified: duplicatedTemplate!.lastModified.toISOString(),
         },
       };
 
@@ -214,6 +243,36 @@ export class TemplatesService {
       });
     } catch (error) {
       return handleServiceError(error, 'Error duplicating template');
+    }
+  }
+
+  async renderTemplate(templateId: string, teamId: number, renderTemplateDto: RenderTemplateDto): Promise<any> {
+    try {
+      const { template, validatedData } = await this.templatesValidator.validateRenderTemplateRequest(
+        templateId,
+        teamId,
+        renderTemplateDto,
+      );
+
+      const { html, text, subject } = TemplateUtil.renderWithSubject(
+        template.html,
+        template.subject,
+        validatedData.data
+      );
+
+      const response: RenderTemplateResponseDto = {
+        html,
+        text,
+        subject,
+      };
+
+      return generateSuccessResponse({
+        statusCode: 200,
+        message: 'Template rendered successfully',
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error rendering template');
     }
   }
 }
