@@ -90,6 +90,7 @@ export class AppModule implements NestModule {
         { path: 'api/v1/auth/google/callback', method: RequestMethod.GET },
         { path: 'api/v1/auth/github', method: RequestMethod.GET },
         { path: 'api/v1/auth/github/callback', method: RequestMethod.GET },
+        { path: 'api/v1/emails/aws-sns-callback', method: RequestMethod.POST },
       )
       .forRoutes('*path');
 
