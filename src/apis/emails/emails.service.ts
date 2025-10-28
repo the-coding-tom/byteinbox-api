@@ -1,7 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { EmailStatus } from '@prisma/client';
 import { EmailsValidator } from './emails.validator';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
@@ -48,7 +47,6 @@ export class EmailsService {
           subject: sendEmailDto.subject,
           text: sendEmailDto.text,
           html: sendEmailDto.html,
-          status: EmailStatus.queued,
         },
         sendEmailDto.attachments as any[]
       );
@@ -356,30 +354,50 @@ export class EmailsService {
 
   /**
    * Handle Open event
+   * With our new architecture, each recipient gets a unique messageId
+   * AWS SES now sends Open events with destination containing only the actual recipient
    */
   private async handleOpenEvent(message: any): Promise<void> {
-    await this.emailEventQueue.add('email-opened', {
-      messageId: message.mail?.messageId,
-      timestamp: message.open?.timestamp,
-      userAgent: message.open?.userAgent,
-      ipAddress: message.open?.ipAddress,
-      metadata: message,
-    });
+    const messageId = message.mail?.messageId;
+    const recipients = message.mail?.destination || [];
+
+    // Since we send individual emails per recipient, destination should contain only one recipient
+    // But we handle the array to be safe
+    for (const recipient of recipients) {
+      await this.emailEventQueue.add('email-opened', {
+        messageId,
+        recipient,
+        timestamp: message.open?.timestamp,
+        userAgent: message.open?.userAgent,
+        ipAddress: message.open?.ipAddress,
+        metadata: message,
+      });
+    }
   }
 
   /**
    * Handle Click event
+   * With our new architecture, each recipient gets a unique messageId
+   * AWS SES now sends Click events with destination containing only the actual recipient
    */
   private async handleClickEvent(message: any): Promise<void> {
-    await this.emailEventQueue.add('email-clicked', {
-      messageId: message.mail?.messageId,
-      timestamp: message.click?.timestamp,
-      userAgent: message.click?.userAgent,
-      ipAddress: message.click?.ipAddress,
-      link: message.click?.link,
-      linkTags: message.click?.linkTags,
-      metadata: message,
-    });
+    const messageId = message.mail?.messageId;
+    const recipients = message.mail?.destination || [];
+
+    // Since we send individual emails per recipient, destination should contain only one recipient
+    // But we handle the array to be safe
+    for (const recipient of recipients) {
+      await this.emailEventQueue.add('email-clicked', {
+        messageId,
+        recipient,
+        timestamp: message.click?.timestamp,
+        userAgent: message.click?.userAgent,
+        ipAddress: message.click?.ipAddress,
+        link: message.click?.link,
+        linkTags: message.click?.linkTags,
+        metadata: message,
+      });
+    }
   }
 
   /**

@@ -4,14 +4,13 @@ import prisma from '../common/prisma';
 import {
   CreateEmailData,
   CreateAttachmentData,
-  CreateEmailEventData,
   FindEmailsWithFilterData,
 } from './entities/email.entity';
 
 @Injectable()
 export class EmailRepository {
   /**
-   * Create a new email with optional attachments in a single atomic transaction
+   * Create a new email with optional attachments and recipients (TO + CC) in a single atomic transaction
    */
   async createEmailWithAttachments(
     emailData: CreateEmailData,
@@ -31,15 +30,24 @@ export class EmailRepository {
         subject: emailData.subject,
         text: emailData.text,
         html: emailData.html,
-        status: emailData.status,
         attachments: attachments.length > 0 ? {
           createMany: {
             data: attachments,
           },
         } : undefined,
+        recipients: {
+          createMany: {
+            data: [
+              ...emailData.to.map(email => ({ recipient: email })),
+              ...(emailData.cc || []).map(email => ({ recipient: email })),
+              ...(emailData.bcc || []).map(email => ({ recipient: email })),
+            ],
+          },
+        },
       },
       include: {
         attachments: true,
+        recipients: true,
       },
     });
   }
@@ -61,9 +69,9 @@ export class EmailRepository {
           },
         },
         attachments: true,
-        events: {
+        recipients: {
           orderBy: {
-            timestamp: 'desc',
+            createdAt: 'asc',
           },
         },
       },
@@ -134,20 +142,6 @@ export class EmailRepository {
   }
 
   /**
-   * Find email by message ID
-   */
-  async findByMessageId(messageId: string): Promise<any | null> {
-    return prisma.email.findFirst({
-      where: { messageId },
-      include: {
-        Domain: true,
-        attachments: true,
-        events: true,
-      },
-    });
-  }
-
-  /**
    * Find all emails for a team
    */
   async findByTeamId(teamId: number): Promise<any[]> {
@@ -177,24 +171,6 @@ export class EmailRepository {
     });
   }
 
-  /**
-   * Update email by message ID
-   */
-  async updateByMessageId(messageId: string, data: any): Promise<any> {
-    // messageId is not unique in schema, so we need to use updateMany or findFirst + update
-    const email = await prisma.email.findFirst({
-      where: { messageId },
-    });
-
-    if (!email) {
-      throw new Error('Email not found');
-    }
-
-    return prisma.email.update({
-      where: { id: email.id },
-      data,
-    });
-  }
 
   /**
    * Delete email
@@ -216,46 +192,20 @@ export class EmailRepository {
 
   /**
    * Get email count by status for a team
+   * Counts emails that have at least one recipient with the given status
    */
   async countByTeamIdAndStatus(teamId: number, status: EmailStatus): Promise<number> {
-    return prisma.email.count({
-      where: {
-        teamId,
-        status,
-      },
-    });
+    const result = await prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(DISTINCT e.id)::int as count
+      FROM emails e
+      INNER JOIN email_recipients er ON er.email_id = e.id
+      WHERE e.team_id = ${teamId}
+      AND er.status = ${status}::email_status
+    `;
+
+    return Number(result[0].count);
   }
 
-  /**
-   * Create email event
-   */
-  async createEmailEvent(data: CreateEmailEventData): Promise<any> {
-    return prisma.emailEvent.create({
-      data: {
-        emailId: data.emailId,
-        type: data.eventType,
-        bounceType: data.bounceType,
-        bounceSubType: data.bounceSubType,
-        complaintFeedbackType: data.complaintFeedbackType,
-        userAgent: data.userAgent,
-        ipAddress: data.ipAddress,
-        location: data.location,
-        metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : null,
-      },
-    });
-  }
-
-  /**
-   * Find email events by email ID
-   */
-  async findEventsByEmailId(emailId: number): Promise<any[]> {
-    return prisma.emailEvent.findMany({
-      where: { emailId },
-      orderBy: {
-        timestamp: 'desc',
-      },
-    });
-  }
 
   /**
    * Find emails with filtering and pagination
@@ -381,39 +331,20 @@ export class EmailRepository {
     };
   }
 
-  /**
-   * Increment email opens count
-   */
-  async incrementOpens(emailId: number): Promise<any> {
-    return prisma.email.update({
-      where: { id: emailId },
-      data: {
-        opens: { increment: 1 },
-        lastOpened: new Date(),
-      },
-    });
-  }
-
-  /**
-   * Increment email clicks count
-   */
-  async incrementClicks(emailId: number): Promise<any> {
-    return prisma.email.update({
-      where: { id: emailId },
-      data: {
-        clicks: { increment: 1 },
-        lastClicked: new Date(),
-      },
-    });
-  }
 
   /**
    * Find queued emails for sending
+   * Note: Status is now tracked per recipient
+   * This finds emails that have at least one queued recipient
    */
   async findQueuedEmails(limit: number = 100): Promise<any[]> {
     return prisma.email.findMany({
       where: {
-        status: EmailStatus.queued,
+        recipients: {
+          some: {
+            status: EmailStatus.queued,
+          },
+        },
       },
       include: {
         Domain: {
@@ -426,6 +357,11 @@ export class EmailRepository {
           },
         },
         attachments: true,
+        recipients: {
+          where: {
+            status: EmailStatus.queued,
+          },
+        },
       },
       orderBy: {
         createdAt: 'asc',

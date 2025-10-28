@@ -423,43 +423,59 @@ model Notification {
 // ============================================
 
 model Email {
+  id        Int         @id @default(autoincrement())
+  reference String?     @unique @default(cuid()) @map("reference") // Public-facing UUID reference for API
+  createdBy Int?        @map("created_by") // User who created/sent this email
+  teamId    Int         @map("team_id") // Team that owns this email (personal or shared)
+  domainId  Int?        @map("domain_id")
+  apiKeyId  Int?        @map("api_key_id") // API key used to send the email
+  from      String
+  to        String[]    @default([]) // Array of TO recipient email addresses
+  cc        String[]    @default([]) // Array of CC recipient email addresses
+  bcc       String[]    @default([]) // Array of BCC recipient email addresses
+  replyTo   String[]    @default([]) @map("reply_to")
+  subject   String
+  text      String?
+  html      String?
+  sentAt    DateTime?   @map("sent_at") // When all recipients were sent
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  Creator     User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  Team        Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Domain      Domain?           @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  ApiKey      ApiKey?           @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  attachments Attachment[]
+  recipients  EmailRecipient[] // Per-recipient tracking for TO, CC, and BCC
+
+  @@map("emails")
+}
+
+model EmailRecipient {
   id          Int         @id @default(autoincrement())
-  reference   String?     @unique @default(cuid()) @map("reference") // Public-facing UUID reference for API
-  createdBy   Int?        @map("created_by") // User who created/sent this email
-  teamId      Int         @map("team_id") // Team that owns this email (personal or shared)
-  domainId    Int?        @map("domain_id")
-  apiKeyId    Int?        @map("api_key_id") // API key used to send the email
-  from        String
-  to          String[] // Array of email addresses
-  cc          String[]    @default([])
-  bcc         String[]    @default([])
-  replyTo     String[]    @default([]) @map("reply_to")
-  subject     String
-  text        String?
-  html        String?
+  emailId     Int         @map("email_id")
+  recipient   String // Recipient email address (from TO, CC, or BCC)
   status      EmailStatus @default(queued)
-  messageId   String?     @map("message_id") // AWS SES Message ID for webhook correlation
+  messageId   String?     @map("message_id") // Unique AWS SES Message ID per recipient
   opens       Int         @default(0)
   clicks      Int         @default(0)
   lastOpened  DateTime?   @map("last_opened")
   lastClicked DateTime?   @map("last_clicked")
   openedAt    DateTime?   @map("opened_at") // First open timestamp
-  sentAt      DateTime?   @map("sent_at")
   deliveredAt DateTime?   @map("delivered_at")
+  sentAt      DateTime?   @map("sent_at") // When this recipient's email was sent
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   // Relations
-  Creator     User?        @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  Team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  Domain      Domain?      @relation(fields: [domainId], references: [id], onDelete: SetNull)
-  ApiKey      ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
-  events      EmailEvent[]
-  attachments Attachment[]
+  Email  Email        @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  events EmailEvent[]
 
-  // Indexes
+  // Indexes for finding by messageId (AWS SNS events - now unique per recipient)
   @@index([messageId])
-  @@map("emails")
+  @@index([emailId])
+  @@map("email_recipients")
 }
 
 model Attachment {
@@ -477,10 +493,10 @@ model Attachment {
 }
 
 model EmailEvent {
-  id        Int      @id @default(autoincrement())
-  emailId   Int      @map("email_id")
-  type      String // delivered, opened, clicked, bounced, complained
-  timestamp DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  emailRecipientId Int      @map("email_recipient_id")
+  type             String // delivered, opened, clicked, bounced, complained
+  timestamp        DateTime @default(now())
 
   // Bounce/Complaint details
   bounceType            String? @map("bounce_type") // transient, permanent, undetermined
@@ -492,10 +508,11 @@ model EmailEvent {
   location  String?
   metadata  Json? // Additional event data
 
-  Email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  EmailRecipient EmailRecipient @relation(fields: [emailRecipientId], references: [id], onDelete: Cascade)
 
   // Indexes for efficient querying
   @@index([type, timestamp])
+  @@index([emailRecipientId])
   @@map("email_events")
 }
 

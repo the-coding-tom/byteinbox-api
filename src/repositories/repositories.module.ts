@@ -14,6 +14,7 @@ import { LocalAuthAccountRepository } from './local-auth-account.repository';
 import { VerificationRequestRepository } from './verification-request.repository';
 import { ApiRequestLogRepository } from './api-request-log.repository';
 import { EmailRepository } from './email.repository';
+import { EmailRecipientRepository } from './email-recipient.repository';
 
 @Module({
   providers: [
@@ -32,6 +33,7 @@ import { EmailRepository } from './email.repository';
     VerificationRequestRepository,
     ApiRequestLogRepository,
     EmailRepository,
+    EmailRecipientRepository,
   ],
   exports: [
     UserRepository,
@@ -49,6 +51,7 @@ import { EmailRepository } from './email.repository';
     VerificationRequestRepository,
     ApiRequestLogRepository,
     EmailRepository,
+    EmailRecipientRepository,
   ],
 })
 export class RepositoriesModule {}

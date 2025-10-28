@@ -1,5 +1,3 @@
-import { EmailStatus } from '@prisma/client';
-
 export class CreateEmailData {
   createdBy: number;
   teamId: number;
@@ -13,7 +11,6 @@ export class CreateEmailData {
   subject: string;
   text?: string;
   html?: string;
-  status: EmailStatus;
 }
 
 export class CreateAttachmentData {
@@ -61,17 +58,11 @@ export class EmailWithRelationsData {
   subject: string;
   text?: string;
   html?: string;
-  status: EmailStatus;
   messageId?: string;
-  opens: number;
-  clicks: number;
-  lastOpened?: Date;
-  lastClicked?: Date;
   sentAt?: Date;
-  deliveredAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   domain?: any;
   attachments?: any[];
-  events?: any[];
+  recipients?: any[];
 }

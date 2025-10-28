@@ -206,6 +206,26 @@ export interface SendEmailParams {
   }>;
 }
 
+export interface SendEmailToSingleRecipientParams {
+  from: string;
+  actualRecipient: string; // The single recipient who will actually receive the email
+  displayTo: string[]; // TO addresses to show in email header
+  displayCc?: string[]; // CC addresses to show in email header
+  replyTo?: string[];
+  subject: string;
+  text?: string;
+  html?: string;
+  region: string;
+  configurationSetName?: string;
+  tags?: Record<string, string>;
+  headers?: Record<string, string>;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentType: string;
+  }>;
+}
+
 export interface SendEmailResult {
   messageId: string;
   success: boolean;
@@ -337,6 +357,106 @@ export async function sendEmailWithSES(params: SendEmailParams): Promise<SendEma
       sendParams.ReplyToAddresses = replyTo;
     }
   }
+
+  // Add configuration set if provided (for tracking)
+  if (configurationSetName) {
+    sendParams.ConfigurationSetName = configurationSetName;
+  }
+
+  // Add tags if provided
+  if (emailTags.length > 0) {
+    sendParams.EmailTags = emailTags;
+  }
+
+  try {
+    const result = await sesClient.send(new SendEmailCommand(sendParams));
+
+    return {
+      messageId: result.MessageId || '',
+      success: true,
+    };
+  } catch (error) {
+    throw new Error(`Failed to send email via AWS SES: ${error.message}`);
+  }
+}
+
+/**
+ * Send email to single recipient with custom TO/CC headers
+ * This creates the illusion of a multi-recipient email while enabling per-recipient tracking
+ */
+export async function sendEmailToSingleRecipient(
+  params: SendEmailToSingleRecipientParams
+): Promise<SendEmailResult> {
+  const {
+    from,
+    actualRecipient,
+    displayTo,
+    displayCc = [],
+    replyTo,
+    subject,
+    text,
+    html,
+    region,
+    configurationSetName,
+    tags = {},
+    headers = {},
+    attachments = [],
+  } = params;
+
+  const sesClient = createSESClient(region);
+
+  // Build raw MIME message with custom TO/CC headers
+  // Note: We don't set 'to' field because nodemailer would override our custom To header
+  // Instead, we only use custom headers and let AWS SES Destination handle actual delivery
+  const mailOptions: any = {
+    from,
+    subject,
+    text,
+    html,
+    replyTo,
+    headers: {
+      ...headers,
+      // Set custom TO/CC headers to show all recipients (creates the illusion)
+      To: displayTo.join(', '),
+      ...(displayCc.length > 0 && { Cc: displayCc.join(', ') }),
+    },
+    attachments: attachments.map((att) => ({
+      filename: att.filename,
+      content: Buffer.from(att.content, 'base64'),
+      contentType: att.contentType,
+    })),
+  };
+
+  // Create a transporter (we won't use it to send, just to build the message)
+  const transporter = nodemailer.createTransport({ streamTransport: true });
+
+  // Generate the raw MIME message
+  const info = await transporter.sendMail(mailOptions);
+
+  // Read the stream into a buffer
+  const chunks: Buffer[] = [];
+  for await (const chunk of info.message) {
+    chunks.push(chunk);
+  }
+  const rawMessage = Buffer.concat(chunks);
+
+  // Convert tags object to EmailTags array format
+  const emailTags = Object.entries(tags).map(([key, value]) => ({
+    Name: key,
+    Value: String(value),
+  }));
+
+  const sendParams: any = {
+    FromEmailAddress: from,
+    Destination: {
+      ToAddresses: [actualRecipient], // Only send to this one recipient
+    },
+    Content: {
+      Raw: {
+        Data: rawMessage,
+      },
+    },
+  };
 
   // Add configuration set if provided (for tracking)
   if (configurationSetName) {
