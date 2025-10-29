@@ -1,196 +1,187 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { Constants } from '../../common/enums/generic.enum';
 import { config } from '../../config/config';
 import { AudiencesValidator } from './audiences.validator';
+import { AudienceRepository } from '../../repositories/audience.repository';
+import { ContactRepository } from '../../repositories/contact.repository';
 import {
-  GetAudiencesResponseDto,
-  GetAudienceContactsResponseDto,
-  GetAudienceStatusesResponseDto,
   AudienceFilterDto,
   ContactFilterDto,
   CreateContactDto,
   UpdateContactDto,
   CreateContactResponseDto,
-  GetContactDetailsResponseDto,
   UpdateContactResponseDto,
   DeleteContactResponseDto,
-  UnsubscribeContactResponseDto,
-  GetContactStatsResponseDto
+  CreateAudienceDto,
+  CreateAudienceResponseDto,
+  GetAudienceResponseDto
 } from './dto/audiences.dto';
 
 @Injectable()
 export class AudiencesService {
-  constructor(private readonly audiencesValidator: AudiencesValidator) {}
+  constructor(
+    private readonly audiencesValidator: AudiencesValidator,
+    private readonly audienceRepository: AudienceRepository,
+    private readonly contactRepository: ContactRepository,
+  ) {}
 
-  async getAudiences(userId: number, filter: AudienceFilterDto): Promise<any> {
+  async getAudience(audienceId: string, teamId: number): Promise<any> {
     try {
-      // Set defaults from config
-      const page = filter.page || config.validation.pagination.defaultPage;
-      const limit = filter.limit || config.validation.pagination.defaultLimit;
-      
-      // Dummy response - in real implementation, this would fetch user's audiences with pagination
-      const response: GetAudiencesResponseDto = {
-        audiences: [
-          {
-            id: 1,
-            reference: 'aud_01h8x9k2m4n5p6q7r8s9t0u1v2',
-            name: 'All Subscribers',
-            type: 'all',
-            contactCount: 1000,
-            subscriberCount: 850,
-            unsubscriberCount: 150,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-15T10:00:00Z',
-          },
-          {
-            id: 2,
-            reference: 'aud_01h8x9k2m4n5p6q7r8s9t0u1v3',
-            name: 'VIP Customers',
-            type: 'custom',
-            contactCount: 150,
-            subscriberCount: 140,
-            unsubscriberCount: 10,
-            createdAt: '2024-01-05T00:00:00Z',
-            updatedAt: '2024-01-20T15:30:00Z',
-          },
-          {
-            id: 3,
-            reference: 'aud_01h8x9k2m4n5p6q7r8s9t0u1v4',
-            name: 'Newsletter Subscribers',
-            type: 'custom',
-            contactCount: 500,
-            subscriberCount: 420,
-            unsubscriberCount: 80,
-            createdAt: '2024-01-10T00:00:00Z',
-            updatedAt: '2024-01-25T09:15:00Z',
-          },
-        ],
-        meta: {
-          page,
-          limit,
-          total: 3,
-          totalPages: 1,
-        },
+      // Validate input and fetch audience
+      const { validatedData } = await this.audiencesValidator.validateGetAudience(teamId, audienceId);
+
+      const response: GetAudienceResponseDto = {
+        id: validatedData.audience.reference!,
+        name: validatedData.audience.name,
+        createdAt: validatedData.audience.createdAt!,
       };
+
+      return generateSuccessResponse({
+        statusCode: HttpStatus.OK,
+        message: Constants.retrievedSuccessfully,
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error retrieving audience');
+    }
+  }
+
+  async deleteAudience(audienceId: string, teamId: number): Promise<any> {
+    try {
+      // Validate input and fetch audience
+      const { validatedData } = await this.audiencesValidator.validateGetAudience(teamId, audienceId);
+
+      // Delete audience from repository
+      await this.audienceRepository.delete(validatedData.audienceId, validatedData.teamId);
+
+      const response = {
+        id: validatedData.audience.reference!,
+      };
+
+      return generateSuccessResponse({
+        statusCode: HttpStatus.OK,
+        message: Constants.deletedSuccessfully,
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error deleting audience');
+    }
+  }
+
+  async createAudience(userId: number, dto: CreateAudienceDto, teamId: number): Promise<any> {
+    try {
+      // Validate input
+      const { validatedData } = await this.audiencesValidator.validateCreateAudience(teamId, userId, dto);
+
+      // Create audience in repository
+      const audience = await this.audienceRepository.create({
+        name: validatedData.name,
+        teamId: validatedData.teamId,
+        createdBy: validatedData.userId,
+      });
+
+      const response: CreateAudienceResponseDto = {
+        id: audience.reference!,
+        name: audience.name,
+      };
+
+      return generateSuccessResponse({
+        statusCode: HttpStatus.OK,
+        message: Constants.createdSuccessfully,
+        data: response,
+      });
+    } catch (error) {
+      return handleServiceError(error, 'Error creating audience');
+    }
+  }
+
+  async getAudiences(userId: number, filter: AudienceFilterDto, teamId: number): Promise<any> {
+    try {
+      // Validate input
+      const { validatedData } = await this.audiencesValidator.validateGetAudiences(teamId, filter);
+
+      // Set defaults from config
+      const page = validatedData.filter.page || config.validation.pagination.defaultPage;
+      const limit = validatedData.filter.limit || config.validation.pagination.defaultLimit;
+      const offset = (page - 1) * limit;
+
+      // Fetch audiences from repository
+      const { data: audiences, total } = await this.audienceRepository.findWithFilter({
+        teamId: validatedData.teamId,
+        keyword: validatedData.filter.search,
+        type: validatedData.filter.type,
+        offset,
+        limit,
+      });
 
       return generateSuccessResponse({
         statusCode: 200,
         message: Constants.retrievedSuccessfully,
-        data: response,
+        data: audiences,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       });
     } catch (error) {
       return handleServiceError(error, 'Error retrieving audiences');
     }
   }
 
-  async getAudienceContacts(audienceId: string, userId: number, filter: ContactFilterDto): Promise<any> {
+  async getAudienceContacts(audienceId: string, userId: number, filter: ContactFilterDto, teamId: number): Promise<any> {
     try {
-      // Set defaults from config
-      const page = filter.page || config.validation.pagination.defaultPage;
-      const limit = filter.limit || config.validation.pagination.defaultLimit;
-      
-      // Dummy response - in real implementation, this would fetch audience contacts with pagination
-      const response: GetAudienceContactsResponseDto = {
-        contacts: [
-          {
-            id: 'contact_123',
-            email: 'user@example.com',
-            firstName: 'John',
-            lastName: 'Doe',
-            status: 'subscribed',
-            subscribedAt: '2024-01-01T00:00:00Z',
-            lastActivity: '2024-01-15T10:00:00Z',
-            tags: ['vip', 'newsletter'],
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-15T10:00:00Z',
-          },
-          {
-            id: 'contact_456',
-            email: 'user2@example.com',
-            firstName: 'Jane',
-            lastName: 'Smith',
-            status: 'subscribed',
-            subscribedAt: '2024-01-05T00:00:00Z',
-            lastActivity: '2024-01-14T15:30:00Z',
-            tags: ['newsletter'],
-            createdAt: '2024-01-05T00:00:00Z',
-            updatedAt: '2024-01-14T15:30:00Z',
-          },
-        ],
-        meta: {
-          page,
-          limit,
-          total: 2,
-          totalPages: 1,
-        },
-      };
+      // Validate input and fetch audience
+      const { validatedData } = await this.audiencesValidator.validateGetAudienceContacts(teamId, audienceId);
+
+      // Fetch contacts from repository
+      const contacts = await this.contactRepository.findByAudienceId(
+        validatedData.audience.id as number,
+        validatedData.teamId,
+      );
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.retrievedSuccessfully,
-        data: response,
+        data: contacts,
       });
     } catch (error) {
       return handleServiceError(error, 'Error retrieving audience contacts');
     }
   }
 
-  async getAudienceStatuses(userId: number): Promise<any> {
-    try {
-      // Dummy response - in real implementation, this would fetch audience status statistics
-      const response: GetAudienceStatusesResponseDto = {
-        statuses: [
-          {
-            value: 'all',
-            label: 'All Audiences',
-            count: 3,
-          },
-          {
-            value: 'custom',
-            label: 'Custom Audiences',
-            count: 2,
-          },
-          {
-            value: 'dynamic',
-            label: 'Dynamic Audiences',
-            count: 1,
-          },
-        ],
-      };
-
-      return generateSuccessResponse({
-        statusCode: 200,
-        message: Constants.retrievedSuccessfully,
-        data: response,
-      });
-    } catch (error) {
-      return handleServiceError(error, 'Error retrieving audience statuses');
-    }
-  }
-
   async createContactInAudience(audienceId: string, userId: number, createContactDto: CreateContactDto, request: any): Promise<any> {
     try {
-      await this.audiencesValidator.validateCreateContact(createContactDto);
+      // Validate input and fetch audience
+      const { validatedData } = await this.audiencesValidator.validateCreateContact(
+        request.user.teamId,
+        userId,
+        audienceId,
+        createContactDto,
+      );
+
+      // Create contact in repository
+      const contact = await this.contactRepository.create({
+        email: validatedData.dto.email,
+        firstName: validatedData.dto.firstName,
+        lastName: validatedData.dto.lastName,
+        unsubscribed: validatedData.dto.unsubscribed,
+        tags: validatedData.dto.tags,
+        metadata: validatedData.dto.metadata,
+        teamId: validatedData.teamId,
+        createdBy: validatedData.userId,
+        audienceId: validatedData.audience.id as number, // Use the database ID
+      });
 
       const response: CreateContactResponseDto = {
-        contact: {
-          id: 'contact_123',
-          email: createContactDto.email,
-          firstName: createContactDto.firstName,
-          lastName: createContactDto.lastName,
-          status: 'subscribed',
-          subscribedAt: new Date().toISOString(),
-          tags: createContactDto.tags || [],
-          metadata: createContactDto.metadata,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
+        id: contact.id,
       };
 
       return generateSuccessResponse({
-        statusCode: 201,
+        statusCode: HttpStatus.CREATED,
         message: Constants.createdSuccessfully,
         data: response,
       });
@@ -199,83 +190,68 @@ export class AudiencesService {
     }
   }
 
-  async getContactStatsByAudience(audienceId: string, userId: number): Promise<any> {
+  async getContactStatsByAudience(audienceId: string, userId: number, teamId: number): Promise<any> {
     try {
-      const response: GetContactStatsResponseDto = {
-        stats: {
-          total: 1000,
-          subscribed: 850,
-          unsubscribed: 100,
-          bounced: 50,
-          newThisMonth: 50,
-          activeThisMonth: 200,
-        },
-      };
+      // Validate input and fetch audience
+      const { validatedData } = await this.audiencesValidator.validateGetAudience(teamId, audienceId);
+
+      // Get contact stats from repository
+      const stats = await this.contactRepository.getStatsByAudience(
+        validatedData.audience.id as number,
+        validatedData.teamId,
+      );
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: 'Contact statistics retrieved successfully',
-        data: response,
+        statusCode: HttpStatus.OK,
+        message: Constants.retrievedSuccessfully,
+        data: stats,
       });
     } catch (error) {
       return handleServiceError(error, 'Error retrieving contact statistics');
     }
   }
 
-  async getContactDetails(contactId: string, userId: number, audienceId: string): Promise<any> {
+  async getContactDetails(contactId: string, userId: number, audienceId: string, teamId: number): Promise<any> {
     try {
-      const response: GetContactDetailsResponseDto = {
-        contact: {
-          id: contactId,
-          email: 'user@example.com',
-          firstName: 'John',
-          lastName: 'Doe',
-          status: 'subscribed',
-          subscribedAt: '2024-01-01T00:00:00Z',
-          lastActivity: '2024-01-15T10:00:00Z',
-          tags: ['vip', 'newsletter'],
-          metadata: {
-            company: 'Example Corp',
-            position: 'Developer',
-            source: 'website',
-          },
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z',
-        },
-      };
+      // Validate input and fetch contact
+      const { validatedData } = await this.audiencesValidator.validateGetContact(teamId, audienceId, contactId);
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: 'Contact details retrieved successfully',
-        data: response,
+        statusCode: HttpStatus.OK,
+        message: Constants.retrievedSuccessfully,
+        data: validatedData.contact,
       });
     } catch (error) {
       return handleServiceError(error, 'Error retrieving contact details');
     }
   }
 
-  async updateContact(contactId: string, userId: number, updateContactDto: UpdateContactDto, request: any, audienceId: string): Promise<any> {
+  async updateContact(contactId: string, userId: number, updateContactDto: UpdateContactDto, request: any, audienceId: string, teamId: number): Promise<any> {
     try {
-      await this.audiencesValidator.validateUpdateContact(updateContactDto);
+      // Validate input and fetch contact
+      const { validatedData } = await this.audiencesValidator.validateUpdateContact(
+        teamId,
+        audienceId,
+        contactId,
+        updateContactDto,
+      );
+
+      // Update contact in repository
+      await this.contactRepository.update(
+        validatedData.contact.id,
+        {
+          firstName: validatedData.dto.firstName,
+          lastName: validatedData.dto.lastName,
+          status: validatedData.status,
+        },
+      );
 
       const response: UpdateContactResponseDto = {
-        contact: {
-          id: contactId,
-          email: 'user@example.com',
-          firstName: updateContactDto.firstName || 'John',
-          lastName: updateContactDto.lastName || 'Doe',
-          status: 'subscribed',
-          subscribedAt: '2024-01-01T00:00:00Z',
-          lastActivity: '2024-01-15T10:00:00Z',
-          tags: updateContactDto.tags || ['vip', 'newsletter'],
-          metadata: updateContactDto.metadata,
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: new Date().toISOString(),
-        },
+        id: validatedData.contact.reference,
       };
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.updatedSuccessfully,
         data: response,
       });
@@ -284,41 +260,29 @@ export class AudiencesService {
     }
   }
 
-  async deleteContact(contactId: string, userId: number, request: any, audienceId: string): Promise<any> {
+  async deleteContact(contactId: string, userId: number, request: any, audienceId: string, teamId: number): Promise<any> {
     try {
+      // Validate input and fetch contact
+      const { validatedData } = await this.audiencesValidator.validateDeleteContact(
+        teamId,
+        audienceId,
+        contactId,
+      );
+
+      // Delete contact from repository
+      await this.contactRepository.delete(validatedData.contact.id);
+
       const response: DeleteContactResponseDto = {
-        message: Constants.deletedSuccessfully,
+        contact: validatedData.contact.reference,
       };
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.deletedSuccessfully,
         data: response,
       });
     } catch (error) {
       return handleServiceError(error, 'Error deleting contact');
-    }
-  }
-
-  async unsubscribeContact(contactId: string, userId: number, request: any, audienceId: string): Promise<any> {
-    try {
-      const response: UnsubscribeContactResponseDto = {
-        message: 'Contact unsubscribed successfully',
-        contact: {
-          id: contactId,
-          email: 'user@example.com',
-          status: 'unsubscribed',
-          unsubscribedAt: new Date().toISOString(),
-        },
-      };
-
-      return generateSuccessResponse({
-        statusCode: 200,
-        message: 'Contact unsubscribed successfully',
-        data: response,
-      });
-    } catch (error) {
-      return handleServiceError(error, 'Error unsubscribing contact');
     }
   }
 }

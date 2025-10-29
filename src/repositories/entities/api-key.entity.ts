@@ -7,14 +7,10 @@ export class CreateApiKeyData {
   createdBy: number;
 }
 
-import { ApiKeyStatus } from '@prisma/client';
-
 export class UpdateApiKeyData {
   name?: string;
   permission?: string;
   domain?: string;
-  status?: ApiKeyStatus;
-  key?: string;
 }
 
 export class FindByTeamIdWithPaginationFilter {

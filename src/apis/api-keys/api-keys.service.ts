@@ -59,13 +59,16 @@ export class ApiKeysService {
         teamId,
         permission: validatedData.permission,
         domain: validatedData.domain,
-        createdBy: user.id
+        createdBy: user.id,
       });
 
       return generateSuccessResponse({
         statusCode: HttpStatus.CREATED,
         message: Constants.createdSuccessfully,
-        data: newApiKey
+        data: {
+          id: newApiKey.reference,
+          token: newApiKey.key,
+        },
       });
     } catch (error) {
       return handleServiceError('Error creating API key', error);
@@ -80,7 +83,7 @@ export class ApiKeysService {
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
         message: Constants.retrievedSuccessfully,
-        data: apiKey
+        data: apiKey,
       });
     } catch (error) {
       return handleServiceError('Error retrieving API key', error);
@@ -98,7 +101,9 @@ export class ApiKeysService {
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
         message: Constants.updatedSuccessfully,
-        data: updatedApiKey
+        data: {
+          id: updatedApiKey.reference,
+        },
       });
     } catch (error) {
       return handleServiceError('Error updating API key', error);
@@ -115,7 +120,7 @@ export class ApiKeysService {
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
-        message: Constants.deletedSuccessfully,
+        message: Constants.successMessage,
       });
     } catch (error) {
       return handleServiceError('Error deleting API key', error);

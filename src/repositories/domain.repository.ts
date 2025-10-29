@@ -63,6 +63,18 @@ export class DomainRepository {
   }
 
   /**
+   * Find domain by ID and team ID
+   */
+  async findByIdAndTeamId(id: number, teamId: number): Promise<any | null> {
+    return prisma.domain.findFirst({
+      where: {
+        id,
+        teamId,
+      },
+    });
+  }
+
+  /**
    * Find domain by name (returns first match since name is no longer unique)
    */
   async findByName(name: string): Promise<any | null> {

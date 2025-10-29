@@ -22,6 +22,7 @@ export class ApiKeyRepository {
       },
       select: {
         id: true,
+        reference: true,
         key: true,
         name: true,
         permission: true,
@@ -36,33 +37,42 @@ export class ApiKeyRepository {
   async findById(id: number): Promise<any | null> {
     const query = Prisma.sql`
       SELECT 
-        AK.id,
-        CONCAT(LEFT(AK.key, 11), '...') as key,
         AK.name,
-        AK.team_id as "teamId",
+        AK.key as token,
         AK.permission,
-        AK.domain,
-        AK.status,
         AK.last_used as "lastUsed",
         AK.created_at as "createdAt",
-        AK.created_by as "createdBy",
-        T.id as "Team.id",
-        T.reference as "Team.reference",
-        T.name as "Team.name",
-        T.slug as "Team.slug",
-        U.id as "Creator.id",
-        U.email as "Creator.email",
-        U.name as "Creator.name",
-        U.first_name as "Creator.firstName",
-        U.last_name as "Creator.lastName"
+        COALESCE(AK.domain, 'all') as domain,
+        U.email as "creatorEmail",
+        COALESCE(
+          (SELECT COUNT(*)::int FROM api_request_logs ARL WHERE ARL.api_key_id = AK.id),
+          0
+        ) as "totalUses"
       FROM api_keys AK
-      LEFT JOIN teams T ON AK.team_id = T.id
       LEFT JOIN users U ON AK.created_by = U.id
       WHERE AK.id = ${id}
     `;
 
     const results = await prisma.$queryRaw(query) as any[];
     return results[0];
+  }
+
+  async findByIdAndTeamId(id: number, teamId: number): Promise<any | null> {
+    return prisma.apiKey.findFirst({
+      where: {
+        id,
+        teamId,
+      },
+    });
+  }
+
+  async findByReferenceAndTeamId(reference: string, teamId: number): Promise<any | null> {
+    return prisma.apiKey.findFirst({
+      where: {
+        reference,
+        teamId,
+      },
+    });
   }
 
 
@@ -108,16 +118,11 @@ export class ApiKeyRepository {
 
     const retrieveApiKeysQuery = Prisma.sql`
       SELECT 
-        AK.id,
-        CONCAT(LEFT(AK.key, 11), '...') as key,
         AK.name,
-        AK.team_id as "teamId",
+        AK.key as token,
         AK.permission,
-        AK.domain,
-        AK.status,
         AK.last_used as "lastUsed",
-        AK.created_at as "createdAt",
-        AK.created_by as "createdBy"
+        AK.created_at as "createdAt"
       FROM api_keys AK
       ${whereClause} 
       ORDER BY AK.created_at DESC 
@@ -142,31 +147,21 @@ export class ApiKeyRepository {
     };
   }
 
-  async update(id: number, data: UpdateApiKeyData): Promise<any> {
+  async update(id: number, data: UpdateApiKeyData): Promise<{ reference: string }> {
     const query = Prisma.sql`
       UPDATE api_keys 
       SET 
         name = COALESCE(${data.name}, name),
         permission = COALESCE(${data.permission}, permission),
-        domain = COALESCE(${data.domain}, domain),
-        status = COALESCE(${data.status}, status)
+        domain = COALESCE(${data.domain}, domain)
       WHERE id = ${id}
-      RETURNING 
-        id,
-        CONCAT(LEFT(key, 11), '...') as key,
-        name,
-        team_id as "teamId",
-        permission,
-        domain,
-        status,
-        last_used as "lastUsed",
-        created_at as "createdAt",
-        created_by as "createdBy"
+      RETURNING reference
     `;
 
-    const results = await prisma.$queryRaw(query) as any[];
+    const results = await prisma.$queryRaw<Array<{ reference: string }>>(query);
     return results[0];
   }
+
 
   async updateLastUsed(id: number): Promise<void> {
     await prisma.apiKey.update({

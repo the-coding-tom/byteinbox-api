@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Param, Query, Body, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { AudiencesService } from './audiences.service';
-import { AudienceFilterDto, CreateContactDto, UpdateContactDto, ContactFilterDto } from './dto/audiences.dto';
+import { AudienceFilterDto, CreateContactDto, UpdateContactDto, ContactFilterDto, CreateAudienceDto } from './dto/audiences.dto';
 
 @Controller('api/v1/audiences')
 export class AudiencesController {
@@ -9,15 +9,27 @@ export class AudiencesController {
     private readonly audiencesService: AudiencesService,
   ) {}
 
-  @Get()
-  async getAudiences(@Query() filter: AudienceFilterDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.audiencesService.getAudiences(request.user.id, filter);
+  @Post()
+  async createAudience(@Body() dto: CreateAudienceDto, @Req() request: any, @Res() response: Response) {
+    const { status, ...restOfResponse } = await this.audiencesService.createAudience(request.user.id, dto, request.user.teamId);
     response.status(status).json(restOfResponse);
   }
 
-  @Get('statuses')
-  async getAudienceStatuses(@Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.audiencesService.getAudienceStatuses(request.user.id);
+  @Get()
+  async getAudiences(@Query() filter: AudienceFilterDto, @Req() request: any, @Res() response: Response) {
+    const { status, ...restOfResponse } = await this.audiencesService.getAudiences(request.user.id, filter, request.user.teamId);
+    response.status(status).json(restOfResponse);
+  }
+
+  @Get(':id')
+  async getAudience(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
+    const { status, ...restOfResponse } = await this.audiencesService.getAudience(id, request.user.teamId);
+    response.status(status).json(restOfResponse);
+  }
+
+  @Delete(':id')
+  async deleteAudience(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
+    const { status, ...restOfResponse } = await this.audiencesService.deleteAudience(id, request.user.teamId);
     response.status(status).json(restOfResponse);
   }
 
@@ -45,13 +57,13 @@ export class AudiencesController {
     @Req() request: any,
     @Res() response: Response,
   ) {
-    const { status, ...restOfResponse } = await this.audiencesService.getAudienceContacts(audienceId, request.user.id, filter);
+    const { status, ...restOfResponse } = await this.audiencesService.getAudienceContacts(audienceId, request.user.id, filter, request.user.teamId);
     response.status(status).json(restOfResponse);
   }
 
   @Get(':audienceId/contacts/stats')
   async getContactStats(@Param('audienceId') audienceId: string, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.audiencesService.getContactStatsByAudience(audienceId, request.user.id);
+    const { status, ...restOfResponse } = await this.audiencesService.getContactStatsByAudience(audienceId, request.user.id, request.user.teamId);
     response.status(status).json(restOfResponse);
   }
 
@@ -62,11 +74,11 @@ export class AudiencesController {
     @Req() request: any,
     @Res() response: Response,
   ) {
-    const { status, ...restOfResponse } = await this.audiencesService.getContactDetails(contactId, request.user.id, audienceId);
+    const { status, ...restOfResponse } = await this.audiencesService.getContactDetails(contactId, request.user.id, audienceId, request.user.teamId);
     response.status(status).json(restOfResponse);
   }
 
-  @Put(':audienceId/contacts/:contactId')
+  @Patch(':audienceId/contacts/:contactId')
   async updateContact(
     @Param('audienceId') audienceId: string,
     @Param('contactId') contactId: string,
@@ -80,6 +92,7 @@ export class AudiencesController {
       updateContactDto,
       request,
       audienceId,
+      request.user.teamId,
     );
     response.status(status).json(restOfResponse);
   }
@@ -91,23 +104,7 @@ export class AudiencesController {
     @Req() request: any,
     @Res() response: Response,
   ) {
-    const { status, ...restOfResponse } = await this.audiencesService.deleteContact(contactId, request.user.id, request, audienceId);
-    response.status(status).json(restOfResponse);
-  }
-
-  @Post(':audienceId/contacts/:contactId/unsubscribe')
-  async unsubscribeContact(
-    @Param('audienceId') audienceId: string,
-    @Param('contactId') contactId: string,
-    @Req() request: any,
-    @Res() response: Response,
-  ) {
-    const { status, ...restOfResponse } = await this.audiencesService.unsubscribeContact(
-      contactId,
-      request.user.id,
-      request,
-      audienceId,
-    );
+    const { status, ...restOfResponse } = await this.audiencesService.deleteContact(contactId, request.user.id, request, audienceId, request.user.teamId);
     response.status(status).json(restOfResponse);
   }
 }

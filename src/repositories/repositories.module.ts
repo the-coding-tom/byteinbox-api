@@ -15,6 +15,8 @@ import { VerificationRequestRepository } from './verification-request.repository
 import { ApiRequestLogRepository } from './api-request-log.repository';
 import { EmailRepository } from './email.repository';
 import { EmailRecipientRepository } from './email-recipient.repository';
+import { AudienceRepository } from './audience.repository';
+import { ContactRepository } from './contact.repository';
 
 @Module({
   providers: [
@@ -34,6 +36,8 @@ import { EmailRecipientRepository } from './email-recipient.repository';
     ApiRequestLogRepository,
     EmailRepository,
     EmailRecipientRepository,
+    AudienceRepository,
+    ContactRepository,
   ],
   exports: [
     UserRepository,
@@ -52,6 +56,8 @@ import { EmailRecipientRepository } from './email-recipient.repository';
     ApiRequestLogRepository,
     EmailRepository,
     EmailRecipientRepository,
+    AudienceRepository,
+    ContactRepository,
   ],
 })
 export class RepositoriesModule {}

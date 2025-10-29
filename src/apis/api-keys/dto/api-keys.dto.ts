@@ -1,14 +1,22 @@
 export class CreateApiKeyDto {
   name: string;
   permission: string;
-  domain?: string;
+  domainId?: number;
+}
+
+export class CreateApiKeyResponseDto {
+  id: string;
+  token: string;
 }
 
 export class UpdateApiKeyDto {
   name?: string;
   permission?: string;
-  domain?: string;
-  status?: 'active' | 'revoked';
+  domainId?: number;
+}
+
+export class UpdateApiKeyResponseDto {
+  id: string;
 }
 
 export class GetApiKeysDto {

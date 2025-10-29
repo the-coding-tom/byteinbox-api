@@ -591,6 +591,7 @@ model WebhookDelivery {
 
 model ApiKey {
   id         Int          @id @default(autoincrement())
+  reference  String       @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   createdBy  Int          @map("created_by") // User who created this API key
   teamId     Int          @map("team_id") // Team that owns this API key (personal or shared)
   name       String
@@ -616,6 +617,7 @@ model ApiKey {
 
 model Contact {
   id           Int           @id @default(autoincrement())
+  reference    String        @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   createdBy    Int?          @map("created_by") // User who created this contact
   teamId       Int           @map("team_id") // Team that owns this contact (personal or shared)
   email        String

@@ -5,6 +5,21 @@ export class AudienceFilterDto {
   search?: string;
 }
 
+export class CreateAudienceDto {
+  name: string;
+}
+
+export class CreateAudienceResponseDto {
+  id: string;
+  name: string;
+}
+
+export class GetAudienceResponseDto {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export class GetAudiencesResponseDto {
   audiences: Array<{
     id: number;
@@ -26,24 +41,12 @@ export class GetAudiencesResponseDto {
 }
 
 export class GetAudienceContactsResponseDto {
-  contacts: Array<{
-    id: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    status: string;
-    subscribedAt?: string;
-    lastActivity?: string;
-    tags: string[];
-    createdAt: string;
-    updatedAt: string;
-  }>;
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+  unsubscribed: boolean;
 }
 
 export class GetAudienceStatusesResponseDto {
@@ -68,11 +71,13 @@ export class CreateContactDto {
   email: string;
   firstName?: string;
   lastName?: string;
+  unsubscribed?: boolean;
   tags?: string[];
   metadata?: Record<string, any>;
 }
 
 export class UpdateContactDto {
+  unsubscribed?: boolean;
   firstName?: string;
   lastName?: string;
   tags?: string[];
@@ -80,19 +85,7 @@ export class UpdateContactDto {
 }
 
 export class CreateContactResponseDto {
-  contact: {
-    id: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    status: string;
-    subscribedAt?: string;
-    lastActivity?: string;
-    tags: string[];
-    metadata?: Record<string, any>;
-    createdAt: string;
-    updatedAt: string;
-  };
+  id: string;
 }
 
 export class GetContactDetailsResponseDto {
@@ -112,23 +105,11 @@ export class GetContactDetailsResponseDto {
 }
 
 export class UpdateContactResponseDto {
-  contact: {
-    id: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    status: string;
-    subscribedAt?: string;
-    lastActivity?: string;
-    tags: string[];
-    metadata?: Record<string, any>;
-    createdAt: string;
-    updatedAt: string;
-  };
+  id: string;
 }
 
 export class DeleteContactResponseDto {
-  message: string;
+  contact: string;
 }
 
 export class UnsubscribeContactResponseDto {
@@ -143,11 +124,8 @@ export class UnsubscribeContactResponseDto {
 
 export class GetContactStatsResponseDto {
   stats: {
-    total: number;
-    subscribed: number;
-    unsubscribed: number;
-    bounced: number;
-    newThisMonth: number;
-    activeThisMonth: number;
+    totalCustomers: number;
+    totalSubscribers: number;
+    totalUnsubscribers: number;
   };
 }
