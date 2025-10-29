@@ -27,13 +27,26 @@ export class EmailRecipientRepository {
    * Update recipient with messageId and mark as sent
    */
   async updateMessageIdAndSent(recipientId: number, messageId: string): Promise<any> {
-    return prisma.emailRecipient.update({
-      where: { id: recipientId },
-      data: {
-        messageId,
-        status: EmailStatus.sent,
-        sentAt: new Date(),
-      },
+    return prisma.$transaction(async (tx) => {
+      // Update recipient status to sent
+      const updatedRecipient = await tx.emailRecipient.update({
+        where: { id: recipientId },
+        data: {
+          messageId,
+          status: EmailStatus.sent,
+          sentAt: new Date(),
+        },
+      });
+
+      // Create a "sent" event
+      await tx.emailEvent.create({
+        data: {
+          emailRecipientId: recipientId,
+          type: EmailStatus.sent,
+        },
+      });
+
+      return updatedRecipient;
     });
   }
 
