@@ -379,4 +379,20 @@ export class DomainRepository {
 
     return result;
   }
+
+  /**
+   * Reset all other domains with the same name (except current domain) to pending_dns
+   * This forces other teams to re-verify DNS when a domain is taken over
+   */
+  async resetOtherDomainsToVerifying(currentDomainId: number, domainName: string): Promise<void> {
+    await prisma.domain.updateMany({
+      where: {
+        name: domainName,
+        id: { not: currentDomainId },
+      },
+      data: {
+        status: DomainStatus.pending_dns,
+      },
+    });
+  }
 }

@@ -44,6 +44,7 @@ export class EmailEventQueueProcessor {
       // Create email event for this recipient
       await this.emailRecipientRepository.createEmailEvent(emailRecipient.id, {
         type: 'delivered',
+        messageId,
         metadata,
       });
 
@@ -76,6 +77,7 @@ export class EmailEventQueueProcessor {
       // Create email event for this recipient
       await this.emailRecipientRepository.createEmailEvent(emailRecipient.id, {
         type: 'opened',
+        messageId,
         userAgent,
         ipAddress,
         location,
@@ -110,6 +112,7 @@ export class EmailEventQueueProcessor {
       // Create email event for this recipient
       await this.emailRecipientRepository.createEmailEvent(emailRecipient.id, {
         type: 'clicked',
+        messageId,
         userAgent,
         ipAddress,
         location,
@@ -148,6 +151,7 @@ export class EmailEventQueueProcessor {
       // Create email event for this recipient
       await this.emailRecipientRepository.createEmailEvent(emailRecipient.id, {
         type: 'bounced',
+        messageId,
         bounceType,
         bounceSubType,
         metadata,
@@ -178,6 +182,7 @@ export class EmailEventQueueProcessor {
       // Create email event for this recipient
       await this.emailRecipientRepository.createEmailEvent(emailRecipient.id, {
         type: 'complained',
+        messageId,
         complaintFeedbackType,
         metadata,
       });

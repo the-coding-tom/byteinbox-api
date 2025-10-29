@@ -495,7 +495,8 @@ model Attachment {
 model EmailEvent {
   id               Int      @id @default(autoincrement())
   emailRecipientId Int      @map("email_recipient_id")
-  type             String // delivered, opened, clicked, bounced, complained
+  messageId        String?  @map("message_id") // AWS SES messageId for easier event lookup
+  type             String // delivered, opened, clicked, bounced, complained, sent
   timestamp        DateTime @default(now())
 
   // Bounce/Complaint details
@@ -513,6 +514,7 @@ model EmailEvent {
   // Indexes for efficient querying
   @@index([type, timestamp])
   @@index([emailRecipientId])
+  @@index([messageId])
   @@map("email_events")
 }
 

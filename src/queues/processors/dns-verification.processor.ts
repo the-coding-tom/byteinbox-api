@@ -12,7 +12,6 @@ import { registerDomainWithSES, checkDomainExists, deleteDomainFromSES } from '.
 import {
   notifyDomainDnsVerified,
   notifyDomainAwsPending,
-  notifyDomainTransfer,
   notifyDomainFailed,
 } from '../../helpers/notification.helper';
 import { config } from '../../config/config';
@@ -126,41 +125,18 @@ export class DnsVerificationQueueProcessor {
           jobId: `dns-verification-${domainId}`,
         });
 
-        // Check if domain exists in AWS SES (another team might own it)
+        // Check if domain exists in AWS SES and delete it (fresh start with new DKIM)
         const domainExistsInAws = await checkDomainExists(domain.name, domain.region);
 
         if (domainExistsInAws) {
-          // Domain exists in AWS - check if it belongs to another team
-          const otherTeamDomain = await this.domainRepository.findVerifiedByName(domain.name);
-
-          if (otherTeamDomain && otherTeamDomain.id !== domain.id) {
-            this.logger.log(`Domain ${domain.name} is being transferred from team ${otherTeamDomain.teamId} to team ${domain.teamId}`);
-
-            // Notify the previous team about the transfer
-            await notifyDomainTransfer(otherTeamDomain.teamId, domain.name, false);
-
-            // Revoke the previous team's domain
-            await this.domainRepository.update(otherTeamDomain.id, {
-              status: DomainStatus.revoked,
-            });
-
-            // Create ownership history record
-            await this.domainRepository.createOwnershipHistory({
-              domainId: domain.id,
-              domainName: domain.name,
-              previousTeamId: otherTeamDomain.teamId,
-              newTeamId: domain.teamId,
-              transferReason: 'dns_verification',
-              metadata: {
-                previousDomainId: otherTeamDomain.id,
-                dkimChanged: true,
-              },
-            });
-
-            // Delete from AWS (will re-add with new DKIM keys)
-            await deleteDomainFromSES(domain.name, domain.region);
-          }
+          this.logger.log(`Domain ${domain.name} exists in AWS, deleting it before re-registration`);
+          await deleteDomainFromSES(domain.name, domain.region);
+          this.logger.log(`Deleted domain ${domain.name} from AWS SES`);
         }
+
+        // Set all other domains with the same name to pending_dns (they need to re-verify)
+        await this.domainRepository.resetOtherDomainsToVerifying(domain.id, domain.name);
+        this.logger.log(`Reset all other team domains with name ${domain.name} to pending_dns`);
 
         // Register domain with AWS SES using this team's DKIM keys
         await registerDomainWithSES(
@@ -181,11 +157,6 @@ export class DnsVerificationQueueProcessor {
 
         // Notify team about AWS registration
         await notifyDomainAwsPending(domain.teamId, domain.name, domain.id);
-
-        // Notify new team about domain transfer (if applicable)
-        if (domainExistsInAws) {
-          await notifyDomainTransfer(domain.teamId, domain.name, true);
-        }
 
         // Enqueue for AWS verification with TTL (repeatable)
         await this.verifyAwsQueue.add(

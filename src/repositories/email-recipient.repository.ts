@@ -38,10 +38,11 @@ export class EmailRecipientRepository {
         },
       });
 
-      // Create a "sent" event
+      // Create a "sent" event with messageId
       await tx.emailEvent.create({
         data: {
           emailRecipientId: recipientId,
+          messageId,
           type: EmailStatus.sent,
         },
       });
@@ -105,6 +106,7 @@ export class EmailRecipientRepository {
     emailRecipientId: number,
     eventData: {
       type: string;
+      messageId?: string;
       bounceType?: string;
       bounceSubType?: string;
       complaintFeedbackType?: string;
@@ -117,6 +119,7 @@ export class EmailRecipientRepository {
     return prisma.emailEvent.create({
       data: {
         emailRecipientId,
+        messageId: eventData.messageId,
         type: eventData.type,
         bounceType: eventData.bounceType,
         bounceSubType: eventData.bounceSubType,
