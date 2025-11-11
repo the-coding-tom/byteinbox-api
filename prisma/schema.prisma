@@ -32,23 +32,25 @@ model User {
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  domains                 Domain[]
-  emails                  Email[]
-  templates               Template[]
-  webhooks                Webhook[]
-  apiKeys                 ApiKey[]
-  broadcasts              Broadcast[]
-  contacts                Contact[]
-  audiences               Audience[]
-  localAuthAccount        LocalAuthAccount? // Password-based auth (optional)
-  oauthAccounts           OAuthAccount[] // OAuth providers (google, github, etc.)
-  sessions                Session[]
-  teamMemberships         TeamMember[]
-  backupCodes             MfaBackupCode[]
-  mfaVerificationSessions MfaVerificationSession[]
-  verificationRequests    VerificationRequest[]
-  blacklistsCreated       Blacklist[]
-  notifications           Notification[]
+  domains                    Domain[]
+  emails                     Email[]
+  templates                  Template[]
+  webhooks                   Webhook[]
+  apiKeys                    ApiKey[]
+  broadcasts                 Broadcast[]
+  contacts                   Contact[]
+  audiences                  Audience[]
+  localAuthAccount           LocalAuthAccount? // Password-based auth (optional)
+  oauthAccounts              OAuthAccount[] // OAuth providers (google, github, etc.)
+  sessions                   Session[]
+  teamMemberships            TeamMember[]
+  backupCodes                MfaBackupCode[]
+  mfaVerificationSessions    MfaVerificationSession[]
+  verificationRequests       VerificationRequest[]
+  blacklistsCreated          Blacklist[]
+  notifications              Notification[]
+  templateVersionsPublished  TemplateVersion[] @relation("PublishedBy")
+  templateVersionsCreated    TemplateVersion[] @relation("VersionCreator")
 
   @@map("users")
 }
@@ -326,14 +328,15 @@ model Subscription {
 
 model Domain {
   id            Int          @id @default(autoincrement())
+  reference     String       @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   name          String // Domain name - multiple teams can use the same domain
   createdBy     Int?         @map("created_by") // User who created this domain
   teamId        Int          @map("team_id") // Team that owns this domain (personal or shared)
-  status        DomainStatus @default(pending_dns)
+  status        DomainStatus @default(not_started)
   region        String? // us-east-1, eu-west-1, etc.
   clickTracking Boolean      @default(true) @map("click_tracking")
   openTracking  Boolean      @default(true) @map("open_tracking")
-  tlsMode       String       @default("enforced") @map("tls_mode") // enforced, opportunistic, disabled
+  tlsMode       String       @default("opportunistic") @map("tls_mode") // enforced, opportunistic, disabled
 
   // DKIM Configuration (per-domain keys)
   dkimSelector   String? @map("dkim_selector") // Unique DKIM selector for this domain
@@ -359,11 +362,12 @@ model Domain {
 model DnsRecord {
   id            Int          @id @default(autoincrement())
   domainId      Int          @map("domain_id")
-  type          String // dkim, spf, dmarc, mx, tracking
-  name          String
-  recordType    String       @map("record_type") // TXT, MX, CNAME
+  record        String // SPF, DKIM, DMARC, MX, TRACKING
+  name          String // send, send.marketing, byteinbox._domainkey, etc.
+  type          String // TXT, MX, CNAME (actual DNS record type)
   value         String
-  status        DomainStatus @default(pending_dns)
+  ttl           String       @default("Auto") // Auto or specific TTL value
+  status        DomainStatus @default(not_started)
   priority      Int? // for MX records
   lastCheckedAt DateTime?    @map("last_checked_at") // When this DNS record was last verified
 
@@ -423,32 +427,44 @@ model Notification {
 // ============================================
 
 model Email {
-  id        Int         @id @default(autoincrement())
-  reference String?     @unique @default(cuid()) @map("reference") // Public-facing UUID reference for API
-  createdBy Int?        @map("created_by") // User who created/sent this email
-  teamId    Int         @map("team_id") // Team that owns this email (personal or shared)
-  domainId  Int?        @map("domain_id")
-  apiKeyId  Int?        @map("api_key_id") // API key used to send the email
-  from      String
-  to        String[]    @default([]) // Array of TO recipient email addresses
-  cc        String[]    @default([]) // Array of CC recipient email addresses
-  bcc       String[]    @default([]) // Array of BCC recipient email addresses
-  replyTo   String[]    @default([]) @map("reply_to")
-  subject   String
-  text      String?
-  html      String?
-  sentAt    DateTime?   @map("sent_at") // When all recipients were sent
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+  id             Int         @id @default(autoincrement())
+  reference      String?     @unique @default(cuid()) @map("reference") // Public-facing UUID reference for API
+  batchReference String?     @map("batch_reference") // UUID to group batch emails together
+  createdBy      Int?        @map("created_by") // User who created/sent this email
+  teamId         Int         @map("team_id") // Team that owns this email (personal or shared)
+  type           EmailType   @default(transactional) // transactional or marketing
+  domainId       Int?        @map("domain_id")
+  apiKeyId       Int?        @map("api_key_id") // API key used to send the email
+  templateId     Int?        @map("template_id") // Template used for this email
+  templateData   Json?       @map("template_data") // Data used to render the template
+  broadcastId    Int?        @map("broadcast_id") // Links to broadcast campaign if this email is part of one
+  from           String
+  to             String[]    @default([]) // Array of TO recipient email addresses
+  cc             String[]    @default([]) // Array of CC recipient email addresses
+  bcc            String[]    @default([]) // Array of BCC recipient email addresses
+  replyTo        String[]    @default([]) @map("reply_to")
+  subject        String
+  text           String?
+  html           String?
+  scheduledAt    DateTime?   @map("scheduled_at") // For scheduled sends
+  sentAt         DateTime?   @map("sent_at") // When email was sent
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
 
   // Relations
   Creator     User?             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   Team        Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
   Domain      Domain?           @relation(fields: [domainId], references: [id], onDelete: SetNull)
   ApiKey      ApiKey?           @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  Template    Template?         @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  Broadcast   Broadcast?        @relation(fields: [broadcastId], references: [id], onDelete: SetNull)
   attachments Attachment[]
   recipients  EmailRecipient[] // Per-recipient tracking for TO, CC, and BCC
 
+  @@index([type])
+  @@index([scheduledAt])
+  @@index([broadcastId])
+  @@index([batchReference])
   @@map("emails")
 }
 
@@ -479,13 +495,17 @@ model EmailRecipient {
 }
 
 model Attachment {
-  id        Int      @id @default(autoincrement())
-  emailId   Int      @map("email_id")
-  filename  String
-  content   String? // Base64 encoded content (optional if path is provided)
-  path      String? // URL to download attachment from
-  type      String? // MIME type
-  createdAt DateTime @default(now()) @map("created_at")
+  id          Int       @id @default(autoincrement())
+  reference   String    @unique @default(cuid()) @map("reference") // Public-facing UUID reference for API
+  emailId     Int       @map("email_id")
+  filename    String
+  content     String? // Base64 encoded content (optional if path is provided)
+  path        String? // User provided path to the attachment
+  downloadUrl String?   @map("download_url") // Pre-signed URL for downloading attachment
+  contentType String?   @map("content_type") // MIME type
+  contentId   String?   @map("content_id") // Content-ID for inline attachments (e.g., img001 for <img src="cid:img001">)
+  expiresAt   DateTime? @map("expires_at") // When the attachment file on CDN will be deleted
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   Email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
 
@@ -523,27 +543,85 @@ model EmailEvent {
 // ============================================
 
 model Template {
-  id           Int            @id @default(autoincrement())
-  createdBy    Int?           @map("created_by") // User who created this template
-  teamId       Int            @map("team_id") // Team that owns this template (personal or shared)
-  name         String
-  description  String?
-  html         String
-  subject      String?
-  category     String? // transactional, marketing, etc.
-  variables    String[]       @default([]) // Template variable names
-  status       TemplateStatus @default(active)
-  opens        Int            @default(0)
-  clicks       Int            @default(0)
-  createdAt    DateTime       @default(now()) @map("created_at")
-  lastModified DateTime       @updatedAt @map("last_modified")
+  id               Int            @id @default(autoincrement())
+  reference        String         @unique @default(cuid()) @map("reference")
+  name             String
+  description      String?
+  alias            String?
+  createdBy        Int?           @map("created_by")
+  teamId           Int            @map("team_id")
+  currentVersionId Int?           @unique @map("current_version_id")
+  status           TemplateStatus @default(active)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  deletedAt        DateTime?      @map("deleted_at")
 
-  Creator    User?       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  Team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  broadcasts Broadcast[]
+  Creator        User?             @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  Team           Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  CurrentVersion TemplateVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions       TemplateVersion[] @relation("TemplateVersions")
+  emails         Email[]
 
+  @@unique([name, teamId])
+  @@index([teamId])
+  @@index([alias, teamId])
+  @@index([reference])
   @@map("templates")
 }
+
+model TemplateVersion {
+  id            Int                   @id @default(autoincrement())
+  reference     String                @unique @default(cuid()) @map("reference")
+  templateId    Int                   @map("template_id")
+  versionNumber Int                   @default(1) @map("version_number")
+  html          String                @db.Text
+  text          String?               @db.Text
+  subject       String?
+  category      String?
+  from          String?
+  replyTo       String[]              @default([]) @map("reply_to")
+  previewUrl    String?               @map("preview_url")
+  status        TemplateVersionStatus @default(draft)
+  publishedAt   DateTime?             @map("published_at")
+  publishedBy   Int?                  @map("published_by")
+  createdBy     Int?                  @map("created_by")
+  opens         Int                   @default(0)
+  clicks        Int                   @default(0)
+  sent          Int                   @default(0)
+  delivered     Int                   @default(0)
+  bounced       Int                   @default(0)
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  rowVersion    Int                   @default(0)
+
+  Template         Template               @relation("TemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
+  CurrentVersionOf Template?              @relation("CurrentVersion")
+  variables        TemplateVariable[]
+  PublishedByUser  User?                  @relation("PublishedBy", fields: [publishedBy], references: [id], onDelete: SetNull)
+  Creator          User?                  @relation("VersionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@unique([templateId, versionNumber])
+  @@index([templateId])
+  @@index([status])
+  @@map("template_versions")
+}
+
+model TemplateVariable {
+  id                Int             @id @default(autoincrement())
+  reference         String          @unique @default(cuid()) @map("reference")
+  templateVersionId Int             @map("template_version_id")
+  key               String
+  type              String
+  fallbackValue     Json?           @map("fallback_value")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  TemplateVersion TemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
+
+  @@index([templateVersionId])
+  @@map("template_variables")
+}
+
 
 // ============================================
 // WEBHOOKS
@@ -551,6 +629,7 @@ model Template {
 
 model Webhook {
   id            Int           @id @default(autoincrement())
+  reference     String        @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   createdBy     Int?          @map("created_by") // User who created this webhook
   teamId        Int           @map("team_id") // Team that owns this webhook (personal or shared)
   url           String
@@ -678,17 +757,17 @@ model AudienceContact {
 
 model Broadcast {
   id          Int             @id @default(autoincrement())
+  reference   String          @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   createdBy   Int?            @map("created_by") // User who created this broadcast
   teamId      Int             @map("team_id") // Team that owns this broadcast (personal or shared)
-  templateId  Int?            @map("template_id")
-  audienceId  Int?            @map("audience_id") // Audience to send broadcast to
-  name        String
+  audienceId  Int             @map("audience_id") // Audience to send broadcast to
+  name        String? // Internal campaign name (optional)
+  from        String // Sender email with optional friendly name (e.g., "Thomas <thomas@esoko.com>")
+  replyTo     String[]        @default([]) @map("reply_to") // Multiple reply-to addresses
   subject     String
-  content     String? // HTML content if not using template
+  html        String?         @db.Text // HTML content with contact property placeholders
+  text        String?         @db.Text // Plain text version
   status      BroadcastStatus @default(draft)
-  totalSent   Int             @default(0) @map("total_sent")
-  opens       Int             @default(0)
-  clicks      Int             @default(0)
   scheduledAt DateTime?       @map("scheduled_at")
   sentAt      DateTime?       @map("sent_at")
   createdAt   DateTime        @default(now()) @map("created_at")
@@ -696,10 +775,13 @@ model Broadcast {
 
   Creator    User?                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   Team       Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  Template   Template?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  Audience   Audience?            @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  Audience   Audience            @relation(fields: [audienceId], references: [id], onDelete: Cascade)
   recipients BroadcastRecipient[]
+  emails     Email[] // Emails sent as part of this broadcast campaign
 
+  @@index([reference])
+  @@index([teamId])
+  @@index([audienceId])
   @@map("broadcasts")
 }
 
@@ -725,6 +807,7 @@ model BroadcastRecipient {
 
 model ApiRequestLog {
   id       String @id @default(cuid())
+  reference String @unique @default(cuid()) @map("reference") // UUID-like reference for API usage
   teamId   Int    @map("team_id")
   apiKeyId Int?   @map("api_key_id")
 
@@ -1047,15 +1130,22 @@ enum TeamInvitationStatus {
 }
 
 enum DomainStatus {
-  pending_dns // Waiting for DNS records to be added by user
-  dns_verified // DNS records verified, ready for AWS registration
-  pending_aws // Registered with AWS, waiting for AWS verification
+  not_started // Initial status when domain is created
+  verifying_dns // DNS verification in progress (when verify API is called)
+  verifying_aws_setup // DNS verified, AWS setup in progress
   verified // Fully verified and ready to send emails
   failed // Verification failed
   revoked // Domain was transferred to another team
 }
 
+enum EmailType {
+  transactional
+  marketing
+}
+
 enum EmailStatus {
+  draft
+  scheduled
   queued
   sent
   delivered
@@ -1065,6 +1155,13 @@ enum EmailStatus {
 
 enum TemplateStatus {
   active
+  archived
+  deleted
+}
+
+enum TemplateVersionStatus {
+  draft
+  published
   archived
 }
 
@@ -1096,6 +1193,7 @@ enum BroadcastStatus {
   sending
   sent
   cancelled
+  failed
 }
 
 enum BroadcastRecipientStatus {

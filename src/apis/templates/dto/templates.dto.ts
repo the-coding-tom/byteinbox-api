@@ -7,30 +7,27 @@ export class TemplateFilterDto {
   teamId?: number;
 }
 
+export class TemplateVariableDto {
+  key: string;
+  type: string;
+  fallbackValue?: any;
+}
+
 export class CreateTemplateDto {
   name: string;
-  description?: string;
   html: string;
+  alias?: string;
+  description?: string;
   subject?: string;
   category?: string;
-  variables?: string[];
+  from?: string;
+  replyTo?: string[];
+  text?: string;
+  variables?: TemplateVariableDto[];
 }
 
 export class CreateTemplateResponseDto {
-  template: {
-    id: number;
-    name: string;
-    description?: string;
-    html: string;
-    subject?: string;
-    category?: string;
-    variables: string[];
-    status: string;
-    opens: number;
-    clicks: number;
-    createdAt: string;
-    lastModified: string;
-  };
+  id: string;
 }
 
 export class GetTemplatesResponseDto {
@@ -54,48 +51,51 @@ export class GetTemplatesResponseDto {
   };
 }
 
+export class TemplateVariableResponseDto {
+  id: string;
+  key: string;
+  type: string;
+  fallbackValue?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class GetTemplateDetailsResponseDto {
-  template: {
-    id: number;
-    name: string;
-    description?: string;
-    html: string;
-    subject?: string;
-    category?: string;
-    variables: string[];
-    status: string;
-    opens: number;
-    clicks: number;
-    createdAt: string;
-    lastModified: string;
-  };
+  object: string;
+  id: string;
+  currentVersionId: string;
+  alias: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+  publishedAt: string | null;
+  from: string | null;
+  subject: string | null;
+  replyTo: string[] | null;
+  html: string;
+  text: string | null;
+  description?: string | null;
+  category?: string | null;
+  previewUrl?: string | null;
+  variables: TemplateVariableResponseDto[];
+  hasUnpublishedVersions: boolean;
 }
 
 export class UpdateTemplateDto {
   name?: string;
   description?: string;
-  html?: string;
+  alias?: string;
+  from?: string;
   subject?: string;
-  category?: string;
-  variables?: string[];
-  status?: string;
+  replyTo?: string[];
+  html?: string;
+  text?: string;
+  variables?: TemplateVariableDto[];
 }
 
 export class UpdateTemplateResponseDto {
-  template: {
-    id: number;
-    name: string;
-    description?: string;
-    html: string;
-    subject?: string;
-    category?: string;
-    variables: string[];
-    status: string;
-    opens: number;
-    clicks: number;
-    createdAt: string;
-    lastModified: string;
-  };
+  id: string;
 }
 
 export class DeleteTemplateResponseDto {

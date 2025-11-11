@@ -6,85 +6,46 @@ export class WebhookFilterDto {
 }
 
 export class CreateWebhookDto {
-  url: string;
+  endpoint: string;
   events: string[];
-  status?: string;
 }
 
 export class CreateWebhookResponseDto {
-  webhook: {
-    id: string;
-    url: string;
-    events: string[];
-    status: string;
-    secret: string;
-    lastTriggered?: string;
-    createdAt: string;
-    updatedAt: string;
-  };
+  id: string;
+  signing_secret: string;
 }
 
-export class GetWebhooksResponseDto {
-  webhooks: Array<{
-    id: string;
-    url: string;
-    events: string[];
-    status: string;
-    lastTriggered?: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+export class WebhookListItem {
+  id: string;
+  createdAt: string;
+  status: string;
+  endpoint: string;
+  events: string[];
 }
+
+export type GetWebhooksResponseDto = WebhookListItem[];
 
 export class GetWebhookDetailsResponseDto {
-  webhook: {
-    id: string;
-    url: string;
-    events: string[];
-    status: string;
-    secret: string;
-    lastTriggered?: string;
-    createdAt: string;
-    updatedAt: string;
-    deliveries: Array<{
-      id: string;
-      eventType: string;
-      messageId?: string;
-      status: string;
-      attempts: number;
-      createdAt: string;
-      completedAt?: string;
-    }>;
-  };
+  id: string;
+  createdAt: string;
+  status: string;
+  endpoint: string;
+  events: string[];
+  signingSecret: string;
 }
 
 export class UpdateWebhookDto {
-  url?: string;
+  endpoint?: string;
   events?: string[];
   status?: string;
 }
 
 export class UpdateWebhookResponseDto {
-  webhook: {
-    id: string;
-    url: string;
-    events: string[];
-    status: string;
-    secret: string;
-    lastTriggered?: string;
-    createdAt: string;
-    updatedAt: string;
-  };
+  id: string;
 }
 
 export class DeleteWebhookResponseDto {
-  message: string;
+  id: string;
 }
 
 export class TestWebhookResponseDto {

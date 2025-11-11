@@ -4,10 +4,10 @@ import prisma from '../common/prisma';
 
 @Injectable()
 export class EmailTemplateRepository {
-  async findActiveEmailTemplateByName(name: string): Promise<any | null> {
+  async findActiveEmailTemplateByName(alias: string): Promise<any | null> {
     return prisma.template.findFirst({
       where: {
-        name,
+        alias,
         status: TemplateStatus.active,
       },
     });

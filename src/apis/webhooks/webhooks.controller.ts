@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { WebhooksService } from './webhooks.service';
-import { CreateWebhookDto, UpdateWebhookDto, ToggleWebhookStatusDto, WebhookFilterDto } from './dto/webhooks.dto';
+import { CreateWebhookDto, UpdateWebhookDto } from './dto/webhooks.dto';
 
 @Controller('api/v1/webhooks')
 export class WebhooksController {
@@ -14,18 +14,18 @@ export class WebhooksController {
   }
 
   @Get()
-  async getWebhooks(@Query() filter: WebhookFilterDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.webhooksService.getWebhooks(request.user.id, filter);
+  async getWebhooks(@Req() request: any, @Res() response: Response) {
+    const { status, ...restOfResponse } = await this.webhooksService.getWebhooks(request.user.id, request);
     response.status(status).json(restOfResponse);
   }
 
   @Get(':id')
   async getWebhookDetails(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.webhooksService.getWebhookDetails(id, request.user.id);
+    const { status, ...restOfResponse } = await this.webhooksService.getWebhookDetails(id, request.user.id, request);
     response.status(status).json(restOfResponse);
   }
 
-  @Put(':id')
+  @Patch(':id')
   async updateWebhook(@Param('id') id: string, @Body() updateWebhookDto: UpdateWebhookDto, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.webhooksService.updateWebhook(id, request.user.id, updateWebhookDto, request);
     response.status(status).json(restOfResponse);
@@ -34,35 +34,6 @@ export class WebhooksController {
   @Delete(':id')
   async deleteWebhook(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.webhooksService.deleteWebhook(id, request.user.id, request);
-    response.status(status).json(restOfResponse);
-  }
-
-  @Post(':id/test')
-  async testWebhook(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.webhooksService.testWebhook(id, request.user.id, request);
-    response.status(status).json(restOfResponse);
-  }
-
-  @Get(':id/deliveries')
-  async getWebhookDeliveries(@Param('id') id: string, @Query() filter: WebhookFilterDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.webhooksService.getWebhookDeliveries(id, request.user.id, filter);
-    response.status(status).json(restOfResponse);
-  }
-
-  @Put(':id/toggle')
-  async toggleWebhookStatus(
-    @Param('id') id: string,
-    @Body() toggleWebhookStatusDto: ToggleWebhookStatusDto,
-    @Req() request: any,
-    @Res() response: Response
-  ) {
-    const { status, ...restOfResponse } = await this.webhooksService.toggleWebhookStatus(id, request.user.id, toggleWebhookStatusDto, request);
-    response.status(status).json(restOfResponse);
-  }
-
-  @Get('events')
-  async getWebhookEvents(@Res() response: Response) {
-    const { status, ...restOfResponse } = await this.webhooksService.getWebhookEvents();
     response.status(status).json(restOfResponse);
   }
 }

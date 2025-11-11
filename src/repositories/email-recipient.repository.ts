@@ -5,6 +5,15 @@ import prisma from '../common/prisma';
 @Injectable()
 export class EmailRecipientRepository {
   /**
+   * Find recipient by ID
+   */
+  async findById(recipientId: number): Promise<any | null> {
+    return prisma.emailRecipient.findUnique({
+      where: { id: recipientId },
+    });
+  }
+
+  /**
    * Find all recipients for an email
    */
   async findByEmailId(emailId: number): Promise<any[]> {

@@ -30,15 +30,20 @@ export class SendEmailDto {
   }>;
 
   // ByteInbox-specific fields (internal, not in public API spec)
-  templateId?: string; // Template ID for templated emails (future feature)
-  variables?: Record<string, any>; // Template variables (future feature)
+  template?: string; // Template name or reference for templated emails
+  variables?: Record<string, any>; // Template variables for dynamic content
 }
 
 export class SendEmailResponseDto {
   id: string;
   status: string;
-  sentAt: string;
   messageId: string;
+}
+
+export class SendBatchEmailResponseDto {
+  data: Array<{
+    id: string;
+  }>;
 }
 
 export class GetEmailsResponseDto {
@@ -48,7 +53,7 @@ export class GetEmailsResponseDto {
     to: string;
     subject: string;
     status: string;
-    sentAt: string;
+    createdAt: string;
     opens: number;
     clicks: number;
   }>;
@@ -75,7 +80,6 @@ export class GetEmailDetailsResponseDto {
     clicks: number;
     lastOpened?: string;
     lastClicked?: string;
-    sentAt?: string;
     deliveredAt?: string;
     createdAt: string;
     events: Array<{

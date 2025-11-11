@@ -11,6 +11,8 @@ export class CreateEmailData {
   subject: string;
   text?: string;
   html?: string;
+  templateId?: number;
+  templateData?: any;
 }
 
 export class CreateAttachmentData {
@@ -18,6 +20,15 @@ export class CreateAttachmentData {
   content?: string;
   path?: string;
   contentType: string;
+  contentId?: string;
+}
+
+export class AttachmentData {
+  id: number;
+  filename: string;
+  content?: string;
+  path?: string;
+  contentType?: string;
   contentId?: string;
 }
 
@@ -59,7 +70,6 @@ export class EmailWithRelationsData {
   text?: string;
   html?: string;
   messageId?: string;
-  sentAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   domain?: any;

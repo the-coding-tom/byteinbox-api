@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EmailTemplateRepository } from './email-template.repository';
 import { TemplateRepository } from './template.repository';
+import { TemplateVersionRepository } from './template-version.repository';
 import { UserRepository } from './user.repository';
 import { SessionRepository } from './session.repository';
 import { MfaVerificationSessionRepository } from './mfa-verification-session.repository';
@@ -17,6 +18,8 @@ import { EmailRepository } from './email.repository';
 import { EmailRecipientRepository } from './email-recipient.repository';
 import { AudienceRepository } from './audience.repository';
 import { ContactRepository } from './contact.repository';
+import { WebhookRepository } from './webhook.repository';
+import { BroadcastRepository } from './broadcast.repository';
 
 @Module({
   providers: [
@@ -26,6 +29,7 @@ import { ContactRepository } from './contact.repository';
     BlacklistRepository,
     EmailTemplateRepository,
     TemplateRepository,
+    TemplateVersionRepository,
     ApiKeyRepository,
     BackupCodeRepository,
     DomainRepository,
@@ -38,6 +42,8 @@ import { ContactRepository } from './contact.repository';
     EmailRecipientRepository,
     AudienceRepository,
     ContactRepository,
+    WebhookRepository,
+    BroadcastRepository,
   ],
   exports: [
     UserRepository,
@@ -46,6 +52,7 @@ import { ContactRepository } from './contact.repository';
     BlacklistRepository,
     EmailTemplateRepository,
     TemplateRepository,
+    TemplateVersionRepository,
     ApiKeyRepository,
     BackupCodeRepository,
     DomainRepository,
@@ -58,6 +65,8 @@ import { ContactRepository } from './contact.repository';
     EmailRecipientRepository,
     AudienceRepository,
     ContactRepository,
+    WebhookRepository,
+    BroadcastRepository,
   ],
 })
 export class RepositoriesModule {}

@@ -3,21 +3,23 @@ import { validateJoiSchema } from '../../utils/joi.validator';
 import { throwError } from '../../utils/util';
 import { AddDomainDto, UpdateDomainDto, UpdateDomainSettingsDto, GetDomainsFilterDto } from './dto/domains.dto';
 import { DomainRepository } from '../../repositories/domain.repository';
+import { config } from '../../config/config';
+import { AwsSesRegion } from '../../common/enums/generic.enum';
 import * as Joi from 'joi';
 
 @Injectable()
 export class DomainsValidator {
   constructor(private readonly domainRepository: DomainRepository) {}
-  async validateAddDomain(data: AddDomainDto, teamId: number): Promise<{ validatedData: AddDomainDto }> {
+  async validateAddDomain(data: AddDomainDto, teamId: number): Promise<{ validatedData: { name: string; region: string } }> {
     const schema = Joi.object({
-      domainName: Joi.string().min(3).max(253).required().pattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i).messages({
+      name: Joi.string().min(3).max(253).required().pattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i).messages({
         'string.min': 'Domain name must be at least 3 characters',
         'string.max': 'Domain name must not exceed 253 characters',
         'any.required': 'Domain name is required',
         'string.pattern.base': 'Invalid domain name format',
       }),
-      region: Joi.string().required().messages({
-        'any.required': 'Region is required',
+      region: Joi.string().valid(...Object.values(AwsSesRegion)).optional().messages({
+        'any.only': `Region must be one of: ${Object.values(AwsSesRegion).join(', ')}`,
       }),
     });
 
@@ -27,12 +29,15 @@ export class DomainsValidator {
     }
 
     // Check if domain already exists for this team
-    const existingDomain = await this.domainRepository.findByTeamIdAndName(teamId, data.domainName);
+    const existingDomain = await this.domainRepository.findByTeamIdAndName(teamId, data.name);
     if (existingDomain) {
       throwError('Domain already exists in this team', HttpStatus.BAD_REQUEST, 'domainExists');
     }
 
-    return { validatedData: data };
+    // Default region from config if not provided
+    const region = data.region || config.domainVerification.defaultRegion;
+
+    return { validatedData: { name: data.name, region } };
   }
 
   async validateUpdateDomain(data: UpdateDomainDto): Promise<{ validatedData: UpdateDomainDto }> {
@@ -42,7 +47,9 @@ export class DomainsValidator {
         'string.max': 'Domain name must not exceed 253 characters',
         'string.pattern.base': 'Invalid domain name format',
       }),
-      region: Joi.string().optional(),
+      region: Joi.string().valid(...Object.values(AwsSesRegion)).optional().messages({
+        'any.only': `Region must be one of: ${Object.values(AwsSesRegion).join(', ')}`,
+      }),
       clickTracking: Joi.boolean().optional(),
       openTracking: Joi.boolean().optional(),
       tlsMode: Joi.string().valid('enforced', 'opportunistic', 'disabled').optional().messages({
@@ -58,51 +65,53 @@ export class DomainsValidator {
     return { validatedData: data };
   }
 
-  async validateUpdateDomainSettings(domainId: string, teamId: number, data: UpdateDomainSettingsDto): Promise<{ validatedData: { domainId: number; teamId: number; validatedData: UpdateDomainSettingsDto } }> {
+  async validateUpdateDomainSettings(domainId: string, teamId: number, data: UpdateDomainSettingsDto): Promise<{ domainId: number; updateData: { clickTracking?: boolean; openTracking?: boolean; tlsMode?: string } }> {
     const schema = Joi.object({
-      domainId: Joi.string().required().messages({
+      domainId: Joi.string().min(1).required().messages({
+        'string.min': 'Domain ID must be at least 1 character',
         'any.required': 'Domain ID is required',
+        'string.empty': 'Domain ID cannot be empty',
       }),
-      teamId: Joi.number().integer().min(1).required().messages({
+      teamId: Joi.number().integer().positive().required().messages({
         'number.base': 'Team ID must be a number',
-        'number.integer': 'Team ID must be an integer',
-        'number.min': 'Team ID must be greater than 0',
+        'number.positive': 'Team ID must be a positive number',
         'any.required': 'Team ID is required',
       }),
       clickTracking: Joi.boolean().optional(),
       openTracking: Joi.boolean().optional(),
-      tlsMode: Joi.string().valid('enforced', 'opportunistic', 'disabled').optional().messages({
-        'any.only': 'TLS mode must be one of: enforced, opportunistic, disabled',
+      tls: Joi.string().valid('enforced', 'opportunistic').optional().messages({
+        'any.only': 'TLS must be one of: enforced, opportunistic',
       }),
     });
 
-    const validationData = { domainId, teamId, ...data };
-    const validationError = validateJoiSchema(schema, validationData);
+    const validationError = validateJoiSchema(schema, { domainId, teamId, ...data });
     if (validationError) {
       throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
     }
 
-    // Parse domainId to number
-    const parsedDomainId = parseInt(domainId);
-
-    // Check if domain exists and belongs to team
-    const domain = await this.domainRepository.findById(parsedDomainId);
+    // Check if domain exists and belongs to team (by reference)
+    const domain = await this.domainRepository.findByReferenceAndTeamId(domainId, teamId);
     if (!domain) {
       throwError('Domain not found', HttpStatus.NOT_FOUND, 'validationError');
     }
 
-    if (domain.teamId !== teamId) {
-      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'validationError');
-    }
+    // Map tls to tlsMode for database
+    const updateData = {
+      clickTracking: data.clickTracking,
+      openTracking: data.openTracking,
+      tlsMode: data.tls,
+    };
 
-    return { validatedData: { domainId: parsedDomainId, teamId, validatedData: data } };
+    return { domainId: domain.id, updateData };
   }
 
   async validateGetDomains(teamId: number, filter: GetDomainsFilterDto): Promise<{ validatedData: { teamId: number; filter: GetDomainsFilterDto } }> {
     const schema = Joi.object({
       keyword: Joi.string().optional(),
       status: Joi.string().optional(),
-      region: Joi.string().optional(),
+      region: Joi.string().valid(...Object.values(AwsSesRegion)).optional().messages({
+        'any.only': `Region must be one of: ${Object.values(AwsSesRegion).join(', ')}`,
+      }),
       offset: Joi.number().min(0).optional(),
       limit: Joi.number().min(1).max(100).optional(),
     });
@@ -133,8 +142,7 @@ export class DomainsValidator {
       }),
     });
 
-    const data = { domainId, teamId };
-    const validationError = validateJoiSchema(schema, data);
+    const validationError = validateJoiSchema(schema, { domainId, teamId });
     if (validationError) {
       throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
     }
@@ -155,73 +163,60 @@ export class DomainsValidator {
     return { validatedData: { domainId: parsedDomainId, teamId } };
   }
 
-  async validateDeleteDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number; domain: any } }> {
+  async validateDeleteDomain(domainId: string, teamId: number): Promise<{ domainId: number; domain: any }> {
     const schema = Joi.object({
-      domainId: Joi.string().required().messages({
+      domainId: Joi.string().min(1).required().messages({
+        'string.min': 'Domain ID must be at least 1 character',
         'any.required': 'Domain ID is required',
+        'string.empty': 'Domain ID cannot be empty',
       }),
-      teamId: Joi.number().integer().min(1).required().messages({
+      teamId: Joi.number().integer().positive().required().messages({
         'number.base': 'Team ID must be a number',
-        'number.integer': 'Team ID must be an integer',
-        'number.min': 'Team ID must be greater than 0',
+        'number.positive': 'Team ID must be a positive number',
         'any.required': 'Team ID is required',
       }),
     });
 
-    const data = { domainId, teamId };
-    const validationError = validateJoiSchema(schema, data);
+    const validationError = validateJoiSchema(schema, { domainId, teamId });
     if (validationError) {
       throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
     }
 
-    // Parse domainId to number
-    const parsedDomainId = parseInt(domainId);
-
-    // Check if domain exists and belongs to team
-    const domain = await this.domainRepository.findById(parsedDomainId);
+    // Check if domain exists and belongs to team (by reference)
+    const domain = await this.domainRepository.findByReferenceAndTeamId(domainId, teamId);
     if (!domain) {
       throwError('Domain not found', HttpStatus.NOT_FOUND, 'domainNotFound');
     }
 
-    if (domain.teamId !== teamId) {
-      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'accessDenied');
-    }
-
-    return { validatedData: { domainId: parsedDomainId, teamId, domain } };
+    return { domainId: domain.id, domain };
   }
 
-  async validateRestartDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number; domain: any } }> {
-    const schema = Joi.object({
-      domainId: Joi.string().required().messages({
+  async validateVerifyDomain(domainId: string, teamId: number): Promise<{ validatedData: { domainId: number; teamId: number; domain: any } }> {
+    // 1. Validate ID parameter schema
+    const idSchema = Joi.object({
+      domainId: Joi.string().min(1).required().messages({
+        'string.min': 'Domain ID must be at least 1 character',
         'any.required': 'Domain ID is required',
+        'string.empty': 'Domain ID cannot be empty',
       }),
-      teamId: Joi.number().integer().min(1).required().messages({
+      teamId: Joi.number().integer().positive().required().messages({
         'number.base': 'Team ID must be a number',
-        'number.integer': 'Team ID must be an integer',
-        'number.min': 'Team ID must be greater than 0',
+        'number.positive': 'Team ID must be a positive number',
         'any.required': 'Team ID is required',
       }),
     });
 
-    const data = { domainId, teamId };
-    const validationError = validateJoiSchema(schema, data);
+    const validationError = validateJoiSchema(idSchema, { domainId, teamId });
     if (validationError) {
       throwError(validationError, HttpStatus.BAD_REQUEST, 'validationError');
     }
 
-    // Parse domainId to number
-    const parsedDomainId = parseInt(domainId);
-
-    // Check if domain exists and belongs to team
-    const domain = await this.domainRepository.findById(parsedDomainId);
+    // 2. Check if domain exists and belongs to team (by reference)
+    const domain = await this.domainRepository.findByReferenceAndTeamId(domainId, teamId);
     if (!domain) {
       throwError('Domain not found', HttpStatus.NOT_FOUND, 'domainNotFound');
     }
 
-    if (domain.teamId !== teamId) {
-      throwError('Access denied: Domain does not belong to your team', HttpStatus.FORBIDDEN, 'accessDenied');
-    }
-
-    return { validatedData: { domainId: parsedDomainId, teamId, domain } };
+    return { validatedData: { domainId: domain.id, teamId, domain } };
   }
 }

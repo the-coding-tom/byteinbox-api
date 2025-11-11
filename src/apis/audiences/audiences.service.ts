@@ -1,11 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
-import { Constants } from '../../common/enums/generic.enum';
+import { Constants, WebhookEventType } from '../../common/enums/generic.enum';
 import { config } from '../../config/config';
 import { AudiencesValidator } from './audiences.validator';
 import { AudienceRepository } from '../../repositories/audience.repository';
 import { ContactRepository } from '../../repositories/contact.repository';
+import { WebhookPublisherService } from '../../shared-services/webhook-publisher/webhook-publisher.service';
 import {
   AudienceFilterDto,
   ContactFilterDto,
@@ -25,6 +26,7 @@ export class AudiencesService {
     private readonly audiencesValidator: AudiencesValidator,
     private readonly audienceRepository: AudienceRepository,
     private readonly contactRepository: ContactRepository,
+    private readonly webhookPublisher: WebhookPublisherService,
   ) {}
 
   async getAudience(audienceId: string, teamId: number): Promise<any> {
@@ -180,6 +182,24 @@ export class AudiencesService {
         id: contact.id,
       };
 
+      // Publish webhook event for contact creation
+      await this.webhookPublisher.publishEvent(
+        validatedData.teamId,
+        WebhookEventType.contactCreated,
+        {
+          id: contact.id,
+          email: validatedData.dto.email,
+          firstName: validatedData.dto.firstName,
+          lastName: validatedData.dto.lastName,
+          unsubscribed: validatedData.dto.unsubscribed,
+          tags: validatedData.dto.tags,
+          metadata: validatedData.dto.metadata,
+          audience: {
+            id: validatedData.audience.reference,
+          },
+        },
+      );
+
       return generateSuccessResponse({
         statusCode: HttpStatus.CREATED,
         message: Constants.createdSuccessfully,
@@ -250,6 +270,19 @@ export class AudiencesService {
         id: validatedData.contact.reference,
       };
 
+      // Publish webhook event for contact update
+      await this.webhookPublisher.publishEvent(
+        teamId,
+        WebhookEventType.contactUpdated,
+        {
+          id: validatedData.contact.reference,
+          email: validatedData.contact.email,
+          firstName: validatedData.dto.firstName,
+          lastName: validatedData.dto.lastName,
+          unsubscribed: validatedData.contact.unsubscribed,
+        },
+      );
+
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
         message: Constants.updatedSuccessfully,
@@ -275,6 +308,16 @@ export class AudiencesService {
       const response: DeleteContactResponseDto = {
         contact: validatedData.contact.reference,
       };
+
+      // Publish webhook event for contact deletion
+      await this.webhookPublisher.publishEvent(
+        teamId,
+        WebhookEventType.contactDeleted,
+        {
+          id: validatedData.contact.reference,
+          email: validatedData.contact.email,
+        },
+      );
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,

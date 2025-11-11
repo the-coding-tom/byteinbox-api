@@ -1,6 +1,6 @@
 export class AddDomainDto {
-  domainName: string;
-  region: string;
+  name: string;
+  region?: string;
 }
 
 export class GetDomainsFilterDto {
@@ -13,16 +13,19 @@ export class GetDomainsFilterDto {
 
 export class AddDomainResponseDto {
   id: string;
-  domainName: string;
-  region: string;
+  name: string;
+  created_at: string;
   status: string;
-  createdAt: string;
-  dnsRecords: Array<{
-    type: string;
+  records: Array<{
+    record: string;
     name: string;
-    value: string;
+    type: string;
+    ttl: string;
     status: string;
+    value: string;
+    priority?: number;
   }>;
+  region: string;
 }
 
 export class GetDomainsResponseDto {
@@ -115,7 +118,7 @@ export class GetRegionsResponseDto {
 export class UpdateDomainSettingsDto {
   clickTracking?: boolean;
   openTracking?: boolean;
-  tlsMode?: string;
+  tls?: 'enforced' | 'opportunistic';
 }
 
 export class UpdateDomainSettingsResponseDto {

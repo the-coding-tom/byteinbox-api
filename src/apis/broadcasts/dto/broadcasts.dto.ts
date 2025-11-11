@@ -6,31 +6,18 @@ export class BroadcastFilterDto {
 }
 
 export class CreateBroadcastDto {
-  name: string;
-  subject: string;
-  content?: string;
-  templateId?: string;
-  audienceId?: string;
-  scheduledAt?: string;
+  audienceId: string; // Required: Audience ID
+  from: string; // Required: Sender with friendly name (e.g., "Thomas <thomas@esoko.com>")
+  subject: string; // Required: Subject line
+  replyTo?: string[]; // Optional: Multiple reply-to addresses
+  html?: string; // Optional: HTML content with contact properties (e.g., {{contact.first_name}})
+  text?: string; // Optional: Plain text version
+  name?: string; // Optional: Internal campaign name
+  scheduledAt?: string; // Optional: Schedule for later
 }
 
 export class CreateBroadcastResponseDto {
-  broadcast: {
-    id: string;
-    name: string;
-    subject: string;
-    content?: string;
-    templateId?: string;
-    audienceId?: string;
-    status: string;
-    totalSent: number;
-    opens: number;
-    clicks: number;
-    scheduledAt?: string;
-    sentAt?: string;
-    createdAt: string;
-    updatedAt: string;
-  };
+  id: string; // Broadcast reference UUID
 }
 
 export class GetBroadcastsResponseDto {
@@ -39,9 +26,6 @@ export class GetBroadcastsResponseDto {
     name: string;
     subject: string;
     status: string;
-    totalSent: number;
-    opens: number;
-    clicks: number;
     scheduledAt?: string;
     sentAt?: string;
     createdAt: string;
@@ -60,13 +44,12 @@ export class GetBroadcastDetailsResponseDto {
     id: string;
     name: string;
     subject: string;
-    content?: string;
-    templateId?: string;
+    from: string;
+    replyTo?: string[];
+    html?: string;
+    text?: string;
     audienceId?: string;
     status: string;
-    totalSent: number;
-    opens: number;
-    clicks: number;
     scheduledAt?: string;
     sentAt?: string;
     createdAt: string;
@@ -84,11 +67,13 @@ export class GetBroadcastDetailsResponseDto {
 }
 
 export class UpdateBroadcastDto {
-  name?: string;
-  subject?: string;
-  content?: string;
-  templateId?: string;
   audienceId?: string;
+  from?: string;
+  subject?: string;
+  replyTo?: string[];
+  html?: string;
+  text?: string;
+  name?: string;
   scheduledAt?: string;
 }
 
@@ -97,13 +82,12 @@ export class UpdateBroadcastResponseDto {
     id: string;
     name: string;
     subject: string;
-    content?: string;
-    templateId?: string;
+    from: string;
+    replyTo?: string[];
+    html?: string;
+    text?: string;
     audienceId?: string;
     status: string;
-    totalSent: number;
-    opens: number;
-    clicks: number;
     scheduledAt?: string;
     sentAt?: string;
     createdAt: string;
@@ -117,9 +101,9 @@ export class DeleteBroadcastResponseDto {
 
 export class AutoSaveBroadcastDto {
   subject?: string;
-  content?: string;
+  html?: string;
+  text?: string;
   audienceId?: string;
-  templateId?: string;
   scheduledAt?: string;
 }
 
@@ -164,14 +148,12 @@ export class GetDraftBroadcastsResponseDto {
   };
 }
 
+export class SendBroadcastDto {
+  scheduledAt?: string; // Optional: "in 1 min", ISO date, or omit for immediate send
+}
+
 export class SendBroadcastResponseDto {
-  message: string;
-  broadcast: {
-    id: string;
-    status: string;
-    totalSent: number;
-    sentAt: string;
-  };
+  id: string;
 }
 
 export class GetBroadcastStatsResponseDto {

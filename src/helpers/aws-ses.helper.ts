@@ -8,16 +8,19 @@ import {
 } from '@aws-sdk/client-sesv2';
 import { fromEnv } from '@aws-sdk/credential-provider-env';
 import * as nodemailer from 'nodemailer';
+import psl from 'psl';
+import { AwsSesVerificationStatus } from '../common/enums/generic.enum';
 
 /**
  * AWS SES Helper for managing email domains with BYODKIM
  */
 
 interface DnsRecord {
-  type: string;
-  name: string;
-  recordType: string;
+  record: string; // SPF, DKIM, DMARC, MX
+  name: string; // send, send.marketing, byteinbox._domainkey, etc.
+  type: string; // TXT, MX, CNAME
   value: string;
+  ttl: string; // Auto or specific TTL
   priority?: number;
 }
 
@@ -70,7 +73,24 @@ export async function registerDomainWithSES(
 }
 
 /**
- * Generate DNS records for domain verification
+ * Extract subdomain from a domain using psl library
+ * Examples:
+ * - hobbin.finance -> null (no subdomain)
+ * - marketing.hobbin.finance -> "marketing"
+ * - sales.marketing.hobbin.finance -> "sales.marketing"
+ */
+function extractSubdomain(domain: string): string | null {
+  const parsed = psl.parse(domain);
+
+  // Check if parsing failed (returns string) or result doesn't have subdomain
+  if ('error' in parsed) return null;
+
+  // parsed is ParsedDomain at this point
+  return parsed.subdomain;
+}
+
+/**
+ * Generate DNS records for domain verification with subdomain support
  */
 export function generateDnsRecords(
   domain: string,
@@ -78,34 +98,45 @@ export function generateDnsRecords(
   publicKeyBase64: string,
   region: string = 'us-east-1'
 ): DnsRecord[] {
-  const mailFromDomain = `send.${domain}`;
+  const subdomain = extractSubdomain(domain);
   const sesRegionEndpoint = `feedback-smtp.${region}.amazonses.com`;
+
+  // Build record names with subdomain support
+  // For main domain (hobbin.finance): "send"
+  // For subdomain (marketing.hobbin.finance): "send.marketing"
+  const sendPrefix = subdomain ? `send.${subdomain}` : 'send';
+  const dkimPrefix = subdomain ? `${selector}._domainkey.${subdomain}` : `${selector}._domainkey`;
+  const dmarcPrefix = subdomain ? `_dmarc.${subdomain}` : '_dmarc';
 
   return [
     {
-      type: 'dkim',
-      name: `${selector}._domainkey.${domain}`,
-      recordType: 'TXT',
+      record: 'DKIM',
+      name: dkimPrefix,
+      type: 'TXT',
       value: `p=${publicKeyBase64}`, // Store with p= prefix only, v=DKIM1; k=rsa; added during verification
+      ttl: 'Auto',
     },
     {
-      type: 'spf',
-      name: mailFromDomain,
-      recordType: 'TXT',
+      record: 'SPF',
+      name: sendPrefix,
+      type: 'TXT',
       value: 'v=spf1 include:amazonses.com ~all',
+      ttl: 'Auto',
     },
     {
-      type: 'mx',
-      name: mailFromDomain,
-      recordType: 'MX',
+      record: 'SPF',
+      name: sendPrefix,
+      type: 'MX',
       value: sesRegionEndpoint,
+      ttl: 'Auto',
       priority: 10,
     },
     {
-      type: 'dmarc',
-      name: `_dmarc.${domain}`,
-      recordType: 'TXT',
+      record: 'DMARC',
+      name: dmarcPrefix,
+      type: 'TXT',
       value: 'v=DMARC1; p=none',
+      ttl: 'Auto',
     },
   ];
 }
@@ -156,10 +187,10 @@ export async function getDomainVerificationStatus(
       identityType: response.IdentityType,
       verifiedForSendingStatus: response.VerifiedForSendingStatus || false,
       verificationStatus: response.VerificationStatus,
-      dkimStatus: response.DkimAttributes?.Status || 'PENDING',
+      dkimStatus: response.DkimAttributes?.Status || AwsSesVerificationStatus.pending,
       dkimTokens: response.DkimAttributes?.Tokens || [],
       mailFromDomain: response.MailFromAttributes?.MailFromDomain,
-      mailFromStatus: response.MailFromAttributes?.MailFromDomainStatus || 'PENDING',
+      mailFromStatus: response.MailFromAttributes?.MailFromDomainStatus || AwsSesVerificationStatus.pending,
       behaviorOnMxFailure: response.MailFromAttributes?.BehaviorOnMxFailure,
     };
   } catch (error) {

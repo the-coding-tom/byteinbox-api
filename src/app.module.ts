@@ -12,6 +12,7 @@ import { DomainsModule } from './apis/domains/domains.module';
 import { EmailsModule } from './apis/emails/emails.module';
 import { TemplatesModule } from './apis/templates/templates.module';
 import { WebhooksModule } from './apis/webhooks/webhooks.module';
+import { CallbacksModule } from './apis/callbacks/callbacks.module';
 import { BroadcastsModule } from './apis/broadcasts/broadcasts.module';
 import { AudiencesModule } from './apis/audiences/audiences.module';
 import { MetricsModule } from './apis/metrics/metrics.module';
@@ -56,6 +57,7 @@ import { AdminModule } from './apis/admin/admin.module';
     EmailsModule,
     TemplatesModule,
     WebhooksModule,
+    CallbacksModule,
     BroadcastsModule,
     AudiencesModule,
     MetricsModule,
@@ -90,7 +92,7 @@ export class AppModule implements NestModule {
         { path: 'api/v1/auth/google/callback', method: RequestMethod.GET },
         { path: 'api/v1/auth/github', method: RequestMethod.GET },
         { path: 'api/v1/auth/github/callback', method: RequestMethod.GET },
-        { path: 'api/v1/emails/aws-sns-callback', method: RequestMethod.POST },
+        { path: 'api/v1/callbacks/aws-sns', method: RequestMethod.POST },
       )
       .forRoutes('*path');
 

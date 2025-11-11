@@ -1,24 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { TemplatesValidator } from './templates.validator';
 import { TemplateRepository } from '../../repositories/template.repository';
-import { TemplateUtil } from '../../utils/template.util';
+import { TemplateVersionRepository } from '../../repositories/template-version.repository';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { Constants } from '../../common/enums/generic.enum';
-import { config } from '../../config/config';
-import { TemplateStatus } from '@prisma/client';
-import { 
-  CreateTemplateDto, 
+import { GENERATE_TEMPLATE_PREVIEW_QUEUE } from '../../common/constants/queues.constant';
+import {
+  CreateTemplateDto,
   TemplateFilterDto,
-  CreateTemplateResponseDto, 
-  GetTemplatesResponseDto, 
-  GetTemplateDetailsResponseDto, 
-  UpdateTemplateDto, 
-  UpdateTemplateResponseDto, 
-  DeleteTemplateResponseDto, 
-  DuplicateTemplateResponseDto,
-  RenderTemplateDto,
-  RenderTemplateResponseDto
+  UpdateTemplateDto
 } from './dto/templates.dto';
 
 @Injectable()
@@ -26,94 +19,67 @@ export class TemplatesService {
   constructor(
     private readonly templatesValidator: TemplatesValidator,
     private readonly templateRepository: TemplateRepository,
+    private readonly templateVersionRepository: TemplateVersionRepository,
+    @InjectQueue(GENERATE_TEMPLATE_PREVIEW_QUEUE) private readonly previewQueue: Queue,
   ) {}
 
   async createTemplate(userId: number, teamId: number, createTemplateDto: CreateTemplateDto): Promise<any> {
     try {
-      const { validatedData } = await this.templatesValidator.validateCreateTemplate(createTemplateDto);
+      const { validatedData } = await this.templatesValidator.validateCreateTemplate(teamId, createTemplateDto);
 
       const template = await this.templateRepository.create({
         createdBy: userId,
         teamId,
+        versionNumber: 1,
         name: validatedData.name,
-        description: validatedData.description,
         html: validatedData.html,
+        alias: validatedData.alias,
+        description: validatedData.description,
         subject: validatedData.subject,
         category: validatedData.category,
+        from: validatedData.from,
+        replyTo: validatedData.replyTo,
+        text: validatedData.text,
         variables: validatedData.variables,
       });
 
-      const response: CreateTemplateResponseDto = {
-        template: {
-          id: template.id,
-          name: template.name,
-          description: template.description,
-          html: template.html,
-          subject: template.subject,
-          category: template.category,
-          variables: template.variables,
-          status: template.status,
-          opens: template.opens,
-          clicks: template.clicks,
-          createdAt: template.createdAt.toISOString(),
-          lastModified: template.lastModified.toISOString(),
-        },
-      };
+      await this.previewQueue.add('generate-preview', {
+        templateVersionId: template.versionId,
+        html: template.html,
+      });
 
       return generateSuccessResponse({
-        statusCode: 201,
+        statusCode: HttpStatus.CREATED,
         message: Constants.createdSuccessfully,
-        data: response,
+        data: {
+          id: template.reference,
+        },
       });
     } catch (error) {
-      return handleServiceError(error, 'Error creating template');
+      return handleServiceError('Error creating template', error);
     }
   }
 
   async getTemplates(userId: number, teamId: number, filter: TemplateFilterDto): Promise<any> {
     try {
-      const page = filter.page || config.validation.pagination.defaultPage;
-      const limit = Math.min(filter.limit || config.validation.pagination.defaultLimit, config.validation.pagination.maxLimit);
-      
-      const { templates, total } = await this.templateRepository.findByTeamId(
-        teamId,
-        {
-          page,
-          limit,
-          category: filter.category,
-          status: filter.status as TemplateStatus,
-          search: filter.search,
-        }
-      );
+      const { validatedData } = await this.templatesValidator.validateGetTemplates(teamId, filter);
 
-      const response: GetTemplatesResponseDto = {
-        templates: templates.map(template => ({
-          id: template.id,
-          name: template.name,
-          description: template.description,
-          subject: template.subject,
-          category: template.category,
-          status: template.status,
-          opens: template.opens,
-          clicks: template.clicks,
-          createdAt: template.createdAt.toISOString(),
-          lastModified: template.lastModified.toISOString(),
-        })),
-        meta: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-      };
+      const { data } = await this.templateRepository.findWithFilter({
+        teamId: validatedData.teamId,
+        keyword: validatedData.filter.keyword,
+        category: validatedData.filter.category,
+        status: validatedData.filter.status,
+        offset: validatedData.filter.offset,
+        limit: validatedData.filter.limit,
+      });
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.retrievedSuccessfully,
-        data: response,
+        data,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error retrieving templates');
+      return handleServiceError('Error retrieving templates', error);
     }
   }
 
@@ -121,158 +87,122 @@ export class TemplatesService {
     try {
       const { template } = await this.templatesValidator.validateGetTemplateDetails(templateId, teamId);
 
-      const response: GetTemplateDetailsResponseDto = {
-        template: {
-          id: template.id,
-          name: template.name,
-          description: template.description,
-          html: template.html,
-          subject: template.subject,
-          category: template.category,
-          variables: template.variables,
-          status: template.status,
-          opens: template.opens,
-          clicks: template.clicks,
-          createdAt: template.createdAt.toISOString(),
-          lastModified: template.lastModified.toISOString(),
-        },
-      };
-
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.retrievedSuccessfully,
-        data: response,
+        data: template,
       });
     } catch (error) {
-      return handleServiceError(error, 'Error retrieving template details');
+      return handleServiceError('Error retrieving template details', error);
     }
   }
 
   async updateTemplate(templateId: string, userId: number, teamId: number, updateTemplateDto: UpdateTemplateDto): Promise<any> {
     try {
-      const { templateId: validatedTemplateId, validatedData } = await this.templatesValidator.validateUpdateTemplateRequest(
+      const { validatedData } = await this.templatesValidator.validateUpdateTemplateRequest(
         templateId,
         teamId,
         updateTemplateDto,
       );
 
-      const template = await this.templateRepository.update(validatedTemplateId, teamId, {
-        name: validatedData.name,
+      const newVersion = await this.templateRepository.update(validatedData.template.id, {
+        name: validatedData.name!,
         description: validatedData.description,
-        html: validatedData.html,
+        alias: validatedData.alias,
+        from: validatedData.from,
         subject: validatedData.subject,
-        category: validatedData.category,
+        replyTo: validatedData.replyTo,
+        html: validatedData.html!,
+        text: validatedData.text,
         variables: validatedData.variables,
-        status: validatedData.status as TemplateStatus,
+        createdBy: userId,
       });
 
-      const response: UpdateTemplateResponseDto = {
-        template: {
-          id: template!.id,
-          name: template!.name,
-          description: template!.description,
-          html: template!.html,
-          subject: template!.subject,
-          category: template!.category,
-          variables: template!.variables,
-          status: template!.status,
-          opens: template!.opens,
-          clicks: template!.clicks,
-          createdAt: template!.createdAt.toISOString(),
-          lastModified: template!.lastModified.toISOString(),
-        },
-      };
+      await this.previewQueue.add('generate-preview', {
+        templateVersionId: newVersion.id,
+        html: newVersion.html,
+      });
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.updatedSuccessfully,
-        data: response,
+        data: {
+          id: validatedData.template.reference,
+        },
       });
     } catch (error) {
-      return handleServiceError(error, 'Error updating template');
+      return handleServiceError('Error updating template', error);
     }
   }
 
   async deleteTemplate(templateId: string, userId: number, teamId: number): Promise<any> {
     try {
-      const { templateId: validatedTemplateId } = await this.templatesValidator.validateDeleteTemplateRequest(templateId, teamId);
+      // Validate template
+      const { template } = await this.templatesValidator.validateDeleteTemplate(templateId, teamId);
 
-      await this.templateRepository.delete(validatedTemplateId, teamId);
-
-      const response: DeleteTemplateResponseDto = {
-        message: Constants.deletedSuccessfully,
-      };
+      await this.templateRepository.delete(template.reference, teamId);
 
       return generateSuccessResponse({
-        statusCode: 200,
+        statusCode: HttpStatus.OK,
         message: Constants.deletedSuccessfully,
-        data: response,
+        data: {
+          id: templateId,
+        },
       });
     } catch (error) {
-      return handleServiceError(error, 'Error deleting template');
+      return handleServiceError('Error deleting template', error);
     }
   }
 
   async duplicateTemplate(templateId: string, userId: number, teamId: number): Promise<any> {
     try {
-      const { templateId: validatedTemplateId } = await this.templatesValidator.validateDuplicateTemplateRequest(templateId, teamId);
+      const { template } = await this.templatesValidator.validateDuplicateTemplate(templateId, teamId);
 
-      const duplicatedTemplate = await this.templateRepository.duplicate(validatedTemplateId, teamId, userId);
-
-      const response: DuplicateTemplateResponseDto = {
-        template: {
-          id: duplicatedTemplate!.id,
-          name: duplicatedTemplate!.name,
-          description: duplicatedTemplate!.description,
-          html: duplicatedTemplate!.html,
-          subject: duplicatedTemplate!.subject,
-          category: duplicatedTemplate!.category,
-          variables: duplicatedTemplate!.variables,
-          status: duplicatedTemplate!.status,
-          opens: duplicatedTemplate!.opens,
-          clicks: duplicatedTemplate!.clicks,
-          createdAt: duplicatedTemplate!.createdAt.toISOString(),
-          lastModified: duplicatedTemplate!.lastModified.toISOString(),
+      const duplicatedTemplate = await this.templateRepository.duplicate(
+        {
+          alias: template.alias,
+          name: `${template.name} (Copy)`,
+          description: template.description,
+          html: template.html,
+          text: template.text,
+          subject: template.subject,
+          category: template.category,
+          from: template.from,
+          replyTo: template.replyTo,
+          variables: template.variables || [],
         },
-      };
+        teamId,
+        userId,
+        1,
+      );
 
       return generateSuccessResponse({
-        statusCode: 201,
+        statusCode: HttpStatus.CREATED,
         message: Constants.createdSuccessfully,
-        data: response,
+        data: {
+          id: duplicatedTemplate.reference,
+        },
       });
     } catch (error) {
-      return handleServiceError(error, 'Error duplicating template');
+      return handleServiceError('Error duplicating template', error);
     }
   }
 
-  async renderTemplate(templateId: string, teamId: number, renderTemplateDto: RenderTemplateDto): Promise<any> {
+  async publishTemplate(templateId: string, userId: number, teamId: number): Promise<any> {
     try {
-      const { template, validatedData } = await this.templatesValidator.validateRenderTemplateRequest(
-        templateId,
-        teamId,
-        renderTemplateDto,
-      );
+      const { templateId: validatedTemplateId, versionId } = await this.templatesValidator.validatePublishTemplate(templateId, teamId);
 
-      const { html, text, subject } = TemplateUtil.renderWithSubject(
-        template.html,
-        template.subject,
-        validatedData.data
-      );
-
-      const response: RenderTemplateResponseDto = {
-        html,
-        text,
-        subject,
-      };
+      await this.templateVersionRepository.publishVersion(validatedTemplateId, versionId, userId);
 
       return generateSuccessResponse({
-        statusCode: 200,
-        message: 'Template rendered successfully',
-        data: response,
+        statusCode: HttpStatus.OK,
+        message: Constants.updatedSuccessfully,
+        data: {
+          id: templateId,
+        },
       });
     } catch (error) {
-      return handleServiceError(error, 'Error rendering template');
+      return handleServiceError('Error publishing template', error);
     }
   }
 }

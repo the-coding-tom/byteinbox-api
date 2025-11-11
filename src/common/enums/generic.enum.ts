@@ -80,6 +80,24 @@ export enum WebhookDeliveryStatus {
   fail = 'fail',
 }
 
+export enum WebhookEventType {
+  emailSent = 'email.sent',
+  emailDelivered = 'email.delivered',
+  emailDeliveryDelayed = 'email.delivery_delayed',
+  emailComplained = 'email.complained',
+  emailBounced = 'email.bounced',
+  emailOpened = 'email.opened',
+  emailClicked = 'email.clicked',
+  emailReceived = 'email.received',
+  emailFailed = 'email.failed',
+  contactCreated = 'contact.created',
+  contactUpdated = 'contact.updated',
+  contactDeleted = 'contact.deleted',
+  domainCreated = 'domain.created',
+  domainUpdated = 'domain.updated',
+  domainDeleted = 'domain.deleted',
+}
+
 export enum ContactStatus {
   subscribed = 'subscribed',
   unsubscribed = 'unsubscribed',
@@ -114,6 +132,21 @@ export enum TeamMemberRole {
   admin = 'admin',
   member = 'member',
   viewer = 'viewer',
+}
+
+export enum AwsSesRegion {
+  us_east_1 = 'us-east-1', // N. Virginia
+  eu_west_1 = 'eu-west-1', // Ireland
+  sa_east_1 = 'sa-east-1', // São Paulo
+  ap_northeast_1 = 'ap-northeast-1', // Tokyo
+}
+
+export enum AwsSesVerificationStatus {
+  pending = 'PENDING',
+  success = 'SUCCESS',
+  failed = 'FAILED',
+  temporary_failure = 'TEMPORARY_FAILURE',
+  not_started = 'NOT_STARTED',
 }
 
 export const Constants = {

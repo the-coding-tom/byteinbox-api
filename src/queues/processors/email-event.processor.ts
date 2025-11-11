@@ -4,12 +4,17 @@ import { Job } from 'bull';
 import { EmailStatus } from '@prisma/client';
 import { PROCESS_EMAIL_EVENT_QUEUE } from '../../common/constants/queues.constant';
 import { EmailRecipientRepository } from '../../repositories/email-recipient.repository';
+import { WebhookPublisherService } from '../../shared-services/webhook-publisher/webhook-publisher.service';
+import { WebhookEventType } from '../../common/enums/generic.enum';
 
 @Processor(PROCESS_EMAIL_EVENT_QUEUE)
 export class EmailEventQueueProcessor {
   private readonly logger = new Logger(EmailEventQueueProcessor.name);
 
-  constructor(private readonly emailRecipientRepository: EmailRecipientRepository) {}
+  constructor(
+    private readonly emailRecipientRepository: EmailRecipientRepository,
+    private readonly webhookPublisher: WebhookPublisherService,
+  ) {}
 
   @Process('email-delivered')
   async handleEmailDelivered(job: Job<any>) {
@@ -49,6 +54,21 @@ export class EmailEventQueueProcessor {
       });
 
       this.logger.log(`EmailRecipient ${emailRecipient.id} (${emailRecipient.recipient}) marked as delivered`);
+
+      // Publish webhook event
+      await this.webhookPublisher.publishEvent(
+        emailRecipient.teamId,
+        WebhookEventType.emailDelivered,
+        {
+          messageId,
+          recipient: emailRecipient.recipient,
+          deliveredAt: timestamp || new Date().toISOString(),
+          email: {
+            id: emailRecipient.emailId,
+          },
+        },
+        messageId,
+      );
     } catch (error) {
       this.logger.error(`Failed to process delivered event: ${error.message}`, error.stack);
       throw error;
@@ -85,6 +105,23 @@ export class EmailEventQueueProcessor {
       });
 
       this.logger.log(`EmailRecipient ${emailRecipient.id} (${emailRecipient.recipient}) opened (total opens: ${emailRecipient.opens + 1})`);
+
+      // Publish webhook event
+      await this.webhookPublisher.publishEvent(
+        emailRecipient.teamId,
+        WebhookEventType.emailOpened,
+        {
+          messageId,
+          recipient: emailRecipient.recipient,
+          userAgent,
+          ipAddress,
+          location,
+          email: {
+            id: emailRecipient.emailId,
+          },
+        },
+        messageId,
+      );
     } catch (error) {
       this.logger.error(`Failed to process opened event: ${error.message}`, error.stack);
       throw error;
@@ -120,6 +157,23 @@ export class EmailEventQueueProcessor {
       });
 
       this.logger.log(`EmailRecipient ${emailRecipient.id} (${emailRecipient.recipient}) clicked (total clicks: ${emailRecipient.clicks + 1})`);
+
+      // Publish webhook event
+      await this.webhookPublisher.publishEvent(
+        emailRecipient.teamId,
+        WebhookEventType.emailClicked,
+        {
+          messageId,
+          recipient: emailRecipient.recipient,
+          userAgent,
+          ipAddress,
+          location,
+          email: {
+            id: emailRecipient.emailId,
+          },
+        },
+        messageId,
+      );
     } catch (error) {
       this.logger.error(`Failed to process clicked event: ${error.message}`, error.stack);
       throw error;
@@ -158,6 +212,22 @@ export class EmailEventQueueProcessor {
       });
 
       this.logger.log(`EmailRecipient ${emailRecipient.id} (${emailRecipient.recipient}) bounced (type: ${bounceType}, subtype: ${bounceSubType})`);
+
+      // Publish webhook event
+      await this.webhookPublisher.publishEvent(
+        emailRecipient.teamId,
+        WebhookEventType.emailBounced,
+        {
+          messageId,
+          recipient: emailRecipient.recipient,
+          bounceType,
+          bounceSubType,
+          email: {
+            id: emailRecipient.emailId,
+          },
+        },
+        messageId,
+      );
     } catch (error) {
       this.logger.error(`Failed to process bounced event: ${error.message}`, error.stack);
       throw error;
@@ -188,6 +258,21 @@ export class EmailEventQueueProcessor {
       });
 
       this.logger.log(`EmailRecipient ${emailRecipient.id} (${emailRecipient.recipient}) received complaint (feedback type: ${complaintFeedbackType})`);
+
+      // Publish webhook event
+      await this.webhookPublisher.publishEvent(
+        emailRecipient.teamId,
+        WebhookEventType.emailComplained,
+        {
+          messageId,
+          recipient: emailRecipient.recipient,
+          complaintFeedbackType,
+          email: {
+            id: emailRecipient.emailId,
+          },
+        },
+        messageId,
+      );
     } catch (error) {
       this.logger.error(`Failed to process complaint event: ${error.message}`, error.stack);
       throw error;

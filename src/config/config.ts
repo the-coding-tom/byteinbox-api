@@ -159,6 +159,8 @@ export const config = {
     ttl: DOMAIN_VERIFICATION_TTL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 30 minutes
     dnsVerificationInterval: DOMAIN_DNS_VERIFICATION_INTERVAL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 1 minute
     awsVerificationInterval: DOMAIN_AWS_VERIFICATION_INTERVAL_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND, // 1 minute
+    defaultRegion: process.env.DOMAIN_DEFAULT_REGION || 'us-east-1',
+    defaultTlsMode: process.env.DOMAIN_DEFAULT_TLS_MODE || 'opportunistic',
   },
 
   // Business Logic

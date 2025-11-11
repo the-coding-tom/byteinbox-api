@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { TemplatesService } from './templates.service';
-import { CreateTemplateDto, UpdateTemplateDto, TemplateFilterDto, RenderTemplateDto } from './dto/templates.dto';
+import { CreateTemplateDto, UpdateTemplateDto, TemplateFilterDto } from './dto/templates.dto';
 
 @Controller('api/v1/templates')
 export class TemplatesController {
@@ -43,9 +43,9 @@ export class TemplatesController {
     response.status(status).json(restOfResponse);
   }
 
-  @Post(':id/render')
-  async renderTemplate(@Param('id') id: string, @Body() renderTemplateDto: RenderTemplateDto, @Req() request: any, @Res() response: Response) {
-    const { status, ...restOfResponse } = await this.templatesService.renderTemplate(id, request.teamId, renderTemplateDto);
+  @Post(':id/publish')
+  async publishTemplate(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
+    const { status, ...restOfResponse } = await this.templatesService.publishTemplate(id, request.user.id, request.teamId);
     response.status(status).json(restOfResponse);
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { DomainsService } from './domains.service';
 import { AddDomainDto, GetDomainsFilterDto, UpdateDomainSettingsDto } from './dto/domains.dto';
@@ -31,15 +31,15 @@ export class DomainsController {
         response.status(status).json(restOfResponse);
     }
 
-    @Put(':id/settings')
-    async updateDomainSettings(@Param('id') id: string, @Body() updateDomainSettingsDto: UpdateDomainSettingsDto, @Req() request: any, @Res() response: Response) {
+    @Patch(':id')
+    async updateDomain(@Param('id') id: string, @Body() updateDomainSettingsDto: UpdateDomainSettingsDto, @Req() request: any, @Res() response: Response) {
         const { status, ...restOfResponse } = await this.domainsService.updateDomainSettings(id, request.teamId, updateDomainSettingsDto);
         response.status(status).json(restOfResponse);
     }
 
-    @Post(':id/restart')
-    async restartDomain(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
-        const { status, ...restOfResponse } = await this.domainsService.restartDomain(id, request.teamId);
+    @Post(':id/verify')
+    async verifyDomain(@Param('id') id: string, @Req() request: any, @Res() response: Response) {
+        const { status, ...restOfResponse } = await this.domainsService.verifyDomain(id, request.teamId);
         response.status(status).json(restOfResponse);
     }
 }

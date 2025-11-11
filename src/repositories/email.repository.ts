@@ -30,6 +30,8 @@ export class EmailRepository {
         subject: emailData.subject,
         text: emailData.text,
         html: emailData.html,
+        templateId: emailData.templateId,
+        templateData: emailData.templateData,
         attachments: attachments.length > 0 ? {
           createMany: {
             data: attachments,
@@ -79,66 +81,36 @@ export class EmailRepository {
   }
 
   /**
-   * Find email by reference with all relations
+   * Find email by reference - returns only API response fields
    */
   async findByReference(reference: string): Promise<any | null> {
     const emailQuery = Prisma.sql`
       SELECT
-        E.reference,
-        E."from",
+        E.reference AS id,
         COALESCE(E."to", '[]'::jsonb) as "to",
-        COALESCE(E.cc, '[]'::jsonb) as cc,
-        COALESCE(E.bcc, '[]'::jsonb) as bcc,
-        COALESCE(E.reply_to, '[]'::jsonb) as "replyTo",
-        E.subject,
-        E.text,
-        E.html,
-        E.status,
-        E.opens,
-        E.clicks,
-        E.last_opened::text as "lastOpened",
-        E.last_clicked::text as "lastClicked",
-        E.sent_at::text as "sentAt",
-        E.delivered_at::text as "deliveredAt",
+        E."from",
         E.created_at::text as "createdAt",
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'type', EE.type,
-                'timestamp', EE.timestamp::text,
-                'userAgent', EE.user_agent,
-                'ipAddress', EE.ip_address,
-                'location', EE.location
-              )
-            )
-            FROM email_events EE
-            WHERE EE.email_id = E.id
-            ORDER BY EE.timestamp DESC
-          ),
-          '[]'::json
-        ) as events,
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'id', EA.id::text,
-                'filename', EA.filename,
-                'type', EA.type,
-                'size', CEIL(LENGTH(EA.content) * 0.75)
-              )
-            )
-            FROM email_attachments EA
-            WHERE EA.email_id = E.id
-          ),
-          '[]'::json
-        ) as attachments
+        E.subject,
+        E.html,
+        E.text,
+        COALESCE(E.bcc, '[]'::jsonb) as bcc,
+        COALESCE(E.cc, '[]'::jsonb) as cc,
+        COALESCE(E.reply_to, '[]'::jsonb) as "replyTo",
+        (
+          SELECT er.type
+          FROM email_recipients er
+          LEFT JOIN email_events ee ON ee.email_recipient_id = er.id
+          WHERE er.email_id = E.id
+          ORDER BY ee.timestamp DESC
+          LIMIT 1
+        ) as "lastEvent",
+        E.scheduled_at::text as "scheduledAt"
       FROM emails E
       WHERE E.reference = ${reference}
     `;
 
-    const result: any[] = await prisma.$queryRaw(emailQuery);
-    return result[0] || null;
+    const [result]: any[] = await prisma.$queryRaw(emailQuery);
+    return result;
   }
 
   /**
@@ -171,6 +143,56 @@ export class EmailRepository {
     });
   }
 
+  /**
+   * Update attachment
+   */
+  async updateAttachment(id: number, data: any): Promise<any> {
+    return prisma.attachment.update({
+      where: { id },
+      data,
+    });
+  }
+
+  /**
+   * Count attachments with path URLs for an email
+   */
+  async countAttachmentsWithPathUrl(emailId: number): Promise<number> {
+    return prisma.attachment.count({
+      where: {
+        emailId,
+        path: { not: null },
+      },
+    });
+  }
+
+  /**
+   * Find attachments that need downloading for an email
+   * Returns attachments that have a path but no content yet
+   */
+  async findAttachmentsToDownload(emailId: number): Promise<any[]> {
+    return prisma.attachment.findMany({
+      where: {
+        emailId,
+        path: { not: null },
+        content: null,
+      },
+    });
+  }
+
+  /**
+   * Find attachments for sending via SES
+   * Returns only the fields needed for email sending (filename, content, contentType)
+   */
+  async findAttachmentsForSending(emailId: number): Promise<{ filename: string; content: string; contentType: string }[]> {
+    return prisma.$queryRaw<{ filename: string; content: string; contentType: string }[]>`
+      SELECT
+        filename,
+        COALESCE(content, '') as content,
+        COALESCE(content_type, 'application/octet-stream') as "contentType"
+      FROM attachments
+      WHERE email_id = ${emailId}
+    `;
+  }
 
   /**
    * Delete email
@@ -250,17 +272,25 @@ export class EmailRepository {
 
     const retrieveEmailsQuery = Prisma.sql`
       SELECT
-        E.reference,
+        E.reference AS id,
+        COALESCE(E."to", '[]'::jsonb) as "to",
         E."from",
-        CASE 
-          WHEN array_length(E."to", 1) > 0 THEN E."to"[1]
-          ELSE E."to"::text
-        END as "to",
+        E.created_at::text as "createdAt",
         E.subject,
-        E.status,
-        COALESCE(E.sent_at::text, E.created_at::text) as "sentAt",
-        E.opens,
-        E.clicks
+        E.html,
+        E.text,
+        COALESCE(E.bcc, '[]'::jsonb) as bcc,
+        COALESCE(E.cc, '[]'::jsonb) as cc,
+        COALESCE(E.reply_to, '[]'::jsonb) as "replyTo",
+        (
+          SELECT ee.type
+          FROM email_recipients er
+          LEFT JOIN email_events ee ON ee.email_recipient_id = er.id
+          WHERE er.email_id = E.id
+          ORDER BY ee.timestamp DESC
+          LIMIT 1
+        ) as "lastEvent",
+        E.scheduled_at::text as "scheduledAt"
       FROM emails E
       LEFT JOIN domains D ON E.domain_id = D.id
       ${whereClause}
@@ -368,5 +398,191 @@ export class EmailRepository {
       },
       take: limit,
     });
+  }
+
+  /**
+   * Create multiple emails with attachments and recipients in a single transaction
+   * Returns array of { id: reference } for successfully created emails
+   */
+  async createBatchEmailsWithAttachments(
+    batchReference: string,
+    emailsData: Array<{
+      email: CreateEmailData;
+      attachments?: CreateAttachmentData[];
+    }>
+  ): Promise<Array<{ id: string }>> {
+    return prisma.$transaction(async (tx) => {
+      // Create all emails with nested creates for attachments and recipients
+      await Promise.all(
+        emailsData.map(({ email: emailData, attachments = [] }) => {
+          return tx.email.create({
+            data: {
+              batchReference,
+              createdBy: emailData.createdBy,
+              teamId: emailData.teamId,
+              domainId: emailData.domainId,
+              apiKeyId: emailData.apiKeyId,
+              from: emailData.from,
+              to: emailData.to,
+              cc: emailData.cc,
+              bcc: emailData.bcc,
+              replyTo: emailData.replyTo,
+              subject: emailData.subject,
+              text: emailData.text,
+              html: emailData.html,
+              templateId: emailData.templateId,
+              templateData: emailData.templateData,
+              attachments: attachments.length > 0 ? {
+                createMany: {
+                  data: attachments,
+                },
+              } : undefined,
+              recipients: {
+                createMany: {
+                  data: [
+                    ...emailData.to.map(email => ({ recipient: email })),
+                    ...(emailData.cc || []).map(email => ({ recipient: email })),
+                    ...(emailData.bcc || []).map(email => ({ recipient: email })),
+                  ],
+                },
+              },
+            },
+          });
+        })
+      );
+
+      // Fetch all created emails by batch reference using raw SQL
+      // Map reference AS id so service receives already-formatted data
+      const createdEmails = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT reference AS id
+        FROM emails
+        WHERE batch_reference = ${batchReference}
+        ORDER BY created_at ASC
+      `;
+
+      return createdEmails;
+    });
+  }
+
+  /**
+   * Find email IDs by batch reference for enqueueing
+   * Returns array of internal email IDs (integer)
+   */
+  async findEmailIdsByBatchReference(batchReference: string): Promise<number[]> {
+    const emails = await prisma.$queryRaw<Array<{ id: number }>>`
+      SELECT id
+      FROM emails
+      WHERE batch_reference = ${batchReference}
+      ORDER BY created_at ASC
+    `;
+
+    return emails.map(email => email.id);
+  }
+
+  /**
+   * Update scheduledAt for an email - only if status is 'scheduled'
+   * Returns the email reference as id or null if not found/not scheduled status
+   */
+  async updateScheduledAt(reference: string, scheduledAt: Date): Promise<{ id: string } | null> {
+    const result = await prisma.$queryRaw<Array<{ id: string }>>`
+      UPDATE emails e
+      SET scheduled_at = ${scheduledAt}::timestamp
+      WHERE e.reference = ${reference}
+        AND EXISTS (
+          SELECT 1 FROM email_recipients er
+          WHERE er.email_id = e.id AND er.status = 'scheduled'::"EmailStatus"
+        )
+      RETURNING e.reference AS id
+    `;
+
+    return result.length > 0 ? result[0] : null;
+  }
+
+  /**
+   * Cancel scheduled email - removes scheduledAt and updates status from 'scheduled' to 'draft'
+   * Returns the email reference as id or null if not found/not scheduled status
+   */
+  async cancelScheduledEmail(reference: string): Promise<{ id: string } | null> {
+    const [result] = await prisma.$queryRaw<Array<{ id: string }>>`
+      WITH updated_email AS (
+        UPDATE emails e
+        SET scheduled_at = NULL
+        WHERE e.reference = ${reference}
+          AND EXISTS (
+            SELECT 1 FROM email_recipients er
+            WHERE er.email_id = e.id AND er.status = 'scheduled'::"EmailStatus"
+          )
+        RETURNING e.id, e.reference
+      ),
+      updated_recipients AS (
+        UPDATE email_recipients er
+        SET status = 'draft'::"EmailStatus"
+        FROM updated_email ue
+        WHERE er.email_id = ue.id AND er.status = 'scheduled'::"EmailStatus"
+      )
+      SELECT reference AS id FROM updated_email
+    `;
+
+    return result;
+  }
+
+  /**
+   * Find attachment by reference and email reference with team validation
+   * Returns attachment details for API response
+   * contentDisposition is calculated: 'inline' if contentId exists, otherwise 'attachment'
+   */
+  async findAttachmentByReference(attachmentReference: string, emailReference: string, teamId: number): Promise<any | null> {
+    const attachmentQuery = Prisma.sql`
+      SELECT
+        a.reference AS id,
+        a.filename,
+        LENGTH(COALESCE(a.content, '')) AS size,
+        a.content_type AS "contentType",
+        a.content_id AS "contentId",
+        CASE
+          WHEN a.content_id IS NOT NULL THEN 'inline'
+          ELSE 'attachment'
+        END AS "contentDisposition",
+        a.download_url AS "downloadUrl",
+        a.expires_at::text AS "expiresAt"
+      FROM attachments a
+      INNER JOIN emails e ON e.id = a.email_id
+      WHERE a.reference = ${attachmentReference}
+        AND e.reference = ${emailReference}
+        AND e.team_id = ${teamId}
+    `;
+
+    const [result]: any[] = await prisma.$queryRaw(attachmentQuery);
+    return result;
+  }
+
+  /**
+   * Find all attachments for an email by email reference with team validation
+   * Returns array of attachment details for API response
+   * contentDisposition is calculated: 'inline' if contentId exists, otherwise 'attachment'
+   */
+  async findAttachmentsByEmailReference(emailReference: string, teamId: number): Promise<any[]> {
+    const attachmentsQuery = Prisma.sql`
+      SELECT
+        a.reference AS id,
+        a.filename,
+        LENGTH(COALESCE(a.content, '')) AS size,
+        a.content_type AS "contentType",
+        a.content_id AS "contentId",
+        CASE
+          WHEN a.content_id IS NOT NULL THEN 'inline'
+          ELSE 'attachment'
+        END AS "contentDisposition",
+        a.download_url AS "downloadUrl",
+        a.expires_at::text AS "expiresAt"
+      FROM attachments a
+      INNER JOIN emails e ON e.id = a.email_id
+      WHERE e.reference = ${emailReference}
+        AND e.team_id = ${teamId}
+      ORDER BY a.created_at ASC
+    `;
+
+    const results: any[] = await prisma.$queryRaw(attachmentsQuery);
+    return results;
   }
 }

@@ -1,17 +1,10 @@
 import { promises as dns } from 'dns';
+import { DnsVerificationResult } from '../repositories/entities/domain.entity';
 
 /**
  * DNS Verification Utility
  * Verifies DNS records using native Node.js DNS resolution
  */
-
-export interface DnsVerificationResult {
-  verified: boolean;
-  recordFound: boolean;
-  expectedValue: string;
-  actualValue?: string;
-  error?: string;
-}
 
 /**
  * Verify a TXT DNS record

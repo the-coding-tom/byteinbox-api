@@ -78,26 +78,12 @@ export class ApiRequestLogRepository {
 
     const retrieveLogsQuery = Prisma.sql`
       SELECT 
-        ARL.id,
-        ARL.team_id as "teamId",
-        ARL.api_key_id as "apiKeyId",
+        ARL.reference as id,
         ARL.endpoint,
+        ARL.status_code as status,
         ARL.http_method as "httpMethod",
-        ARL.status_code as "statusCode",
-        ARL.response_time as "responseTime",
-        ARL.ip_address as "ipAddress",
-        ARL.user_agent as "userAgent",
-        ARL.request_body as "requestBody",
-        ARL.response_body as "responseBody",
-        ARL.error_message as "errorMessage",
-        ARL.error_code as "errorCode",
-        ARL.created_at as "createdAt",
-        AK.id as "apiKey.id",
-        AK.name as "apiKey.name",
-        AK.permission as "apiKey.permission",
-        AK.domain as "apiKey.domain"
+        ARL.created_at as "createdAt"
       FROM api_request_logs ARL
-      LEFT JOIN api_keys AK ON ARL.api_key_id = AK.id
       ${whereClause} 
       ORDER BY ARL.created_at DESC 
       LIMIT ${limit} 
@@ -124,32 +110,16 @@ export class ApiRequestLogRepository {
   async findByIdWithRelations(id: string): Promise<any | null> {
     const query = Prisma.sql`
       SELECT 
-        ARL.id,
-        ARL.team_id as "teamId",
-        ARL.api_key_id as "apiKeyId",
+        ARL.reference as id,
         ARL.endpoint,
         ARL.http_method as "httpMethod",
-        ARL.status_code as "statusCode",
-        ARL.response_time as "responseTime",
-        ARL.ip_address as "ipAddress",
-        ARL.user_agent as "userAgent",
-        ARL.request_body as "requestBody",
-        ARL.response_body as "responseBody",
-        ARL.error_message as "errorMessage",
-        ARL.error_code as "errorCode",
         ARL.created_at as "createdAt",
-        AK.id as "apiKey.id",
-        AK.name as "apiKey.name",
-        AK.permission as "apiKey.permission",
-        AK.domain as "apiKey.domain",
-        T.id as "Team.id",
-        T.reference as "Team.reference",
-        T.name as "Team.name",
-        T.slug as "Team.slug"
+        ARL.user_agent as "userAgent",
+        ARL.status_code as status,
+        ARL.response_body as "responseBody",
+        ARL.request_body as "requestBody"
       FROM api_request_logs ARL
-      LEFT JOIN api_keys AK ON ARL.api_key_id = AK.id
-      LEFT JOIN teams T ON ARL.team_id = T.id
-      WHERE ARL.id = ${id}
+      WHERE ARL.reference = ${id}
     `;
 
     const results = await prisma.$queryRaw(query) as any[];

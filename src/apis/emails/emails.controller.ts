@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { EmailsService } from './emails.service';
 import { SendEmailDto, EmailFilterDto } from './dto/emails.dto';
@@ -10,6 +10,12 @@ export class EmailsController {
   @Post()
   async sendEmail(@Body() sendEmailDto: SendEmailDto, @Req() request: any, @Res() response: Response) {
     const { status, ...restOfResponse } = await this.emailsService.sendEmail(request, sendEmailDto);
+    response.status(status).json(restOfResponse);
+  }
+
+  @Post('batch')
+  async sendBatchEmail(@Body() emails: SendEmailDto[], @Req() request: any, @Res() response: Response) {
+    const { status, ...restOfResponse } = await this.emailsService.sendBatchEmail(request, emails);
     response.status(status).json(restOfResponse);
   }
 
@@ -25,13 +31,45 @@ export class EmailsController {
     response.status(status).json(restOfResponse);
   }
 
-  @Post('aws-sns-callback')
-  async handleAwsSnsCallback(@Body() body: any, @Req() request: any, @Res() response: Response) {
-    const messageType = request.headers['x-amz-sns-message-type'];
-    console.log('SNS Callback - Message Type:', messageType);
-    console.log('SNS Callback - Body:', JSON.stringify(body, null, 2));
-    console.log('SNS Callback - Body type:', typeof body);
-    const { status, ...restOfResponse } = await this.emailsService.handleAwsSnsEvent(messageType, body);
+  @Get(':email_id/attachments')
+  async getAttachments(
+    @Param('email_id') emailId: string,
+    @Req() request: any,
+    @Res() response: Response
+  ) {
+    const { status, ...restOfResponse } = await this.emailsService.getAttachments(request, emailId);
+    response.status(status).json(restOfResponse);
+  }
+
+  @Get(':email_id/attachments/:id')
+  async getAttachment(
+    @Param('email_id') emailId: string,
+    @Param('id') attachmentId: string,
+    @Req() request: any,
+    @Res() response: Response
+  ) {
+    const { status, ...restOfResponse } = await this.emailsService.getAttachment(request, emailId, attachmentId);
+    response.status(status).json(restOfResponse);
+  }
+
+  @Patch(':id')
+  async updateScheduledEmail(
+    @Param('id') id: string,
+    @Body() updateData: { scheduledAt: string },
+    @Req() request: any,
+    @Res() response: Response
+  ) {
+    const { status, ...restOfResponse } = await this.emailsService.updateScheduledEmail(request, id, updateData);
+    response.status(status).json(restOfResponse);
+  }
+
+  @Post(':id/cancel')
+  async cancelScheduledEmail(
+    @Param('id') id: string,
+    @Req() request: any,
+    @Res() response: Response
+  ) {
+    const { status, ...restOfResponse } = await this.emailsService.cancelScheduledEmail(request, id);
     response.status(status).json(restOfResponse);
   }
 }

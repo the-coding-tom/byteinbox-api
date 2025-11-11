@@ -7,9 +7,11 @@ import { CreateDomainData, CreateDnsRecordData, FindDomainsWithFilterData, Domai
 export class DomainRepository {
   /**
    * Create a new domain with DNS records in a single atomic transaction
+   * Returns formatted data with DNS records in the API response format
    */
   async createDomainWithDnsRecords(domainData: CreateDomainData, dnsRecords: CreateDnsRecordData[]): Promise<any> {
-    return prisma.domain.create({
+    // Create domain with DNS records and return with includes
+    const domain = await prisma.domain.create({
       data: {
         name: domainData.name,
         createdBy: domainData.createdBy,
@@ -24,21 +26,34 @@ export class DomainRepository {
         dkimPrivateKey: domainData.dkimPrivateKey,
         dnsRecords: {
           createMany: {
-            data: dnsRecords.map((record) => ({
-              type: record.type,
-              name: record.name,
-              recordType: record.recordType,
-              value: record.value,
-              priority: record.priority,
-              status: DomainStatus.pending_dns,
-            })),
+            data: dnsRecords,
           },
         },
       },
       include: {
-        dnsRecords: true,
+        dnsRecords: {
+          select: {
+            record: true,
+            name: true,
+            type: true,
+            value: true,
+            ttl: true,
+            status: true,
+            priority: true,
+          },
+        },
       },
     });
+
+    // Format response to match API structure
+    return {
+      id: domain.reference,
+      name: domain.name,
+      status: domain.status,
+      region: domain.region,
+      createdAt: domain.createdAt,
+      records: domain.dnsRecords,
+    };
   }
 
   /**
@@ -47,6 +62,18 @@ export class DomainRepository {
   async findDnsRecordsByDomainId(domainId: number): Promise<any[]> {
     return prisma.dnsRecord.findMany({
       where: { domainId },
+    });
+  }
+
+  /**
+   * Find required DNS records by domain ID (excludes optional records like DMARC)
+   */
+  async findRequiredDnsRecordsByDomainId(domainId: number): Promise<any[]> {
+    return prisma.dnsRecord.findMany({
+      where: {
+        domainId,
+        record: { not: 'DMARC' },
+      },
     });
   }
 
@@ -69,6 +96,18 @@ export class DomainRepository {
     return prisma.domain.findFirst({
       where: {
         id,
+        teamId,
+      },
+    });
+  }
+
+  /**
+   * Find domain by reference and team ID
+   */
+  async findByReferenceAndTeamId(reference: string, teamId: number): Promise<any | null> {
+    return prisma.domain.findFirst({
+      where: {
+        reference,
         teamId,
       },
     });
@@ -99,21 +138,54 @@ export class DomainRepository {
    * Find all domains for a team
    */
   async findByTeamId(teamId: number): Promise<any[]> {
-    return prisma.domain.findMany({
-      where: { teamId },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const query = Prisma.sql`
+      SELECT 
+        D.name as domain,
+        D.status,
+        D.region,
+        D.created_at as "createdAt"
+      FROM domains D
+      WHERE D.team_id = ${teamId}
+      ORDER BY D.created_at DESC
+    `;
+
+    return prisma.$queryRaw(query);
   }
 
   /**
    * Update domain
    */
-  async update(id: number, data: any): Promise<any> {
-    return prisma.domain.update({
+  async update(id: number, data: any): Promise<{ reference: string }> {
+    const domain = await prisma.domain.update({
       where: { id },
       data,
+      select: {
+        reference: true,
+      },
+    });
+    return { reference: domain.reference };
+  }
+
+  /**
+   * Update domain and all its DNS records to verified status atomically
+   * This ensures data consistency - either both update or neither
+   */
+  async updateDomainAndDnsRecordsToVerified(domainId: number): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // Update domain status to verified
+      await tx.domain.update({
+        where: { id: domainId },
+        data: { status: DomainStatus.verified },
+      });
+
+      // Update all DNS records for this domain to verified
+      await tx.dnsRecord.updateMany({
+        where: { domainId },
+        data: {
+          status: DomainStatus.verified,
+          lastCheckedAt: new Date(),
+        },
+      });
     });
   }
 
@@ -198,7 +270,7 @@ export class DomainRepository {
     return prisma.domain.findMany({
       where: {
         OR: [
-          { status: DomainStatus.pending_dns },
+          { status: DomainStatus.verifying_dns },
           { status: DomainStatus.failed },
         ],
       },
@@ -215,7 +287,7 @@ export class DomainRepository {
   async findDomainsWithPendingAws(): Promise<any[]> {
     return prisma.domain.findMany({
       where: {
-        status: DomainStatus.pending_aws,
+        status: DomainStatus.verifying_aws_setup,
       },
       include: {
         dnsRecords: true,
@@ -306,9 +378,9 @@ export class DomainRepository {
       )
       AND (
         CASE
-          WHEN ${status} = 'pending_dns' THEN D.status = 'pending_dns'
-          WHEN ${status} = 'dns_verified' THEN D.status = 'dns_verified'
-          WHEN ${status} = 'pending_aws' THEN D.status = 'pending_aws'
+          WHEN ${status} = 'not_started' THEN D.status = 'not_started'
+          WHEN ${status} = 'verifying_dns' THEN D.status = 'verifying_dns'
+          WHEN ${status} = 'verifying_aws_setup' THEN D.status = 'verifying_aws_setup'
           WHEN ${status} = 'verified' THEN D.status = 'verified'
           WHEN ${status} = 'failed' THEN D.status = 'failed'
           WHEN ${status} = 'revoked' THEN D.status = 'revoked'
@@ -323,11 +395,11 @@ export class DomainRepository {
 
     const retrieveDomainsQuery = Prisma.sql`
       SELECT
-        D.id,
-        D.name,
+        D.reference as id,
+        D.name as domain,
         D.status,
-        D.created_at::text as "createdAt",
-        D.updated_at::text as "updatedAt"
+        D.region,
+        D.created_at as "createdAt"
       FROM domains D
       ${whereClause}
       ORDER BY D.created_at DESC
@@ -357,25 +429,21 @@ export class DomainRepository {
    */
   async findDomainWithDnsRecords(domainId: number): Promise<DomainWithDnsRecordsData | null> {
     const query = Prisma.sql`
-      SELECT 
-        D.id,
-        D.name,
+      SELECT
+        D.reference as id,
+        D.name as domain,
         D.status,
         D.region,
-        D.click_tracking as "clickTracking",
-        D.open_tracking as "openTracking",
-        D.tls_mode as "tlsMode",
         D.created_at as "createdAt",
-        D.updated_at as "updatedAt",
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
-              'id', DR.id,
-              'type', DR.type,
+              'record', UPPER(DR.record),
               'name', DR.name,
-              'recordType', DR.record_type,
-              'value', DR.value,
+              'type', DR.type,
+              'ttl', DR.ttl,
               'status', DR.status,
+              'value', DR.value,
               'priority', DR.priority
             )
           ) FILTER (WHERE DR.id IS NOT NULL),
@@ -384,7 +452,7 @@ export class DomainRepository {
       FROM domains D
       LEFT JOIN dns_records DR ON D.id = DR.domain_id
       WHERE D.id = ${domainId}
-      GROUP BY D.id, D.name, D.status, D.region, D.click_tracking, D.open_tracking, D.tls_mode, D.created_at, D.updated_at
+      GROUP BY D.reference, D.name, D.status, D.region, D.created_at
     `;
 
     const [result] = await prisma.$queryRaw<any[]>(query);
@@ -393,7 +461,7 @@ export class DomainRepository {
   }
 
   /**
-   * Reset all other domains with the same name (except current domain) to pending_dns
+   * Reset all other domains with the same name (except current domain) to not_started
    * This forces other teams to re-verify DNS when a domain is taken over
    */
   async resetOtherDomainsToVerifying(currentDomainId: number, domainName: string): Promise<void> {
@@ -403,8 +471,30 @@ export class DomainRepository {
         id: { not: currentDomainId },
       },
       data: {
-        status: DomainStatus.pending_dns,
+        status: DomainStatus.not_started,
       },
     });
+  }
+
+  /**
+   * Find verified domains by multiple domain names for a team (bulk validation)
+   * Returns a map of domain names to domain data for quick O(1) lookup
+   */
+  async findVerifiedDomainsByNamesAndTeam(domainNames: string[], teamId: number): Promise<Record<string, { id: number; name: string; status: string }>> {
+    const domains = await prisma.$queryRaw<Array<{ id: number; name: string; status: string }>>`
+      SELECT id, name, status
+      FROM domains
+      WHERE name = ANY(${domainNames}::text[])
+        AND team_id = ${teamId}
+        AND status = ${DomainStatus.verified}::"DomainStatus"
+    `;
+
+    // Convert array to map for O(1) lookup
+    const domainMap: Record<string, { id: number; name: string; status: string }> = {};
+    for (const domain of domains) {
+      domainMap[domain.name] = domain;
+    }
+
+    return domainMap;
   }
 }
