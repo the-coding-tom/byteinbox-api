@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PlanType, Prisma, SubscriptionStatus, BillingInterval } from '@prisma/client';
 import prisma from '../common/prisma';
 import { FindUsersWithPaginationFilter } from './entities/user.entity';
 import { TeamMemberRole } from '../common/enums/generic.enum';
@@ -8,8 +8,21 @@ import { TeamMemberRole } from '../common/enums/generic.enum';
 export class UserRepository {
   async createLocalAuthUserAndPersonalTeam(userData: any): Promise<any> {
     return prisma.$transaction(async (prismaClient) => {
-      // Extract team data and verification data from userData (passed by service)
-      const { teamName, teamSlug, password, emailVerificationToken, emailVerificationExpiresAt, ...userFields } = userData;
+      // Extract team data, verification data, and default plan info from userData (passed by service)
+      const {
+        teamName,
+        teamSlug,
+        password,
+        emailVerificationToken,
+        emailVerificationExpiresAt,
+        defaultTransactionalPlanSlug,
+        defaultTransactionalTierName,
+        defaultMarketingPlanSlug,
+        defaultMarketingTierName,
+        subscriptionStartDate,
+        subscriptionEndDate,
+        ...userFields
+      } = userData;
 
       const user = await prismaClient.user.create({
         data: {
@@ -52,14 +65,94 @@ export class UserRepository {
         },
       });
 
+      // Get the created team ID
+      const teamMembership = await prismaClient.teamMember.findFirstOrThrow({
+        where: { userId: user.id, role: TeamMemberRole.owner },
+        select: { teamId: true },
+      });
+
+      const teamId = teamMembership.teamId;
+
+      // Fetch transactional email free plan and tier
+      const transactionalPlan = await prismaClient.plan.findFirstOrThrow({
+        where: {
+          slug: defaultTransactionalPlanSlug,
+          planType: PlanType.TRANSACTIONAL,
+        },
+        select: { id: true },
+      });
+
+      const transactionalTier = await prismaClient.planTier.findFirstOrThrow({
+        where: {
+          planId: transactionalPlan.id,
+          name: defaultTransactionalTierName,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      await prismaClient.subscription.create({
+        data: {
+          teamId,
+          planId: transactionalPlan.id,
+          planTierId: transactionalTier.id,
+          status: SubscriptionStatus.ACTIVE,
+          billingInterval: BillingInterval.MONTHLY,
+          currentPeriodStart: subscriptionStartDate,
+          currentPeriodEnd: subscriptionEndDate,
+          cancelAtPeriodEnd: false,
+        },
+      });
+
+      // Fetch marketing email free plan and tier
+      const marketingPlan = await prismaClient.plan.findFirstOrThrow({
+        where: {
+          slug: defaultMarketingPlanSlug,
+          planType: PlanType.MARKETING,
+        },
+        select: { id: true },
+      });
+
+      const marketingTier = await prismaClient.planTier.findFirstOrThrow({
+        where: {
+          planId: marketingPlan.id,
+          name: defaultMarketingTierName,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      await prismaClient.subscription.create({
+        data: {
+          teamId,
+          planId: marketingPlan.id,
+          planTierId: marketingTier.id,
+          status: SubscriptionStatus.ACTIVE,
+          billingInterval: BillingInterval.MONTHLY,
+          currentPeriodStart: subscriptionStartDate,
+          currentPeriodEnd: subscriptionEndDate,
+          cancelAtPeriodEnd: false,
+        },
+      });
+
       return user;
     });
   }
 
   async createOAuthUserAndPersonalTeam(userData: any): Promise<any> {
     return prisma.$transaction(async (prismaClient) => {
-      // Extract team data from userData (passed by service)
-      const { teamName, teamSlug, ...userFields } = userData;
+      // Extract team data and default plan info from userData (passed by service)
+      const {
+        teamName,
+        teamSlug,
+        defaultTransactionalPlanSlug,
+        defaultTransactionalTierName,
+        defaultMarketingPlanSlug,
+        defaultMarketingTierName,
+        subscriptionStartDate,
+        subscriptionEndDate,
+        ...userFields
+      } = userData;
 
       const user = await prismaClient.user.create({
         data: {
@@ -86,6 +179,78 @@ export class UserRepository {
               },
             },
           },
+        },
+      });
+
+      // Get the created team ID
+      const teamMembership = await prismaClient.teamMember.findFirstOrThrow({
+        where: { userId: user.id, role: TeamMemberRole.owner },
+        select: { teamId: true },
+      });
+
+      const teamId = teamMembership.teamId;
+
+      // Fetch transactional email free plan and tier
+      const transactionalPlan = await prismaClient.plan.findFirstOrThrow({
+        where: {
+          slug: defaultTransactionalPlanSlug,
+          planType: PlanType.TRANSACTIONAL,
+        },
+        select: { id: true },
+      });
+
+      const transactionalTier = await prismaClient.planTier.findFirstOrThrow({
+        where: {
+          planId: transactionalPlan.id,
+          name: defaultTransactionalTierName,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      // Subscribe to transactional email free plan and tier
+      await prismaClient.subscription.create({
+        data: {
+          teamId,
+          planId: transactionalPlan.id,
+          planTierId: transactionalTier.id,
+          status: SubscriptionStatus.ACTIVE,
+          billingInterval: BillingInterval.MONTHLY,
+          currentPeriodStart: subscriptionStartDate,
+          currentPeriodEnd: subscriptionEndDate,
+          cancelAtPeriodEnd: false,
+        },
+      });
+
+      // Fetch marketing email free plan and tier
+      const marketingPlan = await prismaClient.plan.findFirstOrThrow({
+        where: {
+          slug: defaultMarketingPlanSlug,
+          planType: PlanType.MARKETING,
+        },
+        select: { id: true },
+      });
+
+      const marketingTier = await prismaClient.planTier.findFirstOrThrow({
+        where: {
+          planId: marketingPlan.id,
+          name: defaultMarketingTierName,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      // Subscribe to marketing email free plan and tier
+      await prismaClient.subscription.create({
+        data: {
+          teamId,
+          planId: marketingPlan.id,
+          planTierId: marketingTier.id,
+          status: SubscriptionStatus.ACTIVE,
+          billingInterval: BillingInterval.MONTHLY,
+          currentPeriodStart: subscriptionStartDate,
+          currentPeriodEnd: subscriptionEndDate,
+          cancelAtPeriodEnd: false,
         },
       });
 

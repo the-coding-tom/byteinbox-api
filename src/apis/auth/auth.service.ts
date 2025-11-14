@@ -8,6 +8,7 @@ import { LocalAuthAccountRepository } from '../../repositories/local-auth-accoun
 import { VerificationRequestRepository } from '../../repositories/verification-request.repository';
 import { TeamRepository } from '../../repositories/team.repository';
 import { AuthValidator } from './auth.validator';
+import { InternalNotificationService } from '../../shared-services/internal-notification/internal-notification.service';
 import { generateSuccessResponse } from '../../utils/util';
 import { handleServiceError } from '../../utils/error.util';
 import { generateTokens, hashPassword } from '../../utils/authentication.util';
@@ -36,6 +37,7 @@ export class AuthService {
     private readonly teamRepository: TeamRepository,
     private readonly authValidator: AuthValidator,
     private readonly jwtService: JwtService,
+    private readonly internalNotificationService: InternalNotificationService,
   ) { }
 
   async login(loginDto: LoginDto, request: any): Promise<any> {
@@ -132,7 +134,11 @@ export class AuthService {
       const emailVerificationToken = randomBytes(32).toString('hex');
       const emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-      // Create new user
+      // Calculate subscription period (free plans are monthly by default)
+      const subscriptionStartDate = moment().toDate();
+      const subscriptionEndDate = moment().add(1, 'month').toDate();
+
+      // Create new user with default free plans
       const user = await this.userRepository.createLocalAuthUserAndPersonalTeam({
         email: validatedData.email,
         password: hashedPassword,
@@ -143,10 +149,16 @@ export class AuthService {
         teamSlug: teamNameAndSlugInfo.slug,
         emailVerificationToken,
         emailVerificationExpiresAt,
+        defaultTransactionalPlanSlug: config.defaultPlans.transactionalEmailSlug,
+        defaultTransactionalTierName: config.defaultPlans.transactionalEmailTierName,
+        defaultMarketingPlanSlug: config.defaultPlans.marketingEmailSlug,
+        defaultMarketingTierName: config.defaultPlans.marketingEmailTierName,
+        subscriptionStartDate,
+        subscriptionEndDate,
       });
 
-      // TODO: Send email verification email
-      console.log(`Email verification needed for ${user.email}`);
+      // Send email verification email
+      await this.internalNotificationService.sendEmailVerification(user.email, emailVerificationToken);
 
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
@@ -231,6 +243,10 @@ export class AuthService {
           // Create new user with personal team
           const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(oauthUserInfo.email));
 
+          // Calculate subscription period (free plans are monthly by default)
+          const subscriptionStartDate = moment().toDate();
+          const subscriptionEndDate = moment().add(1, 'month').toDate();
+
           user = await this.userRepository.createOAuthUserAndPersonalTeam({
             email: oauthUserInfo.email,
             firstName: oauthUserInfo.firstName,
@@ -239,6 +255,12 @@ export class AuthService {
             status: 'ACTIVE',
             teamName: teamData.name,
             teamSlug: teamData.slug,
+            defaultTransactionalPlanSlug: config.defaultPlans.transactionalEmailSlug,
+            defaultTransactionalTierName: config.defaultPlans.transactionalEmailTierName,
+            defaultMarketingPlanSlug: config.defaultPlans.marketingEmailSlug,
+            defaultMarketingTierName: config.defaultPlans.marketingEmailTierName,
+            subscriptionStartDate,
+            subscriptionEndDate,
           });
 
           // Link OAuth account
@@ -394,6 +416,10 @@ export class AuthService {
           // Create new user with personal team
           const teamData = await import('../../utils/team.util').then(m => m.generateUniqueTeamSlug(oauthUserInfo.email));
 
+          // Calculate subscription period (free plans are monthly by default)
+          const subscriptionStartDate = moment().toDate();
+          const subscriptionEndDate = moment().add(1, 'month').toDate();
+
           user = await this.userRepository.createOAuthUserAndPersonalTeam({
             email: oauthUserInfo.email,
             firstName: oauthUserInfo.firstName,
@@ -402,6 +428,12 @@ export class AuthService {
             status: UserStatus.active,
             teamName: teamData.name,
             teamSlug: teamData.slug,
+            defaultTransactionalPlanSlug: config.defaultPlans.transactionalEmailSlug,
+            defaultTransactionalTierName: config.defaultPlans.transactionalEmailTierName,
+            defaultMarketingPlanSlug: config.defaultPlans.marketingEmailSlug,
+            defaultMarketingTierName: config.defaultPlans.marketingEmailTierName,
+            subscriptionStartDate,
+            subscriptionEndDate,
           });
 
           // Link OAuth account
@@ -583,9 +615,8 @@ export class AuthService {
           moment().add(1, 'hour').toDate()
         );
 
-        // TODO: Send password reset email with resetToken
-        // This would typically use a queue system to send emails
-        console.log(`Password reset token for ${user.email}: ${resetToken}`);
+        // Send password reset email
+        await this.internalNotificationService.sendPasswordReset(user.email, resetToken);
       }
 
       return generateSuccessResponse({
@@ -659,6 +690,9 @@ export class AuthService {
       // Delete the verification token after successful verification
       await this.verificationRequestRepository.delete(verificationRequest.id);
 
+      // Send welcome email
+      await this.internalNotificationService.sendWelcome(user.email);
+
       return generateSuccessResponse({
         statusCode: HttpStatus.OK,
         message: Constants.successMessage,
@@ -696,9 +730,8 @@ export class AuthService {
         verificationExpiresAt
       );
 
-      // TODO: Send email verification email with verificationToken
-      // This would typically use a queue system to send emails
-      console.log(`Email verification token for ${user.email}: ${verificationToken}`);
+      // Send email verification email
+      await this.internalNotificationService.sendEmailVerification(user.email, verificationToken);
 
       return generateSuccessResponse({
         statusCode: 200,

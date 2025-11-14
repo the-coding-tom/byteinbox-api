@@ -222,4 +222,22 @@ export const config = {
       configurationSetName: process.env.AWS_SES_CONFIGURATION_SET_NAME || 'byteinbox-tracking',
     },
   },
+
+  // Stripe Configuration
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY!,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY!,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+  },
+
+  // Default Free Plans (for new user registration)
+  defaultPlans: {
+    transactionalEmailSlug: process.env.DEFAULT_TRANSACTIONAL_PLAN_SLUG || 'free',
+    transactionalEmailTierName: process.env.DEFAULT_TRANSACTIONAL_TIER_NAME || '3K',
+    marketingEmailSlug: process.env.DEFAULT_MARKETING_PLAN_SLUG || 'free',
+    marketingEmailTierName: process.env.DEFAULT_MARKETING_TIER_NAME || '1K Contacts',
+  },
+
+  // Frontend URL (for redirects)
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3001',
 };

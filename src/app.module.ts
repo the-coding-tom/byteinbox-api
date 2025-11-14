@@ -17,6 +17,9 @@ import { BroadcastsModule } from './apis/broadcasts/broadcasts.module';
 import { AudiencesModule } from './apis/audiences/audiences.module';
 import { MetricsModule } from './apis/metrics/metrics.module';
 import { LogsModule } from './apis/logs/logs.module';
+import { PlansModule } from './apis/plans/plans.module';
+import { SubscriptionsModule } from './apis/subscriptions/subscriptions.module';
+import { StripeWebhookModule } from './apis/webhooks/stripe/stripe-webhook.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { IsAuthenticatedMiddleware } from './common/middlewares/is-authenticated.middleware';
@@ -29,6 +32,7 @@ import { CronsModule } from './crons/crons.module';
 import { QueueProcessorsModule } from './queues/queue-processors.module';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { AdminModule } from './apis/admin/admin.module';
+import { SeedsModule } from './seeds/seeds.module';
 
 @Module({
   imports: [
@@ -46,6 +50,7 @@ import { AdminModule } from './apis/admin/admin.module';
     RepositoriesModule,
     QueueProcessorsModule,
     CronsModule,
+    SeedsModule,
     AuthModule,
     ProfileModule,
     ApiKeysModule,
@@ -62,6 +67,9 @@ import { AdminModule } from './apis/admin/admin.module';
     AudiencesModule,
     MetricsModule,
     LogsModule,
+    PlansModule,
+    SubscriptionsModule,
+    StripeWebhookModule,
   ],
   controllers: [AppController],
   providers: [
@@ -93,6 +101,10 @@ export class AppModule implements NestModule {
         { path: 'api/v1/auth/github', method: RequestMethod.GET },
         { path: 'api/v1/auth/github/callback', method: RequestMethod.GET },
         { path: 'api/v1/callbacks/aws-sns', method: RequestMethod.POST },
+        { path: 'api/v1/plans', method: RequestMethod.GET },
+        { path: 'api/v1/plans/calculate', method: RequestMethod.POST },
+        { path: 'api/v1/plans/:slug', method: RequestMethod.GET },
+        { path: 'api/v1/webhooks/stripe', method: RequestMethod.POST },
       )
       .forRoutes('*path');
 

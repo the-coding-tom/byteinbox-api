@@ -15,6 +15,7 @@ import { EmailEventQueueProcessor } from './processors/email-event.processor';
 import { TemplatePreviewQueueProcessor } from './processors/template-preview.processor';
 import { WebhookDeliveryQueueProcessor } from './processors/webhook-delivery.processor';
 import { BroadcastProcessingProcessor } from './processors/broadcast-processing.processor';
+import { InternalNotificationProcessor } from './processors/internal-notification.processor';
 import { QueueProducersModule } from './queue-producers.module';
 
 @Module({
@@ -37,6 +38,7 @@ import { QueueProducersModule } from './queue-producers.module';
     TemplatePreviewQueueProcessor,
     WebhookDeliveryQueueProcessor,
     BroadcastProcessingProcessor,
+    InternalNotificationProcessor,
   ],
   exports: [
     NotificationQueueProcessor,
@@ -50,6 +52,7 @@ import { QueueProducersModule } from './queue-producers.module';
     TemplatePreviewQueueProcessor,
     WebhookDeliveryQueueProcessor,
     BroadcastProcessingProcessor,
+    InternalNotificationProcessor,
   ],
 })
 export class QueueProcessorsModule {}

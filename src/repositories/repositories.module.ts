@@ -20,6 +20,9 @@ import { AudienceRepository } from './audience.repository';
 import { ContactRepository } from './contact.repository';
 import { WebhookRepository } from './webhook.repository';
 import { BroadcastRepository } from './broadcast.repository';
+import { PlanRepository } from './plan.repository';
+import { PlanTierRepository } from './plan-tier.repository';
+import { SubscriptionRepository } from './subscription.repository';
 
 @Module({
   providers: [
@@ -44,6 +47,9 @@ import { BroadcastRepository } from './broadcast.repository';
     ContactRepository,
     WebhookRepository,
     BroadcastRepository,
+    PlanRepository,
+    PlanTierRepository,
+    SubscriptionRepository,
   ],
   exports: [
     UserRepository,
@@ -67,6 +73,9 @@ import { BroadcastRepository } from './broadcast.repository';
     ContactRepository,
     WebhookRepository,
     BroadcastRepository,
+    PlanRepository,
+    PlanTierRepository,
+    SubscriptionRepository,
   ],
 })
 export class RepositoriesModule {}

@@ -249,27 +249,14 @@ model TeamInvitation {
 // ============================================
 
 model Plan {
-  id              Int             @id @default(autoincrement())
-  name            String          @unique // "free", "starter", "pro", "business", "enterprise"
-  slug            String          @unique // URL-friendly identifier: "free", "pro-monthly", etc.
-  displayName     String          @map("display_name") // "Free Plan", "Pro Plan", "Enterprise"
-  description     String?
-  price           Decimal         @db.Decimal(10, 2) // Monthly price
-  yearlyPrice     Decimal?        @map("yearly_price") @db.Decimal(10, 2) // Yearly price (if applicable)
-  currency        String          @default("USD")
-  billingInterval BillingInterval @map("billing_interval") // MONTHLY, YEARLY
+  id          Int      @id @default(autoincrement())
+  name        String   // "transactional-free", "transactional-pro", "marketing-free", etc.
+  slug        String   // URL-friendly identifier (pro, scale, etc.)
+  displayName String   @map("display_name") // "Transactional Pro", "Marketing Pro", etc.
+  description String?
+  planType    PlanType @map("plan_type") // TRANSACTIONAL or MARKETING
 
-  // Feature limits
-  maxDomains        Int @map("max_domains")
-  maxEmailsPerMonth Int @map("max_emails_per_month")
-  maxTeamMembers    Int @map("max_team_members")
-  maxTemplates      Int @map("max_templates")
-  maxWebhooks       Int @map("max_webhooks")
-  maxContacts       Int @map("max_contacts")
-  maxAudiences      Int @map("max_audiences")
-  maxBroadcasts     Int @map("max_broadcasts")
-
-  // Feature flags
+  // Feature flags (same for all tiers within a plan)
   customDomain      Boolean @default(false) @map("custom_domain")
   advancedAnalytics Boolean @default(false) @map("advanced_analytics")
   prioritySupport   Boolean @default(false) @map("priority_support")
@@ -277,26 +264,85 @@ model Plan {
   webhookSupport    Boolean @default(false) @map("webhook_support")
   teamCollaboration Boolean @default(false) @map("team_collaboration")
 
-  isActive  Boolean  @default(true) @map("is_active")
+  // Limits that DON'T vary by tier
+  maxDomains        Int @map("max_domains")
+  maxEmailsPerDay   Int @map("max_emails_per_day") // Daily limit (100 for free, unlimited for others)
+  maxTeamMembers    Int @map("max_team_members")
+  maxTemplates      Int @map("max_templates")
+  maxWebhooks       Int @map("max_webhooks")
+  maxContacts       Int @map("max_contacts")
+  maxAudiences      Int @map("max_audiences")
+  maxBroadcasts     Int @map("max_broadcasts")
+
+  // Plan metadata
+  isFree         Boolean @default(false) @map("is_free") // true for free tier plans
+  isContactSales Boolean @default(false) @map("is_contact_sales") // true for Enterprise/Custom
+  displayOrder   Int     @default(0) @map("display_order") // For sorting
+  isActive       Boolean @default(true) @map("is_active")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
+  tiers         PlanTier[]
   subscriptions Subscription[]
 
+  @@unique([slug, planType])
   @@map("plans")
 }
 
-model Subscription {
-  id     Int                @id @default(autoincrement())
-  teamId Int                @map("team_id")
-  planId Int                @map("plan_id")
-  status SubscriptionStatus @default(ACTIVE)
+// Volume-based pricing tiers within each plan
+model PlanTier {
+  id     Int    @id @default(autoincrement())
+  planId Int    @map("plan_id")
+  name   String // "3K", "50K", "75K", "100K", "250K", etc.
 
-  // Billing details
+  // Volume range
+  minEmails Int @map("min_emails") // Minimum emails per month
+  maxEmails Int @map("max_emails") // Maximum emails per month
+
+  // Pricing
+  monthlyPrice        Decimal @map("monthly_price") @db.Decimal(10, 2)
+  yearlyPrice         Decimal @map("yearly_price") @db.Decimal(10, 2) // Yearly pricing (usually discounted)
+  monthlyPriceInCents Int?    @map("monthly_price_in_cents") // Helper for Stripe sync
+  yearlyPriceInCents  Int?    @map("yearly_price_in_cents") // Helper for Stripe sync
+
+  // Stripe integration
+  stripeMonthlyPriceId String? @map("stripe_monthly_price_id") // price_1ABC... for monthly
+  stripeYearlyPriceId  String? @map("stripe_yearly_price_id") // price_1XYZ... for yearly
+
+  // Hierarchy for upgrade/downgrade detection
+  rank         Int     @default(1) // Defines upgrade order (1=lowest, higher=better)
+  isActive     Boolean @default(true) @map("is_active")
+  displayOrder Int     @default(0) @map("display_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  Plan          Plan           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@unique([planId, minEmails])
+  @@index([planId])
+  @@index([minEmails, maxEmails])
+  @@map("plan_tiers")
+}
+
+model Subscription {
+  id         Int                @id @default(autoincrement())
+  teamId     Int                @map("team_id")
+  planId     Int                @map("plan_id")
+  planTierId Int?               @map("plan_tier_id") // NULL for free plan
+  status     SubscriptionStatus @default(ACTIVE)
+
+  // Stripe details
   stripeCustomerId      String? @map("stripe_customer_id")
   stripeSubscriptionId  String? @unique @map("stripe_subscription_id")
   stripePaymentMethodId String? @map("stripe_payment_method_id")
+
+  // Billing
+  billingInterval BillingInterval @default(MONTHLY) @map("billing_interval") // MONTHLY or YEARLY
 
   // Subscription period
   currentPeriodStart DateTime  @map("current_period_start")
@@ -310,14 +356,17 @@ model Subscription {
 
   // Usage tracking
   emailsSentThisMonth Int      @default(0) @map("emails_sent_this_month")
+  emailsSentToday     Int      @default(0) @map("emails_sent_today")
   lastUsageReset      DateTime @default(now()) @map("last_usage_reset")
+  lastDailyReset      DateTime @default(now()) @map("last_daily_reset")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  Team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  Plan Plan @relation(fields: [planId], references: [id])
+  Team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Plan     Plan      @relation(fields: [planId], references: [id])
+  PlanTier PlanTier? @relation(fields: [planTierId], references: [id])
 
   @@map("subscriptions")
 }
@@ -1010,6 +1059,11 @@ enum BillingInterval {
   MONTHLY
   YEARLY
   LIFETIME
+}
+
+enum PlanType {
+  TRANSACTIONAL
+  MARKETING
 }
 
 enum SubscriptionStatus {
